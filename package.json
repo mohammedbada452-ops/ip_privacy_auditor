@@ -27,7 +27,8 @@
     "deploy": "npm run build:cloudflare && npx --yes wrangler@4.125.0 deploy",
     "test:release": "npm run test:cloudflare-guard && npm run test:production-truth && npm run test:accuracy",
     "build:cloudflare:verify": "npm run build:cloudflare && node scripts/verify-cloudflare-deployment.mjs",
-    "test:production-truth": "node scripts/verify-production-truth.mjs"
+    "test:production-truth": "node scripts/verify-production-truth.mjs",
+    "test:worker-native": "node scripts/verify-cloudflare-deployment.mjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.14",

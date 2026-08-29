@@ -27,8 +27,8 @@ must(!/"build"\s*:\s*\{[\s\S]*?"command"\s*:/.test(wrangler), 'Wrangler custom b
 must(/"directory"\s*:\s*"\.\/dist"/.test(wrangler), 'Cloudflare assets directory must remain dist.');
 must(/"NODE_ENV"\s*:\s*"production"/.test(wrangler), 'Production NODE_ENV must be explicit in Worker vars.');
 must(geoService.includes("providerType === 'mock' && !['test', 'development'].includes"), 'Mock GeoIP must be blocked outside test/development.');
-must(worker.includes('X-Privasec-Observed-IP'), 'Worker must pass authoritative observed client IP into the Express bridge.');
-must(worker.includes("headers.delete(key)"), 'Worker must strip spoofable internal edge headers before rewriting them.');
+must(worker.toLowerCase().includes('x-privasec-observed-ip'), 'Worker must pass authoritative observed client IP into service requests.');
+must(worker.includes('const cfMap') && worker.includes('headers["x-privasec-observed-ip"]'), 'Worker must construct internal edge observations from authoritative request context.');
 must(extractor.includes("workerObservedIp") && extractor.includes("PRIVASEC_CLOUDFLARE_EDGE === 'true'"), 'IP extraction must consume Worker-authoritative observed client IP.');
 must(cfProvider.includes('Cloudflare request.cf metadata is unavailable for this request.'), 'Cloudflare provider must fail closed when edge metadata is unavailable.');
 must(hackMyIp.includes('returned data for a different IP address'), 'HackMyIP response must be bound to requested IP.');

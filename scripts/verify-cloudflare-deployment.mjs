@@ -30,10 +30,11 @@ assert(/"not_found_handling"\s*:\s*"single-page-application"/.test(wranglerText)
 assert(/"run_worker_first"\s*:\s*\[[\s\S]*"\/api\/\*"[\s\S]*\]/.test(wranglerText), 'API routes must run through Worker first');
 assert(/"exclude"\s*:\s*\[[\s\S]*worker\/\*\*\/\*\.ts[\s\S]*worker-configuration\.d\.ts/.test(tsconfigText), 'root TS config must isolate Worker generated types');
 assert(/"cf:typecheck"\s*:\s*"wrangler types && tsc -p tsconfig.worker.json"/.test(packageText), 'Worker typecheck must regenerate Wrangler types');
-assert(workerText.includes('httpServerHandler({ port: 8787 })'), 'Worker must expose the Express adapter');
-assert(workerText.includes('expressWorkerHandler.fetch('), 'Worker must forward requests through the Express Worker handler');
-assert(!workerText.includes('handleAsNodeRequest('), 'Worker must not use the incompatible handleAsNodeRequest call form');
-assert(!/process\.env\.NODE_ENV\s*=(?!=)/.test(workerText), 'Worker must not assign to Wrangler-defined NODE_ENV');
+assert(workerText.includes('export default { fetch: handleRequest }'), 'Worker must export a native fetch handler');
+assert(!workerText.includes("from 'express'") && !workerText.includes("from \"express\""), 'Production Worker must not import Express runtime');
+assert(workerText.includes('async function handleRequest(') && workerText.includes('fetch: handleRequest'), 'Worker must dispatch requests through its native fetch handler');
+assert(!workerText.includes('handleAsNodeRequest'), 'Worker must not use handleAsNodeRequest');
+assert(!workerText.includes('createApiApp('), 'Production Worker must not instantiate the Express application');
 assert(appText.includes('export function createApiApp'), 'shared API app factory must exist');
 assert(routerText.includes("const normalized = path.replace(/\\/+$/, '')"), 'router must normalize trailing slashes');
 assert(adminText.includes("setActiveTab(tab.id === 'securityLogs' ? 'logs' : tab.id)"), 'Admin navigation mapping must be explicit');
