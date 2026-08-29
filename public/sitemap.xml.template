@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>__PUBLIC_ORIGIN__/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>
+  <url><loc>__PUBLIC_ORIGIN__/browser</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>__PUBLIC_ORIGIN__/headers</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>__PUBLIC_ORIGIN__/site-audit</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>__PUBLIC_ORIGIN__/privacy</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
+  <url><loc>__PUBLIC_ORIGIN__/learn</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+</urlset>

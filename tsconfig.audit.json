@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.json",
+  "include": ["src/**/*.ts", "src/**/*.tsx", "server/**/*.ts", "e2e/**/*.ts", "playwright.config.ts", "scripts/**/*.mjs", "packages/**/*.ts", "/tmp/privasec-audit-shims.d.ts"],
+  "compilerOptions": { "noEmit": true, "skipLibCheck": true }
+}
