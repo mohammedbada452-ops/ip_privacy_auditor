@@ -32,7 +32,7 @@ async function getCurrentClientGeoDetails(req: Request, ip: string): Promise<IpD
       ip,
       measurementStatus: details.network.providerStatus === 'VERIFIED' ? 'MEASURED' : 'UNKNOWN',
       geo: details.geo,
-      network: mergedNetwork,
+      network: details.network,
     };
   } catch {
     return null;
@@ -217,7 +217,7 @@ router.get('/ip/network-intelligence', async (req: Request, res: Response) => {
     data: {
       ip: normalizedIp,
       geo: details.geo,
-      network: mergedNetwork,
+      network: details.network,
       reputation,
       rdap,
       reverseDns,
