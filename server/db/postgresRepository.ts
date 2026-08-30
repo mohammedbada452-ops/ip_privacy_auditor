@@ -1,7 +1,6 @@
 import crypto from 'crypto';
 import type pg from 'pg';
 import pgRuntime from 'pg';
-import { getPool, withTransaction, withClientTransaction, hashSessionToken } from './postgres';
 import type {
   AdminUser,
   ScanSessionRecord,
@@ -20,6 +19,10 @@ import { getRequestEnv } from '../config/requestEnv';
 // Runtime (non-type-only) binding used solely for `instanceof` checks below, since the
 // `pg` import above is type-only and cannot be used as a value.
 const { Pool: PgPool } = pgRuntime;
+
+function hashSessionToken(rawToken: string): string {
+  return crypto.createHash('sha256').update(rawToken).digest('hex');
+}
 
 /**
  * This repository is constructed with either:
@@ -57,11 +60,40 @@ export class PostgresRepository {
    * instance holds a `pg.Pool` (checks out + releases a client) or a single request-scoped
    * `pg.Client` (runs directly on that same connection, per Cloudflare's request-isolation rules).
    */
-  private runTransaction<T>(callback: (client: pg.PoolClient | pg.Client) => Promise<T>): Promise<T> {
+  private async runTransaction<T>(callback: (client: pg.PoolClient | pg.Client) => Promise<T>): Promise<T> {
     if (this.connection instanceof PgPool) {
-      return withTransaction(callback, this.connection);
+      const client = await this.connection.connect();
+      try {
+        await client.query('BEGIN');
+        const result = await callback(client);
+        await client.query('COMMIT');
+        return result;
+      } catch (error) {
+        try {
+          await client.query('ROLLBACK');
+        } catch (rollbackError) {
+          console.error('[DATABASE] Transaction rollback failed:', rollbackError);
+        }
+        throw error;
+      } finally {
+        client.release();
+      }
     }
-    return withClientTransaction(callback as (client: pg.Client) => Promise<T>, this.connection);
+
+    const client = this.connection as pg.Client;
+    await client.query('BEGIN');
+    try {
+      const result = await callback(client);
+      await client.query('COMMIT');
+      return result;
+    } catch (error) {
+      try {
+        await client.query('ROLLBACK');
+      } catch (rollbackError) {
+        console.error('[DATABASE] Transaction rollback failed:', rollbackError);
+      }
+      throw error;
+    }
   }
 
   /**

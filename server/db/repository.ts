@@ -9,6 +9,7 @@ import type {
 import { validateAdminUsername, validateAdminPassword } from '../config';
 import type { PostgresRepository } from './postgresRepository';
 import { ProductionGuard } from './productionGuard';
+import { getRequestEnv } from '../config/requestEnv';
 import { loadDevelopmentSeeds } from './dev-seeds/devSeedData';
 
 /**
@@ -86,7 +87,7 @@ export class DatabaseRepository {
   private serverSalt: string;
 
   constructor() {
-    this.serverSalt = process.env.SERVER_SECRET_SALT || (process.env.NODE_ENV === 'production' ? '' : crypto.randomBytes(32).toString('hex'));
+    this.serverSalt = getRequestEnv('SERVER_SECRET_SALT') || (getRequestEnv('NODE_ENV') === 'production' ? '' : crypto.randomBytes(32).toString('hex'));
     this.initializeDefaultState();
   }
 
@@ -368,9 +369,9 @@ export class DatabaseRepository {
    * Only bootstraps the administrator credentials configured in environment variables.
    */
   private initializeDefaultState() {
-    const isProduction = process.env.NODE_ENV === 'production';
-    const envUsername = process.env.ADMIN_USERNAME ? process.env.ADMIN_USERNAME.trim() : undefined;
-    const envPassword = process.env.ADMIN_PASSWORD || undefined;
+    const isProduction = getRequestEnv('NODE_ENV') === 'production';
+    const envUsername = getRequestEnv('ADMIN_USERNAME') ? getRequestEnv('ADMIN_USERNAME')!.trim() : undefined;
+    const envPassword = getRequestEnv('ADMIN_PASSWORD') || undefined;
 
     if (envUsername && envPassword) {
       try {
@@ -427,7 +428,7 @@ export class DatabaseRepository {
     passwordPlain: string,
     options?: { force?: boolean }
   ): { success: boolean; username: string; isNewUser: boolean } {
-    const isProduction = process.env.NODE_ENV === 'production';
+    const isProduction = getRequestEnv('NODE_ENV') === 'production';
     const userVal = validateAdminUsername(username);
     if (!userVal.valid) {
       throw new Error(`Failed to bootstrap admin: ${userVal.error}`);
@@ -511,7 +512,7 @@ export class DatabaseRepository {
    * Rotates admin credentials safely.
    */
   public rotateAdminCredentials(username: string, newPasswordPlain: string): boolean {
-    const isProduction = process.env.NODE_ENV === 'production';
+    const isProduction = getRequestEnv('NODE_ENV') === 'production';
     const passVal = validateAdminPassword(newPasswordPlain, isProduction);
     if (!passVal.valid) {
       throw new Error(`Failed to rotate admin credentials: ${passVal.error}`);

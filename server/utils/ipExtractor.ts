@@ -197,10 +197,10 @@ export function isTrustedProxy(ip: string): boolean {
   // Loopback is never trusted implicitly. A local reverse proxy may be trusted only when
   // the operator explicitly configures it, preventing forged X-Forwarded-For on localhost.
   if (validation.isLoopback) {
-    return process.env.TRUST_LOCAL_PROXY === 'true';
+    return getRequestEnv('TRUST_LOCAL_PROXY') === 'true';
   }
 
-  const envTrusted = process.env.TRUSTED_PROXIES || process.env.TRUSTED_PROXY_CIDRS;
+  const envTrusted = getRequestEnv('TRUSTED_PROXIES') || getRequestEnv('TRUSTED_PROXY_CIDRS');
   if (!envTrusted) return false;
 
   return envTrusted
@@ -265,7 +265,7 @@ export function extractClientIp(req: Request): ExtractedClientIpInfo {
   const peerValidation = validateIp(directPeer);
 
   // Trust proxy if the direct connection is from a trusted proxy or TRUST_PROXY is enabled
-  const trustProxyOverride = process.env.TRUST_PROXY === 'true' && process.env.NODE_ENV !== 'production';
+  const trustProxyOverride = getRequestEnv('TRUST_PROXY') === 'true' && getRequestEnv('NODE_ENV') !== 'production';
   const isPeerTrusted = isTrustedProxy(directPeer) || trustProxyOverride;
   const isInfrastructureProxy = isPeerTrusted && hasProxyHeaders;
 

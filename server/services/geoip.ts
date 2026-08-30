@@ -13,8 +13,8 @@ interface CacheEntry {
 }
 
 export function createDefaultGeoIPProvider(): IGeoIPProvider {
-  const providerType = (process.env.GEOIP_PROVIDER || 'hackmyip').toLowerCase().trim();
-  if (providerType === 'mock' && !['test', 'development'].includes((process.env.NODE_ENV || '').toLowerCase())) {
+  const providerType = (getRequestEnv('GEOIP_PROVIDER') || 'hackmyip').toLowerCase().trim();
+  if (providerType === 'mock' && !['test', 'development'].includes((getRequestEnv('NODE_ENV') || '').toLowerCase())) {
     throw new Error('Mock GeoIP provider is disabled outside test/development environments.');
   }
 

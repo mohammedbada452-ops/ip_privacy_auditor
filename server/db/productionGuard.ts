@@ -1,4 +1,5 @@
 import type { DatabaseRepository } from './repository';
+import { getRequestEnv } from '../config/requestEnv';
 import type { PostgresRepository } from './postgresRepository';
 
 /**
@@ -10,7 +11,7 @@ export class ProductionGuard {
    * Returns true if running in production mode.
    */
   public static isProduction(): boolean {
-    return process.env.NODE_ENV === 'production' || process.env.APP_ENV === 'production';
+    return getRequestEnv('NODE_ENV') === 'production' || getRequestEnv('APP_ENV') === 'production';
   }
 
   /**

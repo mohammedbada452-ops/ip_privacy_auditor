@@ -24,6 +24,14 @@ type RuntimeEnv = {
   ADMIN_SECRET_KEY?: string;
   IPINFO_TOKEN?: string;
   ABUSEIPDB_API_KEY?: string;
+  GEOIP_PROVIDER?: string;
+  GEOIP_API_KEY?: string;
+  TRUST_LOCAL_PROXY?: string;
+  TRUSTED_PROXIES?: string;
+  TRUSTED_PROXY_CIDRS?: string;
+  TRUST_PROXY?: string;
+  DISABLE_RATE_LIMIT?: string;
+  APP_ENV?: string;
   [key: string]: unknown;
 };
 
@@ -67,6 +75,14 @@ function buildRequestEnvValues(env: RuntimeEnv): RequestEnvValues {
   if (typeof env.ADMIN_SECRET_KEY === "string") values.ADMIN_SECRET_KEY = env.ADMIN_SECRET_KEY;
   if (typeof env.IPINFO_TOKEN === "string") values.IPINFO_TOKEN = env.IPINFO_TOKEN;
   if (typeof env.ABUSEIPDB_API_KEY === "string") values.ABUSEIPDB_API_KEY = env.ABUSEIPDB_API_KEY;
+  if (typeof env.GEOIP_PROVIDER === "string") values.GEOIP_PROVIDER = env.GEOIP_PROVIDER;
+  if (typeof env.GEOIP_API_KEY === "string") values.GEOIP_API_KEY = env.GEOIP_API_KEY;
+  if (typeof env.TRUST_LOCAL_PROXY === "string") values.TRUST_LOCAL_PROXY = env.TRUST_LOCAL_PROXY;
+  if (typeof env.TRUSTED_PROXIES === "string") values.TRUSTED_PROXIES = env.TRUSTED_PROXIES;
+  if (typeof env.TRUSTED_PROXY_CIDRS === "string") values.TRUSTED_PROXY_CIDRS = env.TRUSTED_PROXY_CIDRS;
+  if (typeof env.TRUST_PROXY === "string") values.TRUST_PROXY = env.TRUST_PROXY;
+  if (typeof env.DISABLE_RATE_LIMIT === "string") values.DISABLE_RATE_LIMIT = env.DISABLE_RATE_LIMIT;
+  if (typeof env.APP_ENV === "string") values.APP_ENV = env.APP_ENV;
   return values;
 }
 
@@ -581,7 +597,7 @@ async function handleApi(request: Request, env: RuntimeEnv, ctx: ExecutionContex
     }
   }
 
-  return null as unknown as Response;
+  return publicError(req, "NOT_FOUND", "API endpoint not found.", 404);
 }
 
 function seoResponse(request: Request): Response | null {
@@ -640,7 +656,12 @@ async function handleRequest(request: Request, env: RuntimeEnv, ctx: ExecutionCo
 async function handleRequestSafely(request: Request, env: RuntimeEnv, ctx: ExecutionContext): Promise<Response> {
   const requestEnvValues = buildRequestEnvValues(env);
   return runWithRequestEnv(requestEnvValues, async () => {
-    const { client, repo } = await createRequestDatabase(env);
+    const pathname = new URL(request.url).pathname;
+    const needsDatabase = pathname.startsWith("/api/");
+    const { client, repo } = needsDatabase
+      ? await createRequestDatabase(env)
+      : { client: null, repo: null };
+
     try {
       return await dbRepository.runWithRequestScopedRepository(repo, () => handleRequest(request, env, ctx));
     } catch (error) {
@@ -657,9 +678,6 @@ async function handleRequestSafely(request: Request, env: RuntimeEnv, ctx: Execu
         ),
       );
     } finally {
-      // Requirement: close the request-scoped connection after the request completes, regardless
-      // of success, handled error, or uncaught exception. Nothing about this connection survives
-      // past this point - the next request (even on the same warm isolate) creates its own.
       if (client) {
         await client.end().catch((closeError) => {
           console.error("[DATABASE] Error closing per-request connection:", closeError instanceof Error ? closeError.message : String(closeError));

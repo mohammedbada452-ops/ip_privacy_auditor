@@ -1,6 +1,7 @@
 import type { GeoIPResult, IGeoIPProvider } from './IGeoIPProvider';
 import { FallbackGeoIPProvider } from './FallbackGeoIPProvider';
 import { validateIp } from '../../utils/ipExtractor';
+import { getRequestEnv } from '../../config/requestEnv';
 
 export interface IpApiConfig {
   baseUrl?: string;
@@ -39,7 +40,7 @@ export class IpApiProvider implements IGeoIPProvider {
 
   constructor(config: IpApiConfig = {}) {
     this.baseUrl = config.baseUrl || 'https://ip-api.com/json/';
-    this.apiKey = config.apiKey || process.env.GEOIP_API_KEY;
+    this.apiKey = config.apiKey || getRequestEnv('GEOIP_API_KEY');
     this.timeoutMs = config.timeoutMs || 5000;
   }
 

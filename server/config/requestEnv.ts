@@ -18,6 +18,14 @@ export interface RequestEnvValues {
   ADMIN_SECRET_KEY?: string;
   IPINFO_TOKEN?: string;
   ABUSEIPDB_API_KEY?: string;
+  GEOIP_PROVIDER?: string;
+  GEOIP_API_KEY?: string;
+  TRUST_LOCAL_PROXY?: string;
+  TRUSTED_PROXIES?: string;
+  TRUSTED_PROXY_CIDRS?: string;
+  TRUST_PROXY?: string;
+  DISABLE_RATE_LIMIT?: string;
+  APP_ENV?: string;
 }
 
 const requestEnvStorage = new AsyncLocalStorage<RequestEnvValues>();
