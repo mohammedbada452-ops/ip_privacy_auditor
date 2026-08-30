@@ -68,7 +68,7 @@ export const PRIVACY_GLOSSARY: Record<string, GlossaryTerm> = {
   Infrastructure: {
     term: 'Infrastructure',
     category: 'PROVENANCE',
-    definition: 'Signals introduced by trusted hosting or reverse proxies (e.g. Cloud Run, CDN edge).',
+    definition: 'Signals introduced by trusted hosting, reverse proxies, or CDN edge infrastructure.',
     technicalRule: 'Must NOT penalize the user score or be flagged as user vulnerability.',
   },
   Educational: {

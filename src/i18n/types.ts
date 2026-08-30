@@ -395,6 +395,22 @@ export interface Translations {
     userAgent: string;
     activeOne: string;
     notSet: string;
+    networkGeolocation: string;
+    geoSourceConflict: string;
+    sourceAgreement: string;
+    providerReported: string;
+    geoSourceConflictNote: string;
+    backendDataFetched: string;
+    extendedNetworkIntelligence: string;
+    extendedNetworkIntelligenceSubtitle: string;
+    intelligenceConfidence: string;
+    rdapNetwork: string;
+    reverseDns: string;
+    dnssec: string;
+    sources: string;
+    providerAgreement: string;
+    providerObservations: string;
+    noPtrRecord: string;
   };
 
   browser: {
@@ -890,6 +906,9 @@ export interface Translations {
     authError: string;
     sessionActive: string;
     sessionExpires: string;
+    retryInSeconds: string;
+    hideSecretKeyInput: string;
+    useAdminMasterSecretKey: string;
     tabs: {
       overview: string;
       scans: string;

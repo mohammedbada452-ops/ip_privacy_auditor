@@ -23,7 +23,7 @@ async function runHeadersIntelligenceTests() {
   assert(knownKeys.length >= 30, `1. Header registry contains comprehensive metadata definitions (${knownKeys.length} >= 30)`);
   assert(HEADER_DEFINITIONS['sec-gpc']?.canonicalName === 'Sec-GPC', '2. Sec-GPC canonical name is accurate');
   assert(HEADER_DEFINITIONS['user-agent']?.category === 'IDENTITY_CLIENT_HINTS', '3. User-Agent is categorized as IDENTITY_CLIENT_HINTS');
-  assert(RECOMMENDED_MISSING_HEADERS.length >= 3, '4. Recommended missing headers registry has at least 3 essential signals');
+  assert(RECOMMENDED_MISSING_HEADERS.some((h) => h.canonicalName === 'Sec-GPC'), '4. Recommended missing headers registry contains Sec-GPC');
 
   // --- 2. Normalization & Case Insensitivity Tests ---
   console.log('\n--- 2. Normalization & Case Insensitivity Tests ---');
@@ -174,8 +174,8 @@ async function runHeadersIntelligenceTests() {
   const bareAnalysis = HeaderClassifier.analyze(bareEntries);
 
   assert(bareAnalysis.missingHeaders.some((m) => m.canonicalName === 'Sec-GPC'), '24. Detects missing Sec-GPC header');
-  assert(bareAnalysis.missingHeaders.some((m) => m.canonicalName === 'DNT'), '25. Detects missing DNT header');
-  assert(bareAnalysis.missingHeaders.some((m) => m.canonicalName === 'Upgrade-Insecure-Requests'), '26. Detects missing Upgrade-Insecure-Requests header');
+  assert(!bareAnalysis.missingHeaders.some((m) => m.canonicalName === 'DNT'), '25. Deprecated DNT is not treated as a missing remediation header');
+  assert(!bareAnalysis.missingHeaders.some((m) => m.canonicalName === 'Upgrade-Insecure-Requests'), '26. Upgrade-Insecure-Requests is not treated as a privacy-control remediation header');
   assert(bareAnalysis.missingHeaders.every((m) => m.recommendation.length > 0), '27. All missing headers provide actionable recommendations');
 
   // --- 7. Export Formatting Tests ---

@@ -16,6 +16,7 @@ export function sanitizeFingerprintPayload(input: BrowserFingerprintInput): Brow
     sanitized.webgl = {
       vendor: typeof input.webgl.vendor === 'string' ? input.webgl.vendor.substring(0, 100) : undefined,
       renderer: typeof input.webgl.renderer === 'string' ? input.webgl.renderer.substring(0, 150) : undefined,
+      isUnmasked: typeof input.webgl.isUnmasked === 'boolean' ? input.webgl.isUnmasked : false,
     };
   }
 

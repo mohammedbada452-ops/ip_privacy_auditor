@@ -2,13 +2,14 @@ import React from 'react';
 import { MapPin, Clock } from 'lucide-react';
 import { Card, CardHeader, CardBody, DataRow, MonoValue } from '../../../components/ui';
 import { useLanguage } from '../../../i18n/LanguageContext';
-import type { IpDetailsResponse } from '@packages/api-contract';
+import type { IpDetailsResponse, IpNetworkIntelligenceResponse } from '@packages/api-contract';
 
 export interface GeoNetworkCardProps {
   details: IpDetailsResponse;
+  networkIntelligence?: IpNetworkIntelligenceResponse;
 }
 
-export const GeoNetworkCard: React.FC<GeoNetworkCardProps> = ({ details }) => {
+export const GeoNetworkCard: React.FC<GeoNetworkCardProps> = ({ details, networkIntelligence }) => {
   const { t } = useLanguage();
   const { geo } = details;
 
@@ -69,6 +70,30 @@ export const GeoNetworkCard: React.FC<GeoNetworkCardProps> = ({ details }) => {
             }
           />
         </div>
+
+        {networkIntelligence?.providerObservations && (() => {
+          const countries = Array.from(new Set(networkIntelligence.providerObservations.map((o) => o.countryCode).filter((c): c is string => Boolean(c))));
+          const hasConflict = countries.length > 1;
+          return (
+            <div className="mt-4 rounded-lg border border-slate-800/80 bg-slate-950/30 p-3">
+              <div className="flex items-center justify-between gap-3 text-[10px] uppercase tracking-wider">
+                <span className="text-slate-500">{hasConflict ? t.ip.geoSourceConflict : t.ip.sourceAgreement}</span>
+                <span className={hasConflict ? 'text-amber-400' : 'text-emerald-400'}>{networkIntelligence.consensus?.agreement || 'NONE'}</span>
+              </div>
+              <div className="mt-2 space-y-1.5">
+                {networkIntelligence.providerObservations.map((observation) => (
+                  <div key={`${observation.provider}-${observation.countryCode || 'none'}`} className="flex items-center justify-between gap-3 text-[11px]">
+                    <span className="text-slate-400">{observation.provider}</span>
+                    <span className="font-mono text-slate-300">{observation.countryCode || '—'}{observation.country ? ` · ${observation.country}` : ''}</span>
+                  </div>
+                ))}
+              </div>
+              {hasConflict && (
+                <p className="mt-2 text-[10px] leading-4 text-slate-500">{t.ip.networkGeolocation}: {t.ip.geoSourceConflict}. {t.ip.geoSourceConflictNote}</p>
+              )}
+            </div>
+          );
+        })()}
       </CardBody>
     </Card>
   );

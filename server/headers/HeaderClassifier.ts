@@ -404,12 +404,12 @@ export class HeaderClassifier {
       if (isInfrastructureProxy) {
         scoreFactors.push({
           id: 'HDR_INFRA_PROXY_TRUSTED',
-          factor: 'Infrastructure Reverse Proxy (Cloud Run Ingress)',
+          factor: 'Trusted Reverse Proxy Infrastructure',
           points: 0,
-          description: 'Trusted reverse proxy and edge load balancer architecture detected. No privacy deduction applied.',
-          impact: 'Protected (+0 pts)',
+          description: 'Trusted reverse-proxy or edge infrastructure metadata detected. No privacy deduction applied.',
+          impact: 'Informational (+0 pts)',
           severity: 'info',
-          status: 'SAFE',
+          status: 'INFO',
         });
       } else {
         const headerNames = [

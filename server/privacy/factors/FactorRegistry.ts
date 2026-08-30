@@ -48,7 +48,7 @@ export class FactorRegistry {
           reason: isUntrustedProxy
             ? 'Untrusted public or transparent proxy server detected relaying unencrypted traffic.'
             : isInfra
-              ? 'Reverse proxy infrastructure detected (Protected Cloud Ingress Architecture).'
+              ? 'Trusted reverse-proxy infrastructure detected in the request path.'
               : 'No transparent proxy server detected on origin connection.',
           recommendation: isUntrustedProxy ? 'Disconnect from untrusted proxy or route traffic through an encrypted VPN tunnel.' : undefined,
           detected: isUntrustedProxy,
@@ -78,7 +78,7 @@ export class FactorRegistry {
           currentValue: available ? (isHosting ? 'Datacenter / Cloud Provider' : 'Standard / Non-Datacenter ISP') : null,
           expectedValue: false,
           reason: isHosting
-            ? 'IP address originates from a public cloud or datacenter hosting provider (e.g. Cloud Run, VPS, CDN).'
+            ? 'IP address originates from a public cloud or datacenter hosting provider.'
             : 'IP address belongs to a standard residential, commercial, or enterprise ISP.',
           recommendation: isHosting ? 'Optional VPN/Tor recommended if accessing residential-only geo services.' : undefined,
           detected: isHosting,

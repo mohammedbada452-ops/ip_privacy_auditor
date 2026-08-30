@@ -49,7 +49,7 @@ export const HeaderProxyAnalysisCard: React.FC<HeaderProxyAnalysisCardProps> = (
                   {t.headers.proxyInfraDetected}
                 </h4>
                 <Badge variant="info" size="sm">
-                  Google Cloud Run Ingress
+                  Trusted Reverse Proxy Infrastructure
                 </Badge>
               </div>
               <p className="text-xs text-slate-300 leading-relaxed">

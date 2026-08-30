@@ -88,7 +88,7 @@ export const IpIntelligenceView: React.FC = () => {
 
         {/* Intelligence Grid */}
         <Grid cols={1} colsMd={2} gap={6}>
-          <GeoNetworkCard details={data.details} />
+          <GeoNetworkCard details={data.details} networkIntelligence={data.networkIntelligence} />
           <AsnIspCard details={data.details} />
           <SecurityFlagsCard details={data.details} />
           <HeadersPreviewCard check={data.check} />
@@ -104,7 +104,7 @@ export const IpIntelligenceView: React.FC = () => {
           </span>
           <span className="text-emerald-500/90 flex items-center gap-1.5 font-sans">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            {language === 'ar' ? 'تم جلب البيانات من الخادم' : 'Backend data fetched'}
+            {t.ip.backendDataFetched}
           </span>
         </div>
       </div>

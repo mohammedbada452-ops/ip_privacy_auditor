@@ -6,7 +6,7 @@
 import assert from 'node:assert';
 import { PrivacyEngine } from '../privacy/PrivacyEngine';
 import { HeaderClassifier } from '../headers/HeaderClassifier';
-import { RECOMMENDED_MISSING_HEADERS } from '../headers/HeaderRegistry';
+import { HEADER_DEFINITIONS } from '../headers/HeaderRegistry';
 import { FallbackGeoIPProvider } from '../providers/geoip/FallbackGeoIPProvider';
 import { PRIVACY_GLOSSARY } from '../../src/features/common/glossary';
 import { en } from '../../src/i18n/locales/en';
@@ -221,7 +221,7 @@ console.log('11. Testing Recovery Math...');
 // 12. Header Wording
 console.log('12. Testing Header Wording...');
 {
-  const uir = RECOMMENDED_MISSING_HEADERS.find((h) => h.canonicalName === 'Upgrade-Insecure-Requests');
+  const uir = HEADER_DEFINITIONS['upgrade-insecure-requests'];
   if (!uir) throw new Error('Upgrade-Insecure-Requests definition missing');
   assert(!uir.benefit?.toLowerCase().includes('guarantees end-to-end'));
   console.log('  [PASS] Header descriptions strictly avoid unproven guarantee claims');

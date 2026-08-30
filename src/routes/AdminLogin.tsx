@@ -86,7 +86,7 @@ export const AdminLogin: React.FC = () => {
                 {error}
                 {retryAfterSeconds && (
                   <span className="block mt-1 text-rose-400 font-mono">
-                    Retry allowed in {retryAfterSeconds}s
+                    {t.admin.retryInSeconds.replace('{seconds}', String(retryAfterSeconds))}
                   </span>
                 )}
               </div>
@@ -140,7 +140,7 @@ export const AdminLogin: React.FC = () => {
               className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1.5 transition-colors focus:outline-none"
             >
               <Key className="w-3.5 h-3.5" />
-              <span>{showSecretKey ? 'Hide Secret Key Input' : 'Use Admin Master Secret Key'}</span>
+              <span>{showSecretKey ? t.admin.hideSecretKeyInput : t.admin.useAdminMasterSecretKey}</span>
             </button>
 
             {showSecretKey && (
