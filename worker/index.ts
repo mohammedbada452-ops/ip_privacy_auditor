@@ -40,8 +40,94 @@ type ServiceRequest = {
   get(name: string): string | undefined;
 };
 
-let dbInitialized = false;
-let dbInitPromise: Promise<void> | null = null;
+/**
+ * Bridges Cloudflare bindings to the legacy service layer once per Worker isolate.
+ *
+ * These are immutable deployment configuration values, not request-specific state. We only
+ * perform the bridge once so concurrent requests do not repeatedly mutate `process.env`.
+ * Database connections are deliberately NOT stored here; they remain request-scoped.
+ */
+let workerEnvironmentConfigured = false;
+
+function applyEnvToProcessEnvOnce(env: RuntimeEnv): void {
+  if (workerEnvironmentConfigured) return;
+
+  process.env.NODE_ENV = typeof env.NODE_ENV === "string" && env.NODE_ENV.trim()
+    ? env.NODE_ENV
+    : (process.env.NODE_ENV || "production");
+  process.env.PRIVASEC_CLOUDFLARE_EDGE = "true";
+
+  const copyKeys = [
+    "SERVER_SECRET_SALT",
+    "ADMIN_USERNAME",
+    "ADMIN_PASSWORD",
+    "ADMIN_SECRET_KEY",
+    "IPINFO_TOKEN",
+    "ABUSEIPDB_API_KEY",
+    "CORS_ALLOWED_ORIGINS",
+    "GEOIP_PROVIDER",
+    "GEOIP_API_KEY",
+    "TRUSTED_PROXY_CIDRS",
+    "TRUSTED_PROXIES",
+    "TRUST_PROXY",
+    "TRUST_LOCAL_PROXY",
+    "DISABLE_RATE_LIMIT",
+    "APP_ENV",
+  ] as const;
+
+  for (const key of copyKeys) {
+    const value = env[key];
+    if (typeof value === "string") process.env[key] = value;
+  }
+
+  workerEnvironmentConfigured = true;
+}
+
+let databaseSchemaReady = false;
+
+/**
+ * Creates a brand-new, single-use PostgreSQL connection for exactly one Worker request, per
+ * Cloudflare's documented Hyperdrive + node-postgres pattern: "Create a new client instance
+ * for each request. Hyperdrive maintains the underlying database connection pool, so creating
+ * a new client is fast."
+ * (https://developers.cloudflare.com/hyperdrive/examples/connect-to-postgres/postgres-drivers-and-libraries/node-postgres/)
+ *
+ * This function never reads or writes any module-level variable: nothing it creates outlives
+ * the request that calls it. The caller is responsible for closing `client` in a `finally`
+ * block once the request has finished (see `handleRequestSafely` below), and for scoping
+ * `repo` to this request only via `dbRepository.runWithRequestScopedRepository`.
+ */
+async function createRequestDatabase(env: RuntimeEnv): Promise<{ client: import("pg").Client | null; repo: import("../server/db/postgresRepository").PostgresRepository | null }> {
+  const connectionString = env.HYPERDRIVE?.connectionString?.trim() || (typeof env.DATABASE_URL === "string" ? env.DATABASE_URL.trim() : "");
+  if (!connectionString) return { client: null, repo: null };
+
+  const pg = await import("pg");
+  const client = new pg.default.Client({ connectionString });
+
+  try {
+    await client.connect();
+    const health = await client.query("SELECT 1 AS healthy");
+    if (health.rows?.[0]?.healthy !== 1) throw new Error("PostgreSQL health check failed");
+
+    const [{ PostgresRepository }, { runMigrations }] = await Promise.all([
+      import("../server/db/postgresRepository"),
+      import("../server/db/migrationRunner"),
+    ]);
+    // Schema migration state is a tiny immutable-ish readiness flag, not an I/O object.
+    // The migration runner itself acquires a PostgreSQL transaction-level advisory lock so
+    // concurrent cold isolates/requests cannot apply the same migration simultaneously.
+    if (!databaseSchemaReady) {
+      await runMigrations(client, { acquireAdvisoryLock: true });
+      databaseSchemaReady = true;
+    }
+
+    return { client, repo: new PostgresRepository(client) };
+  } catch (error) {
+    console.error("[DATABASE] Per-request connection failed; this request continues without persistence:", error instanceof Error ? error.message : String(error));
+    await client.end().catch(() => {});
+    return { client: null, repo: null };
+  }
+}
 
 const INDEXABLE_PATHS = [
   "/",
@@ -177,62 +263,7 @@ function publicError(req: ServiceRequest, code: string, message: string, status:
   return jsonResponse({ success: false, error: { code, message }, meta: apiMeta(req) }, status);
 }
 
-async function ensureDatabase(env: RuntimeEnv): Promise<void> {
-  process.env.NODE_ENV = env.NODE_ENV || process.env.NODE_ENV || "production";
-  process.env.PRIVASEC_CLOUDFLARE_EDGE = "true";
-  process.env.DATABASE_URL = typeof env.DATABASE_URL === "string" ? env.DATABASE_URL : process.env.DATABASE_URL;
-  if (typeof env.SERVER_SECRET_SALT === "string") process.env.SERVER_SECRET_SALT = env.SERVER_SECRET_SALT;
-  if (typeof env.ADMIN_USERNAME === "string") process.env.ADMIN_USERNAME = env.ADMIN_USERNAME;
-  if (typeof env.ADMIN_PASSWORD === "string") process.env.ADMIN_PASSWORD = env.ADMIN_PASSWORD;
-  if (typeof env.ADMIN_SECRET_KEY === "string") process.env.ADMIN_SECRET_KEY = env.ADMIN_SECRET_KEY;
-  if (typeof env.IPINFO_TOKEN === "string") process.env.IPINFO_TOKEN = env.IPINFO_TOKEN;
-  if (typeof env.ABUSEIPDB_API_KEY === "string") process.env.ABUSEIPDB_API_KEY = env.ABUSEIPDB_API_KEY;
-  if (typeof env.CORS_ALLOWED_ORIGINS === "string") process.env.CORS_ALLOWED_ORIGINS = env.CORS_ALLOWED_ORIGINS;
 
-  if (dbInitialized) return;
-  if (dbInitPromise) return dbInitPromise;
-
-  dbInitPromise = (async () => {
-    try {
-      const hyperdrive = env.HYPERDRIVE;
-      const connectionString = hyperdrive?.connectionString?.trim() || (typeof env.DATABASE_URL === "string" ? env.DATABASE_URL.trim() : "");
-      if (!connectionString) {
-        dbRepository.setPostgresRepository(null);
-        dbInitialized = true;
-        return;
-      }
-
-      process.env.DATABASE_URL = connectionString;
-      const [{ PostgresRepository }, { runMigrations }] = await Promise.all([
-        import("../server/db/postgresRepository"),
-        import("../server/db/migrationRunner"),
-      ]);
-      const pg = await import("pg");
-      const pool = new pg.default.Pool({
-        connectionString,
-        max: 10,
-        idleTimeoutMillis: 30_000,
-        connectionTimeoutMillis: 5_000,
-      });
-      const health = await pool.query("SELECT 1 AS healthy");
-      if (health.rows?.[0]?.healthy !== 1) throw new Error("PostgreSQL health check failed");
-      await runMigrations(pool);
-      dbRepository.setPostgresRepository(new PostgresRepository(pool));
-      dbInitialized = true;
-      console.log("[DATABASE] PostgreSQL/Hyperdrive initialized.");
-    } catch (error) {
-      dbRepository.setPostgresRepository(null);
-      dbInitialized = true;
-      console.error("[DATABASE] Initialization failed; public APIs continue without persistence:", error instanceof Error ? error.message : String(error));
-    }
-  })();
-
-  try {
-    await dbInitPromise;
-  } finally {
-    dbInitPromise = null;
-  }
-}
 
 async function rateLimit(req: ServiceRequest, bucket: string, windowMs: number, max: number): Promise<Response | null> {
   try {
@@ -245,7 +276,13 @@ async function rateLimit(req: ServiceRequest, bucket: string, windowMs: number, 
       );
     }
     return null;
-  } catch {
+  } catch (error) {
+    // Previously this catch block was empty (`catch {}`), silently discarding the real error.
+    // That made RATE_LIMITER_UNAVAILABLE unactionable in `wrangler tail`. Now that every request
+    // gets its own freshly-connected database client (see createRequestDatabase), a failure here
+    // is a genuine query/connectivity problem for this request, not a stale shared connection -
+    // there is nothing left to reset, so we just log it and degrade this request's response.
+    console.error("[RATE_LIMITER] consumeApiRateLimitAsync failed:", error instanceof Error ? error.message : String(error));
     return process.env.NODE_ENV === "production"
       ? publicError(req, "RATE_LIMITER_UNAVAILABLE", "Traffic protection is temporarily unavailable. Please retry shortly.", 503)
       : null;
@@ -538,7 +575,7 @@ async function handleApi(request: Request, env: RuntimeEnv, ctx: ExecutionContex
     }
   }
 
-  return null as unknown as Response;
+  return publicError(req, "NOT_FOUND", "API endpoint not found.", 404);
 }
 
 function seoResponse(request: Request): Response | null {
@@ -557,8 +594,6 @@ async function handleRequest(request: Request, env: RuntimeEnv, ctx: ExecutionCo
   const seo = seoResponse(request);
   if (seo) return applySecurityHeaders(seo);
 
-  await ensureDatabase(env);
-
   if (new URL(request.url).pathname.startsWith("/api/")) {
     const response = await handleApi(request, env, ctx);
     const finalResponse = applyCors(request, applySecurityHeaders(response), env);
@@ -572,4 +607,56 @@ async function handleRequest(request: Request, env: RuntimeEnv, ctx: ExecutionCo
   return new Response("Not found", { status: 404 });
 }
 
-export default { fetch: handleRequest };
+/**
+ * Root cause of the reported Cloudflare "Error 1101: Worker threw an exception":
+ * `handleRequest` had no top-level error boundary, and several handlers inside `handleApi`
+ * (population insights, every /api/admin/* analytics endpoint) call into `dbRepository`
+ * without a try/catch. Any exception thrown from those calls - including a database query
+ * against a column that migrations never created - propagated out of the fetch handler
+ * entirely, which is what Cloudflare surfaces to the client as Error 1101 instead of a normal
+ * HTTP error response.
+ *
+ * This wrapper also owns the full per-request database connection lifecycle:
+ *
+ *   BEFORE: one `pg.Pool` was created on cold start and reused across requests in a warm isolate,
+ *   which violated Cloudflare's Hyperdrive request-scoped I/O guidance and caused intermittent
+ *   cross-request failures behind RATE_LIMITER_UNAVAILABLE and Error 1101.
+ *
+ *   AFTER: `createRequestDatabase` opens exactly one `pg.Client` for this call, scoped to this
+ *   request only via `dbRepository.runWithRequestScopedRepository` (AsyncLocalStorage - see
+ *   server/db/repository.ts), used for the request's complete lifecycle including any
+ *   transactions, and closed in `finally` below no matter how the request ends. No database
+ *   client or pool is ever stored in module/global scope, so there is nothing to share - or
+ *   race - between concurrent requests.
+ */
+async function handleRequestSafely(request: Request, env: RuntimeEnv, ctx: ExecutionContext): Promise<Response> {
+  applyEnvToProcessEnvOnce(env);
+  const { client, repo } = await createRequestDatabase(env);
+  try {
+    return await dbRepository.runWithRequestScopedRepository(repo, () => handleRequest(request, env, ctx));
+  } catch (error) {
+    console.error("[WORKER] Uncaught exception while handling request:", error instanceof Error ? (error.stack || error.message) : String(error));
+    const requestId = `req_${crypto.randomUUID().replaceAll("-", "")}`;
+    return applySecurityHeaders(
+      jsonResponse(
+        {
+          success: false,
+          error: { code: "INTERNAL_ERROR", message: "An unexpected error occurred. Please retry shortly." },
+          meta: { timestamp: new Date().toISOString(), requestId, version: "1.0.0" },
+        },
+        500,
+      ),
+    );
+  } finally {
+    // Requirement: close the request-scoped connection after the request completes, regardless
+    // of success, handled error, or uncaught exception. Nothing about this connection survives
+    // past this point - the next request (even on the same warm isolate) creates its own.
+    if (client) {
+      await client.end().catch((closeError) => {
+        console.error("[DATABASE] Error closing per-request connection:", closeError instanceof Error ? closeError.message : String(closeError));
+      });
+    }
+  }
+}
+
+export default { fetch: handleRequestSafely };

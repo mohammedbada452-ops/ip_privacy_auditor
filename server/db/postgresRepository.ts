@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import type pg from 'pg';
-import { getPool, withTransaction, hashSessionToken } from './postgres';
+import pgRuntime from 'pg';
+import { getPool, withTransaction, withClientTransaction, hashSessionToken } from './postgres';
 import type {
   AdminUser,
   ScanSessionRecord,
@@ -15,22 +16,51 @@ import type {
 } from './repository';
 import { validateAdminUsername, validateAdminPassword } from '../config';
 
+// Runtime (non-type-only) binding used solely for `instanceof` checks below, since the
+// `pg` import above is type-only and cannot be used as a value.
+const { Pool: PgPool } = pgRuntime;
+
+/**
+ * This repository is constructed with either:
+ *  - a `pg.Pool` (the long-running Node/Express dev server in server.ts, where a persistent
+ *    pool across many requests within one process is correct and always was), or
+ *  - a single already-connected `pg.Client` scoped to exactly one Cloudflare Worker request
+ *    (see `worker/index.ts`), per Cloudflare Hyperdrive's documented guidance that Worker
+ *    requests must not share I/O objects (sockets, pool connections) across requests.
+ *
+ * Every query method below calls `this.connection.query(...)`, which both `pg.Pool` and
+ * `pg.Client` implement identically, so no other method needed to change. Only multi-statement
+ * transactions need to know which kind of connection they're running against - `runTransaction`
+ * below routes to the pool-checkout variant or the single-client variant accordingly.
+ */
 export class PostgresRepository {
   public async checkHealth(): Promise<boolean> {
     try {
-      const result = await this.pool.query('SELECT 1 AS ok');
+      const result = await this.connection.query('SELECT 1 AS ok');
       return result.rows[0]?.ok === 1;
     } catch {
       return false;
     }
   }
-  private pool: pg.Pool;
+  private connection: pg.Pool | pg.Client;
   private serverSalt: string;
   private loginAttempts: Map<string, { count: number; firstAttemptAt: number; blockedUntil?: number }> = new Map();
 
-  constructor(pool: pg.Pool) {
-    this.pool = pool;
+  constructor(connection: pg.Pool | pg.Client) {
+    this.connection = connection;
     this.serverSalt = process.env.SERVER_SECRET_SALT || (process.env.NODE_ENV === 'production' ? '' : crypto.randomBytes(32).toString('hex'));
+  }
+
+  /**
+   * Routes a transactional callback to the correct helper depending on whether this repository
+   * instance holds a `pg.Pool` (checks out + releases a client) or a single request-scoped
+   * `pg.Client` (runs directly on that same connection, per Cloudflare's request-isolation rules).
+   */
+  private runTransaction<T>(callback: (client: pg.PoolClient | pg.Client) => Promise<T>): Promise<T> {
+    if (this.connection instanceof PgPool) {
+      return withTransaction(callback, this.connection);
+    }
+    return withClientTransaction(callback as (client: pg.Client) => Promise<T>, this.connection);
   }
 
   /**
@@ -92,7 +122,7 @@ export class PostgresRepository {
       WHERE username = $1 AND status = 'active'
       LIMIT 1
     `;
-    const res = await this.pool.query(query, [username]);
+    const res = await this.connection.query(query, [username]);
     if (res.rows.length === 0) return null;
     const row = res.rows[0];
     return {
@@ -109,7 +139,7 @@ export class PostgresRepository {
 
   public async getAllAdminUsernames(): Promise<string[]> {
     const query = 'SELECT username FROM admin_users ORDER BY username ASC';
-    const res = await this.pool.query(query);
+    const res = await this.connection.query(query);
     return res.rows.map((r) => r.username);
   }
 
@@ -131,7 +161,7 @@ export class PostgresRepository {
       throw new Error(`Failed to bootstrap admin: ${passVal.error}`);
     }
 
-    return await withTransaction(async (client) => {
+    return await this.runTransaction(async (client) => {
       const checkRes = await client.query(
         'SELECT id, username, password_hash, password_salt FROM admin_users WHERE username = $1 LIMIT 1',
         [username]
@@ -193,7 +223,7 @@ export class PostgresRepository {
       }
 
       return { success: true, username, isNewUser };
-    }, this.pool);
+    });
   }
 
   /**
@@ -206,7 +236,7 @@ export class PostgresRepository {
       throw new Error(`Failed to rotate admin credentials: ${passVal.error}`);
     }
 
-    return await withTransaction(async (client) => {
+    return await this.runTransaction(async (client) => {
       const userRes = await client.query('SELECT id FROM admin_users WHERE username = $1 LIMIT 1', [username]);
       if (userRes.rows.length === 0) {
         throw new Error(`Cannot rotate credentials: User '${username}' does not exist.`);
@@ -238,11 +268,11 @@ export class PostgresRepository {
       );
 
       return true;
-    }, this.pool);
+    });
   }
 
   public async updateAdminLastLogin(username: string): Promise<void> {
-    await this.pool.query('UPDATE admin_users SET last_login_at = NOW() WHERE username = $1', [username]);
+    await this.connection.query('UPDATE admin_users SET last_login_at = NOW() WHERE username = $1', [username]);
   }
 
   // --- SESSIONS ---
@@ -262,7 +292,7 @@ export class PostgresRepository {
       )
     `;
 
-    await this.pool.query(query, [
+    await this.connection.query(query, [
       id,
       tokenHash,
       userId,
@@ -307,7 +337,7 @@ export class PostgresRepository {
       LIMIT 1
     `;
 
-    const res = await this.pool.query(query, [tokenHash]);
+    const res = await this.connection.query(query, [tokenHash]);
     if (res.rows.length === 0) return null;
 
     const row = res.rows[0];
@@ -319,7 +349,7 @@ export class PostgresRepository {
     }
 
     // Update last_active_at
-    await this.pool.query(
+    await this.connection.query(
       'UPDATE admin_sessions SET last_active_at = NOW() WHERE token_hash = $1',
       [tokenHash]
     );
@@ -339,7 +369,7 @@ export class PostgresRepository {
   public async invalidateSession(rawToken: string): Promise<boolean> {
     if (!rawToken) return false;
     const tokenHash = hashSessionToken(rawToken);
-    const res = await this.pool.query(
+    const res = await this.connection.query(
       'UPDATE admin_sessions SET revoked_at = NOW() WHERE token_hash = $1 AND revoked_at IS NULL',
       [tokenHash]
     );
@@ -348,13 +378,13 @@ export class PostgresRepository {
 
   public async invalidateAllSessions(username?: string): Promise<number> {
     if (username) {
-      const res = await this.pool.query(
+      const res = await this.connection.query(
         'UPDATE admin_sessions SET revoked_at = NOW() WHERE username = $1 AND revoked_at IS NULL',
         [username]
       );
       return res.rowCount ?? 0;
     } else {
-      const res = await this.pool.query(
+      const res = await this.connection.query(
         'UPDATE admin_sessions SET revoked_at = NOW() WHERE revoked_at IS NULL'
       );
       return res.rowCount ?? 0;
@@ -365,7 +395,7 @@ export class PostgresRepository {
 
   public async consumeApiRateLimit(bucketKey: string, windowMs: number, maxRequests: number): Promise<{ isLimited: boolean; remaining: number; retryAfterSeconds: number }> {
     const now = Date.now();
-    return withTransaction(async (client) => {
+    return this.runTransaction(async (client) => {
       await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [bucketKey]);
       const rowRes = await client.query('SELECT window_started_at, request_count FROM api_rate_limits WHERE bucket_key = $1 FOR UPDATE', [bucketKey]);
       let windowStartedAt = now;
@@ -391,7 +421,7 @@ export class PostgresRepository {
         [bucketKey, windowStartedAt, requestCount, expiresAt]
       );
       return { isLimited: false, remaining: Math.max(0, maxRequests - requestCount), retryAfterSeconds: 0 };
-    }, this.pool);
+    });
   }
 
   // --- BRUTE FORCE RATE LIMITING ---
@@ -404,12 +434,12 @@ export class PostgresRepository {
     for (const key of bucketKeys) {
       const table = key.startsWith('acct_') ? 'auth_rate_limit_buckets' : 'auth_rate_limits';
       const column = key.startsWith('acct_') ? 'bucket_key' : 'ip_hash';
-      const res = await this.pool.query(`SELECT blocked_until, first_attempt_at FROM ${table} WHERE ${column} = $1 LIMIT 1`, [key]);
+      const res = await this.connection.query(`SELECT blocked_until, first_attempt_at FROM ${table} WHERE ${column} = $1 LIMIT 1`, [key]);
       const row = res.rows[0];
       if (!row) continue;
       const firstAttemptAt = new Date(row.first_attempt_at).getTime();
       if (now - firstAttemptAt > 15 * 60 * 1000) {
-        await this.pool.query(`DELETE FROM ${table} WHERE ${column} = $1`, [key]);
+        await this.connection.query(`DELETE FROM ${table} WHERE ${column} = $1`, [key]);
         continue;
       }
       if (row.blocked_until) {
@@ -426,7 +456,7 @@ export class PostgresRepository {
       ...(username ? [{ key: `acct_${this.anonymizeIp(username.toLowerCase())}`, table: 'auth_rate_limit_buckets', column: 'bucket_key' }] : []),
     ];
     for (const bucket of buckets) {
-      await withTransaction(async (client) => {
+      await this.runTransaction(async (client) => {
         await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [bucket.key]);
         const existing = await client.query(`SELECT failure_count, first_attempt_at FROM ${bucket.table} WHERE ${bucket.column} = $1 FOR UPDATE`, [bucket.key]);
         const now = Date.now();
@@ -442,13 +472,13 @@ export class PostgresRepository {
         const nextCount = Number(existing.rows[0].failure_count || 0) + 1;
         const blockedUntil = nextCount >= 5 ? new Date(now + 15 * 60 * 1000) : null;
         await client.query(`UPDATE ${bucket.table} SET failure_count = $2, blocked_until = $3 WHERE ${bucket.column} = $1`, [bucket.key, nextCount, blockedUntil]);
-      }, this.pool);
+      });
     }
   }
 
   public async resetFailedLoginsAsync(ip: string, username?: string): Promise<void> {
-    await this.pool.query('DELETE FROM auth_rate_limits WHERE ip_hash = $1', [this.anonymizeIp(ip)]);
-    if (username) await this.pool.query('DELETE FROM auth_rate_limit_buckets WHERE bucket_key = $1', [`acct_${this.anonymizeIp(username.toLowerCase())}`]);
+    await this.connection.query('DELETE FROM auth_rate_limits WHERE ip_hash = $1', [this.anonymizeIp(ip)]);
+    if (username) await this.connection.query('DELETE FROM auth_rate_limit_buckets WHERE bucket_key = $1', [`acct_${this.anonymizeIp(username.toLowerCase())}`]);
   }
 
   // Synchronous compatibility methods for legacy unit tests running without PostgreSQL.
@@ -483,7 +513,7 @@ export class PostgresRepository {
   public async getPopulationInsight(privacyScore: number, windowDays = 30): Promise<{ sampleSize: number; scorePercentile: number | null; averageScore: number | null; status: 'READY' | 'INSUFFICIENT_SAMPLE'; comparisonWindowDays: number }> {
     const boundedScore = Math.max(0, Math.min(100, Math.round(privacyScore)));
     const boundedDays = Math.min(90, Math.max(1, Math.round(windowDays)));
-    const res = await this.pool.query(`
+    const res = await this.connection.query(`
       SELECT COUNT(*)::INTEGER AS sample_size,
              COALESCE(ROUND(AVG(privacy_score)::numeric, 1), 0)::FLOAT AS avg_score,
              COUNT(*) FILTER (WHERE privacy_score <= $1)::INTEGER AS at_or_below
@@ -527,7 +557,7 @@ export class PostgresRepository {
         user_agent_category AS "userAgentCategory", verification_status AS "verificationStatus", verification_coverage_pct AS "verificationCoveragePct", overall_confidence AS "overallConfidence", created_at AS "createdAt"
     `;
 
-    const res = await this.pool.query(query, [
+    const res = await this.connection.query(query, [
       id,
       record.ipHash,
       record.countryCode || 'XX',
@@ -571,7 +601,7 @@ export class PostgresRepository {
 
   public async getSystemAnalyticsSummary(): Promise<SystemAnalyticsSummary & { tierCounts: Record<string, number>; todayScans: number }> {
     // 1. Core aggregates
-    const aggRes = await this.pool.query(`
+    const aggRes = await this.connection.query(`
       SELECT 
         COUNT(*)::INTEGER AS total_scans,
         COUNT(DISTINCT ip_hash)::INTEGER AS unique_ips,
@@ -605,7 +635,7 @@ export class PostgresRepository {
     const completedScans = Number(agg.completed_scans || 0);
     const completeRatePercent = totalScans > 0 ? Number(((completedScans / totalScans) * 100).toFixed(1)) : 0;
     const averageCoveragePercent = Number(agg.avg_coverage || 0);
-    const confidenceRes = await this.pool.query(`
+    const confidenceRes = await this.connection.query(`
       SELECT overall_confidence AS confidence, COUNT(*)::INTEGER AS count
       FROM scan_sessions
       WHERE verification_status = 'COMPLETE'
@@ -620,7 +650,7 @@ export class PostgresRepository {
     }
     const networkVerifiedRate = totalScans > 0 ? Number(((Number(agg.network_verified_count || 0) / totalScans) * 100).toFixed(1)) : 0;
     const webRtcVerifiedRate = totalScans > 0 ? Number(((Number(agg.webrtc_verified_count || 0) / totalScans) * 100).toFixed(1)) : 0;
-    const trendRes = await this.pool.query(`
+    const trendRes = await this.connection.query(`
       SELECT TO_CHAR(DATE(created_at), 'YYYY-MM-DD') AS date,
              COUNT(*)::INTEGER AS count,
              COALESCE(ROUND(AVG(privacy_score) FILTER (WHERE verification_status = 'COMPLETE')::numeric, 1), 0)::FLOAT AS average_score
@@ -632,7 +662,7 @@ export class PostgresRepository {
     const dailyTrend = trendRes.rows.map((row) => ({ date: row.date, count: Number(row.count), averageScore: row.average_score == null ? null : Number(row.average_score) }));
 
     // 2. Top Countries
-    const topCountriesRes = await this.pool.query(`
+    const topCountriesRes = await this.connection.query(`
       SELECT country_code AS "countryCode", COUNT(*)::INTEGER AS count
       FROM scan_sessions
       WHERE country_code IS NOT NULL AND country_code != '' AND country_code != 'XX'
@@ -646,7 +676,7 @@ export class PostgresRepository {
     }));
 
     // 3. Tier counts
-    const tierRes = await this.pool.query(`
+    const tierRes = await this.connection.query(`
       SELECT score_tier AS "scoreTier", COUNT(*)::INTEGER AS count
       FROM scan_sessions
       WHERE verification_status = 'COMPLETE'
@@ -665,7 +695,7 @@ export class PostgresRepository {
     }
 
     // 4. Recent scans (without ipHash for privacy)
-    const recentRes = await this.pool.query(`
+    const recentRes = await this.connection.query(`
       SELECT 
         id, country_code AS "countryCode", city, isp, 
         is_vpn AS "isVpn", is_proxy AS "isProxy", is_tor AS "isTor", is_webrtc_leak AS "isWebRtcLeak",
@@ -763,7 +793,7 @@ export class PostgresRepository {
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
     // Count total matching
-    const countRes = await this.pool.query(
+    const countRes = await this.connection.query(
       `SELECT COUNT(*)::INTEGER AS total FROM scan_sessions ${whereClause}`,
       values
     );
@@ -778,7 +808,7 @@ export class PostgresRepository {
     const sortDir = params.sortOrder === 'asc' ? 'ASC' : 'DESC';
 
     const dataValues = [...values, limit, offset];
-    const dataRes = await this.pool.query(
+    const dataRes = await this.connection.query(
       `
       SELECT 
         id, country_code AS "countryCode", city, isp, 
@@ -816,7 +846,7 @@ export class PostgresRepository {
 
   public async recordSecurityLog(log: Omit<SecurityLogRecord, 'id' | 'createdAt'>): Promise<SecurityLogRecord> {
     const id = `sec_${crypto.randomUUID()}`;
-    const res = await this.pool.query(
+    const res = await this.connection.query(
       `INSERT INTO security_logs (id, event_type, ip_address, details, created_at)
        VALUES ($1, $2, $3, $4, NOW())
        RETURNING id, event_type AS "eventType", ip_address AS "ipAddress", details, created_at AS "createdAt"`,
@@ -869,12 +899,12 @@ export class PostgresRepository {
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
-    const countRes = await this.pool.query(`SELECT COUNT(*)::INTEGER AS total FROM security_logs ${whereClause}`, values);
+    const countRes = await this.connection.query(`SELECT COUNT(*)::INTEGER AS total FROM security_logs ${whereClause}`, values);
     const total = Number(countRes.rows[0]?.total || 0);
     const totalPages = Math.ceil(total / limit) || 1;
 
     const dataValues = [...values, limit, offset];
-    const dataRes = await this.pool.query(
+    const dataRes = await this.connection.query(
       `SELECT id, event_type AS "eventType", ip_address AS "ipAddress", details, created_at AS "createdAt"
        FROM security_logs
        ${whereClause}
@@ -905,7 +935,7 @@ export class PostgresRepository {
 
   public async recordPageView(pv: Omit<PageViewRecord, 'id' | 'createdAt'>): Promise<void> {
     const id = `pv_${crypto.randomUUID()}`;
-    await this.pool.query(
+    await this.connection.query(
       `INSERT INTO page_views (id, route, language, user_agent_category, duration_ms, created_at)
        VALUES ($1, $2, $3, $4, $5, NOW())`,
       [id, pv.route, pv.language, pv.userAgentCategory, pv.durationMs || 0]
@@ -918,16 +948,16 @@ export class PostgresRepository {
     languageBreakdown: Array<{ language: string; count: number }>;
     deviceBreakdown: Array<{ category: string; count: number }>;
   }> {
-    const totalRes = await this.pool.query('SELECT COUNT(*)::INTEGER AS total FROM page_views');
+    const totalRes = await this.connection.query('SELECT COUNT(*)::INTEGER AS total FROM page_views');
     const totalViews = Number(totalRes.rows[0]?.total || 0);
 
-    const routeRes = await this.pool.query(
+    const routeRes = await this.connection.query(
       'SELECT route, COUNT(*)::INTEGER AS count FROM page_views GROUP BY route ORDER BY count DESC'
     );
-    const langRes = await this.pool.query(
+    const langRes = await this.connection.query(
       'SELECT language, COUNT(*)::INTEGER AS count FROM page_views GROUP BY language ORDER BY count DESC'
     );
-    const deviceRes = await this.pool.query(
+    const deviceRes = await this.connection.query(
       'SELECT user_agent_category AS category, COUNT(*)::INTEGER AS count FROM page_views GROUP BY user_agent_category ORDER BY count DESC'
     );
 
@@ -941,7 +971,7 @@ export class PostgresRepository {
 
   public async recordPerformanceMetric(perf: Omit<PerformanceMetricRecord, 'id' | 'createdAt'>): Promise<void> {
     const id = `perf_${crypto.randomUUID()}`;
-    await this.pool.query(
+    await this.connection.query(
       `INSERT INTO performance_metrics (id, endpoint, method, status_code, response_time_ms, created_at)
        VALUES ($1, $2, $3, $4, $5, NOW())`,
       [id, perf.endpoint, perf.method, perf.statusCode, perf.responseTimeMs]
@@ -955,7 +985,7 @@ export class PostgresRepository {
     uptimeSeconds: number;
     endpoints: Array<{ endpoint: string; requestsCount: number; avgLatencyMs: number }>;
   }> {
-    const summaryRes = await this.pool.query(`
+    const summaryRes = await this.connection.query(`
       SELECT 
         COUNT(*)::INTEGER AS total_requests,
         COALESCE(ROUND(AVG(response_time_ms)::numeric, 0), 0)::INTEGER AS avg_latency,
@@ -967,7 +997,7 @@ export class PostgresRepository {
     const avgResponseTimeMs = Number(summary.avg_latency);
     const errorRatePercent = totalRequests > 0 ? parseFloat(((Number(summary.error_count) / totalRequests) * 100).toFixed(2)) : 0;
 
-    const endpointRes = await this.pool.query(`
+    const endpointRes = await this.connection.query(`
       SELECT 
         endpoint,
         COUNT(*)::INTEGER AS requests_count,
@@ -996,7 +1026,7 @@ export class PostgresRepository {
 
   public async recordAdminAudit(audit: Omit<AdminAuditRecord, 'id' | 'createdAt'>): Promise<void> {
     const id = `aud_${crypto.randomUUID()}`;
-    await this.pool.query(
+    await this.connection.query(
       `INSERT INTO admin_audit_logs (id, admin_username, action, ip_address, details, created_at)
        VALUES ($1, $2, $3, $4, $5, NOW())`,
       [id, audit.adminUsername, audit.action, this.anonymizeIp(audit.ipAddress), audit.details]
@@ -1030,12 +1060,12 @@ export class PostgresRepository {
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
-    const countRes = await this.pool.query(`SELECT COUNT(*)::INTEGER AS total FROM admin_audit_logs ${whereClause}`, values);
+    const countRes = await this.connection.query(`SELECT COUNT(*)::INTEGER AS total FROM admin_audit_logs ${whereClause}`, values);
     const total = Number(countRes.rows[0]?.total || 0);
     const totalPages = Math.ceil(total / limit) || 1;
 
     const dataValues = [...values, limit, offset];
-    const dataRes = await this.pool.query(
+    const dataRes = await this.connection.query(
       `SELECT id, admin_username AS "adminUsername", action, ip_address AS "ipAddress", details, created_at AS "createdAt"
        FROM admin_audit_logs
        ${whereClause}
@@ -1065,7 +1095,7 @@ export class PostgresRepository {
   // --- RETENTION & CLEANUP ---
 
   public async cleanupExpiredSessions(): Promise<number> {
-    const res = await this.pool.query(
+    const res = await this.connection.query(
       `DELETE FROM admin_sessions 
        WHERE expires_at < NOW() - INTERVAL '7 days' 
           OR revoked_at < NOW() - INTERVAL '7 days'`
@@ -1074,27 +1104,27 @@ export class PostgresRepository {
   }
 
   public async purgeOldRecords(retentionDays = 90): Promise<{ scansDeleted: number; pageViewsDeleted: number; perfDeleted: number; securityLogsDeleted: number; auditLogsDeleted: number; authRateLimitsDeleted: number }> {
-    const scans = await this.pool.query(
+    const scans = await this.connection.query(
       `DELETE FROM scan_sessions WHERE created_at < NOW() - ($1 || ' days')::INTERVAL`,
       [retentionDays]
     );
-    const pvs = await this.pool.query(
+    const pvs = await this.connection.query(
       `DELETE FROM page_views WHERE created_at < NOW() - ($1 || ' days')::INTERVAL`,
       [retentionDays]
     );
-    const perfs = await this.pool.query(
+    const perfs = await this.connection.query(
       `DELETE FROM performance_metrics WHERE created_at < NOW() - ($1 || ' days')::INTERVAL`,
       [retentionDays]
     );
-    const securityLogs = await this.pool.query(
+    const securityLogs = await this.connection.query(
       `DELETE FROM security_logs WHERE created_at < NOW() - ($1 || ' days')::INTERVAL`,
       [retentionDays]
     );
-    const auditLogs = await this.pool.query(
+    const auditLogs = await this.connection.query(
       `DELETE FROM admin_audit_logs WHERE created_at < NOW() - ($1 || ' days')::INTERVAL`,
       [retentionDays]
     );
-    const authRateLimits = await this.pool.query(
+    const authRateLimits = await this.connection.query(
       `DELETE FROM auth_rate_limits WHERE first_attempt_at < NOW() - INTERVAL '1 day' AND (blocked_until IS NULL OR blocked_until < NOW())`
     );
 
@@ -1118,13 +1148,13 @@ export class PostgresRepository {
     performanceMetrics: number;
   }> {
     const [u, s, sc, sec, aud, pv, perf] = await Promise.all([
-      this.pool.query('SELECT COUNT(*)::INTEGER AS c FROM admin_users'),
-      this.pool.query('SELECT COUNT(*)::INTEGER AS c FROM admin_sessions'),
-      this.pool.query('SELECT COUNT(*)::INTEGER AS c FROM scan_sessions'),
-      this.pool.query('SELECT COUNT(*)::INTEGER AS c FROM security_logs'),
-      this.pool.query('SELECT COUNT(*)::INTEGER AS c FROM admin_audit_logs'),
-      this.pool.query('SELECT COUNT(*)::INTEGER AS c FROM page_views'),
-      this.pool.query('SELECT COUNT(*)::INTEGER AS c FROM performance_metrics'),
+      this.connection.query('SELECT COUNT(*)::INTEGER AS c FROM admin_users'),
+      this.connection.query('SELECT COUNT(*)::INTEGER AS c FROM admin_sessions'),
+      this.connection.query('SELECT COUNT(*)::INTEGER AS c FROM scan_sessions'),
+      this.connection.query('SELECT COUNT(*)::INTEGER AS c FROM security_logs'),
+      this.connection.query('SELECT COUNT(*)::INTEGER AS c FROM admin_audit_logs'),
+      this.connection.query('SELECT COUNT(*)::INTEGER AS c FROM page_views'),
+      this.connection.query('SELECT COUNT(*)::INTEGER AS c FROM performance_metrics'),
     ]);
 
     return {

@@ -1,4 +1,7 @@
 import type pg from 'pg';
+import pgRuntime from 'pg';
+
+const { Pool: PgPool } = pgRuntime;
 
 export interface Migration {
   version: number;
@@ -133,15 +136,113 @@ export const MIGRATIONS: Migration[] = [
       CREATE INDEX IF NOT EXISTS idx_auth_rate_limits_blocked_until ON auth_rate_limits(blocked_until);
     `,
   },
+  {
+    version: 3,
+    name: '003_global_rate_limits',
+    sql: `
+      CREATE TABLE IF NOT EXISTS api_rate_limits (
+        bucket_key VARCHAR(191) PRIMARY KEY,
+        window_started_at TIMESTAMPTZ NOT NULL,
+        request_count INTEGER NOT NULL DEFAULT 0,
+        expires_at TIMESTAMPTZ NOT NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_api_rate_limits_expires_at ON api_rate_limits(expires_at);
+
+      CREATE TABLE IF NOT EXISTS auth_rate_limit_buckets (
+        bucket_key VARCHAR(191) PRIMARY KEY,
+        failure_count INTEGER NOT NULL DEFAULT 0,
+        first_attempt_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        blocked_until TIMESTAMPTZ
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_auth_rate_limit_buckets_blocked_until ON auth_rate_limit_buckets(blocked_until);
+    `,
+  },
+  {
+    version: 4,
+    name: '004_evidence_truth',
+    sql: `
+      -- Evidence-truth fields: distinguish unknown from false in persisted analytics.
+      ALTER TABLE scan_sessions ADD COLUMN IF NOT EXISTS network_intelligence_status VARCHAR(16) NOT NULL DEFAULT 'UNAVAILABLE';
+      ALTER TABLE scan_sessions ADD COLUMN IF NOT EXISTS webrtc_evidence_state VARCHAR(16) NOT NULL DEFAULT 'UNKNOWN';
+      ALTER TABLE scan_sessions ALTER COLUMN is_vpn DROP DEFAULT;
+      ALTER TABLE scan_sessions ALTER COLUMN is_proxy DROP DEFAULT;
+      ALTER TABLE scan_sessions ALTER COLUMN is_tor DROP DEFAULT;
+      ALTER TABLE scan_sessions ALTER COLUMN is_webrtc_leak DROP DEFAULT;
+      ALTER TABLE scan_sessions ALTER COLUMN is_vpn DROP NOT NULL;
+      ALTER TABLE scan_sessions ALTER COLUMN is_proxy DROP NOT NULL;
+      ALTER TABLE scan_sessions ALTER COLUMN is_tor DROP NOT NULL;
+      ALTER TABLE scan_sessions ALTER COLUMN is_webrtc_leak DROP NOT NULL;
+      CREATE INDEX IF NOT EXISTS idx_scan_sessions_network_status ON scan_sessions(network_intelligence_status);
+      CREATE INDEX IF NOT EXISTS idx_scan_sessions_webrtc_state ON scan_sessions(webrtc_evidence_state);
+    `,
+  },
+  {
+    version: 5,
+    name: '005_verification_status',
+    sql: `
+      -- Persist scan verification completeness so population intelligence only uses fully verifiable audits.
+      ALTER TABLE scan_sessions ADD COLUMN IF NOT EXISTS verification_status VARCHAR(16) NOT NULL DEFAULT 'COMPLETE';
+      CREATE INDEX IF NOT EXISTS idx_scan_sessions_verification_status ON scan_sessions(verification_status);
+
+      -- Historical rows created before verification provenance existed must not be presented as fully verified.
+      UPDATE scan_sessions
+      SET verification_status = 'PARTIAL'
+      WHERE network_intelligence_status <> 'VERIFIED' OR webrtc_evidence_state IN ('UNKNOWN', 'UNAVAILABLE');
+    `,
+  },
+  {
+    version: 6,
+    name: '006_accuracy_coverage',
+    sql: `
+      -- Accuracy Core: persist verification coverage/confidence so population analytics never
+      -- treat incomplete audits as equivalent to fully verified audits.
+      ALTER TABLE scan_sessions
+        ADD COLUMN IF NOT EXISTS verification_coverage_pct INTEGER NOT NULL DEFAULT 0
+          CHECK (verification_coverage_pct >= 0 AND verification_coverage_pct <= 100),
+        ADD COLUMN IF NOT EXISTS overall_confidence VARCHAR(8) NOT NULL DEFAULT 'LOW'
+          CHECK (overall_confidence IN ('HIGH','MEDIUM','LOW'));
+
+      CREATE INDEX IF NOT EXISTS idx_scan_sessions_verified_created_at
+        ON scan_sessions(created_at DESC)
+        WHERE verification_status = 'COMPLETE';
+    `,
+  },
 ];
 
 /**
- * Runs all pending database migrations sequentially inside isolated transactions.
+ * Migration runner shared by the Node development server and Cloudflare Worker.
+ *
+ * Node/Express: a pool is supplied and one pool client is checked out for the complete
+ * migration transaction, then released.
+ *
+ * Cloudflare Worker: a single request-scoped pg.Client is supplied. When
+ * `acquireAdvisoryLock` is enabled, a transaction-level PostgreSQL advisory lock serializes
+ * schema changes across concurrent requests/isolates. The client always remains owned by the
+ * caller and is never cached by this module.
  */
-export async function runMigrations(pool: pg.Pool): Promise<{ applied: number; currentVersion: number }> {
-  const client = await pool.connect();
+export interface MigrationRunOptions {
+  /** Serialize migration execution across concurrent Worker requests/isolates. */
+  acquireAdvisoryLock?: boolean;
+}
+
+// Stable application-specific PostgreSQL advisory-lock key. Two int32 values are accepted by
+// pg_advisory_xact_lock and avoid depending on server-specific hash functions.
+const MIGRATION_LOCK_KEY = { namespace: 19472831, resource: 6014 };
+
+export async function runMigrations(
+  connection: pg.Pool | pg.Client,
+  options: MigrationRunOptions = {},
+): Promise<{ applied: number; currentVersion: number }> {
+  const isPool = connection instanceof PgPool;
+  const client = isPool ? await (connection as pg.Pool).connect() : (connection as pg.Client);
+  let inTransaction = false;
+
   try {
-    // 1. Ensure migrations tracking table exists
+    // The tracking table must exist before we can inspect migration state. This statement is
+    // intentionally outside the migration transaction because migration #1 creates the table
+    // itself and therefore cannot be the prerequisite for taking the advisory lock.
     await client.query(`
       CREATE TABLE IF NOT EXISTS schema_migrations (
         version INTEGER PRIMARY KEY,
@@ -150,37 +251,59 @@ export async function runMigrations(pool: pg.Pool): Promise<{ applied: number; c
       );
     `);
 
-    // 2. Fetch applied migration versions
+    await client.query('BEGIN');
+    inTransaction = true;
+
+    if (options.acquireAdvisoryLock) {
+      await client.query(
+        'SELECT pg_advisory_xact_lock($1, $2)',
+        [MIGRATION_LOCK_KEY.namespace, MIGRATION_LOCK_KEY.resource],
+      );
+    }
+
     const appliedResult = await client.query<{ version: number }>(
       'SELECT version FROM schema_migrations ORDER BY version ASC'
     );
     const appliedVersions = new Set(appliedResult.rows.map((r) => r.version));
 
     let appliedCount = 0;
-    let latestVersion = appliedResult.rows.length > 0 ? appliedResult.rows[appliedResult.rows.length - 1].version : 0;
+    let latestVersion = appliedResult.rows.length > 0
+      ? appliedResult.rows[appliedResult.rows.length - 1].version
+      : 0;
 
-    // 3. Execute pending migrations in sequence
     for (const migration of MIGRATIONS) {
-      if (!appliedVersions.has(migration.version)) {
-        await client.query('BEGIN');
-        try {
-          await client.query(migration.sql);
-          await client.query(
-            'INSERT INTO schema_migrations (version, name, applied_at) VALUES ($1, $2, NOW())',
-            [migration.version, migration.name]
-          );
-          await client.query('COMMIT');
-          appliedCount++;
-          latestVersion = migration.version;
-        } catch (err) {
-          await client.query('ROLLBACK');
-          throw new Error(`Migration ${migration.version} (${migration.name}) failed: ${(err as Error).message}`);
-        }
+      if (appliedVersions.has(migration.version)) continue;
+
+      try {
+        await client.query(migration.sql);
+        await client.query(
+          `INSERT INTO schema_migrations (version, name, applied_at)
+           VALUES ($1, $2, NOW())
+           ON CONFLICT (version) DO NOTHING`,
+          [migration.version, migration.name]
+        );
+        appliedCount++;
+        latestVersion = migration.version;
+      } catch (err) {
+        throw new Error(
+          `Migration ${migration.version} (${migration.name}) failed: ${(err as Error).message}`,
+        );
       }
     }
 
+    await client.query('COMMIT');
+    inTransaction = false;
     return { applied: appliedCount, currentVersion: latestVersion };
+  } catch (err) {
+    if (inTransaction) {
+      try {
+        await client.query('ROLLBACK');
+      } catch (rollbackErr) {
+        console.error('[DATABASE] Migration rollback failed:', rollbackErr);
+      }
+    }
+    throw err;
   } finally {
-    client.release();
+    if (isPool) (client as pg.PoolClient).release();
   }
 }

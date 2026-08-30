@@ -135,6 +135,37 @@ export async function withTransaction<T>(
 }
 
 /**
+ * Executes a callback within a managed PostgreSQL transaction using a single, already-connected
+ * `pg.Client` (as opposed to `withTransaction`, which checks a client OUT of a `pg.Pool`).
+ *
+ * This exists for the Cloudflare Worker request lifecycle: each request creates exactly one
+ * `pg.Client` against Hyperdrive (see `worker/index.ts`), and every read, write, and transaction
+ * for that request must run on that same connection. There is no separate connect()/release()
+ * step here because the Client passed in already IS the connection for the current request -
+ * checking out a "different" connection would defeat the purpose of request-scoping and risks
+ * the exact cross-request I/O sharing bug this design avoids. The caller (worker/index.ts) owns
+ * connecting the client before use and closing it in a `finally` after the request completes.
+ */
+export async function withClientTransaction<T>(
+  callback: (client: pg.Client) => Promise<T>,
+  client: pg.Client
+): Promise<T> {
+  await client.query('BEGIN');
+  try {
+    const result = await callback(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (err) {
+    try {
+      await client.query('ROLLBACK');
+    } catch (rollbackErr) {
+      console.error('Error during transaction rollback:', rollbackErr);
+    }
+    throw err;
+  }
+}
+
+/**
  * Closes the active PostgreSQL connection pool gracefully.
  */
 export async function closePool(): Promise<void> {

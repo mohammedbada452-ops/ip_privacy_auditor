@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import type {
   AdminUser,
   ScanSessionRecord,
@@ -9,6 +10,21 @@ import { validateAdminUsername, validateAdminPassword } from '../config';
 import type { PostgresRepository } from './postgresRepository';
 import { ProductionGuard } from './productionGuard';
 import { loadDevelopmentSeeds } from './dev-seeds/devSeedData';
+
+/**
+ * Request-scoped PostgreSQL repository storage.
+ *
+ * The long-running Node/Express dev server (server.ts) calls `setPostgresRepository()` once at
+ * startup with a persistent `pg.Pool` - correct there, since it is a single OS process handling
+ * requests sequentially with no cross-isolate concerns. Cloudflare Workers must NOT do that: a
+ * Worker isolate can interleave multiple concurrent requests, and per Cloudflare's Hyperdrive
+ * guidance, a database connection created during one request's I/O context must never be read or
+ * written during another request's context. AsyncLocalStorage gives each request's entire async
+ * call tree its own isolated view of "the current PostgresRepository" with zero risk of one
+ * request seeing another's connection - concurrent `.run()` calls never share their stores.
+ * See `runWithRequestScopedRepository` below, used by worker/index.ts once per request.
+ */
+const postgresRepoRequestScope = new AsyncLocalStorage<PostgresRepository | null>();
 
 export interface PageViewRecord {
   id: string;
@@ -75,15 +91,37 @@ export class DatabaseRepository {
   }
 
   public setPostgresRepository(repo: PostgresRepository | null): void {
+    // Used by the Node/Express dev server (server/db/init.ts) only. Cloudflare Workers must
+    // never call this - it would be exactly the shared/global connection state this design
+    // avoids. Workers use `runWithRequestScopedRepository` instead.
     this.postgresRepo = repo;
   }
 
   public getPostgresRepository(): PostgresRepository | null {
-    return this.postgresRepo;
+    const scoped = postgresRepoRequestScope.getStore();
+    // `undefined` means "no request-scoped context is active" (the Node dev server path,
+    // which never calls runWithRequestScopedRepository) - fall back to the shared field set by
+    // setPostgresRepository(). Once inside a request-scoped context (a Cloudflare Worker
+    // request), the value explicitly scoped to THIS request always wins, `null` included
+    // (meaning: database unavailable for this particular request).
+    return scoped !== undefined ? scoped : this.postgresRepo;
   }
 
   public isPostgresActive(): boolean {
-    return this.postgresRepo !== null;
+    return this.getPostgresRepository() !== null;
+  }
+
+  /**
+   * Scopes `repo` (or `null` when the database is unavailable) to the current request only, for
+   * the duration of `fn`. Every call to `getPostgresRepository()`/`isPostgresActive()` anywhere
+   * in the async call tree started by `fn` - including inside services imported elsewhere, like
+   * `adminAuthService` - sees this exact value. Concurrent invocations (concurrent Worker
+   * requests handled by the same warm isolate) each get their own independent store; nothing is
+   * written to a shared field, so there is no possibility of one request observing or closing
+   * another request's database connection.
+   */
+  public runWithRequestScopedRepository<T>(repo: PostgresRepository | null, fn: () => Promise<T>): Promise<T> {
+    return postgresRepoRequestScope.run(repo, fn);
   }
 
   // Runtime persistence facade. Production callers use these async methods so PostgreSQL
@@ -94,8 +132,9 @@ export class DatabaseRepository {
     windowMs: number,
     maxRequests: number
   ): Promise<{ isLimited: boolean; remaining: number; retryAfterSeconds: number }> {
-    if (this.postgresRepo) {
-      return this.postgresRepo.consumeApiRateLimit(bucketKey, windowMs, maxRequests);
+    const postgresRepo = this.getPostgresRepository();
+    if (postgresRepo) {
+      return postgresRepo.consumeApiRateLimit(bucketKey, windowMs, maxRequests);
     }
 
     // Development/degraded fallback must retain state between calls. The previous
@@ -136,70 +175,84 @@ export class DatabaseRepository {
   }
 
   public async getAdminUserAsync(username: string) {
-    return this.postgresRepo ? this.postgresRepo.getAdminUser(username) : this.getAdminUser(username);
+    const postgresRepo = this.getPostgresRepository();
+    return postgresRepo ? postgresRepo.getAdminUser(username) : this.getAdminUser(username);
   }
 
   public async getAllAdminUsernamesAsync(): Promise<string[]> {
-    return this.postgresRepo ? this.postgresRepo.getAllAdminUsernames() : this.getAllAdminUsernames();
+    const postgresRepo = this.getPostgresRepository();
+    return postgresRepo ? postgresRepo.getAllAdminUsernames() : this.getAllAdminUsernames();
   }
 
   public async bootstrapAdminCredentialsAsync(username: string, passwordPlain: string, options?: { force?: boolean }) {
-    if (this.postgresRepo) return this.postgresRepo.bootstrapAdminCredentials(username, passwordPlain, options);
+    const postgresRepo = this.getPostgresRepository();
+    if (postgresRepo) return postgresRepo.bootstrapAdminCredentials(username, passwordPlain, options);
     return this.bootstrapAdminCredentials(username, passwordPlain, options);
   }
 
   public async rotateAdminCredentialsAsync(username: string, newPasswordPlain: string): Promise<boolean> {
-    if (this.postgresRepo) return this.postgresRepo.rotateAdminCredentials(username, newPasswordPlain);
+    const postgresRepo = this.getPostgresRepository();
+    if (postgresRepo) return postgresRepo.rotateAdminCredentials(username, newPasswordPlain);
     return this.rotateAdminCredentials(username, newPasswordPlain);
   }
 
   public async updateAdminLastLoginAsync(username: string): Promise<void> {
-    if (this.postgresRepo) return this.postgresRepo.updateAdminLastLogin(username);
+    const postgresRepo = this.getPostgresRepository();
+    if (postgresRepo) return postgresRepo.updateAdminLastLogin(username);
     this.updateAdminLastLogin(username);
   }
 
   public async createSessionAsync(username: string, userId: string, ipAddress: string): Promise<AdminSession> {
-    if (this.postgresRepo) return this.postgresRepo.createSession(username, userId, ipAddress);
+    const postgresRepo = this.getPostgresRepository();
+    if (postgresRepo) return postgresRepo.createSession(username, userId, ipAddress);
     return this.createSession(username, userId, ipAddress);
   }
 
   public async getSessionAsync(token: string): Promise<AdminSession | null> {
-    if (this.postgresRepo) return this.postgresRepo.getSession(token);
+    const postgresRepo = this.getPostgresRepository();
+    if (postgresRepo) return postgresRepo.getSession(token);
     return this.getSession(token);
   }
 
   public async invalidateSessionAsync(token: string): Promise<boolean> {
-    if (this.postgresRepo) return this.postgresRepo.invalidateSession(token);
+    const postgresRepo = this.getPostgresRepository();
+    if (postgresRepo) return postgresRepo.invalidateSession(token);
     return this.invalidateSession(token);
   }
 
   public async invalidateAllSessionsAsync(username?: string): Promise<number> {
-    if (this.postgresRepo) return this.postgresRepo.invalidateAllSessions(username);
+    const postgresRepo = this.getPostgresRepository();
+    if (postgresRepo) return postgresRepo.invalidateAllSessions(username);
     return this.invalidateAllSessions(username);
   }
 
   public async checkLoginRateLimitAsync(ip: string, username?: string): Promise<{ isBlocked: boolean; retryAfterSeconds?: number }> {
-    if (this.postgresRepo) return this.postgresRepo.checkLoginRateLimitAsync(ip, username);
+    const postgresRepo = this.getPostgresRepository();
+    if (postgresRepo) return postgresRepo.checkLoginRateLimitAsync(ip, username);
     return this.checkLoginRateLimit(ip);
   }
 
   public async recordFailedLoginAsync(ip: string, username?: string): Promise<void> {
-    if (this.postgresRepo) return this.postgresRepo.recordFailedLoginAsync(ip, username);
+    const postgresRepo = this.getPostgresRepository();
+    if (postgresRepo) return postgresRepo.recordFailedLoginAsync(ip, username);
     this.recordFailedLogin(ip);
   }
 
   public async resetFailedLoginsAsync(ip: string, username?: string): Promise<void> {
-    if (this.postgresRepo) return this.postgresRepo.resetFailedLoginsAsync(ip, username);
+    const postgresRepo = this.getPostgresRepository();
+    if (postgresRepo) return postgresRepo.resetFailedLoginsAsync(ip, username);
     this.resetFailedLogins(ip);
   }
 
   public async recordScanSessionAsync(record: Omit<ScanSessionRecord, 'id' | 'createdAt'>): Promise<ScanSessionRecord> {
-    if (this.postgresRepo) return this.postgresRepo.recordScanSession(record);
+    const postgresRepo = this.getPostgresRepository();
+    if (postgresRepo) return postgresRepo.recordScanSession(record);
     return this.recordScanSession(record);
   }
 
   public async getPopulationInsightAsync(privacyScore: number, windowDays = 30) {
-    if (this.postgresRepo) return this.postgresRepo.getPopulationInsight(privacyScore, windowDays);
+    const postgresRepo = this.getPostgresRepository();
+    if (postgresRepo) return postgresRepo.getPopulationInsight(privacyScore, windowDays);
     const boundedScore = Math.max(0, Math.min(100, Math.round(privacyScore)));
     const recent = this.scanSessions.filter((scan) => Date.now() - new Date(scan.createdAt).getTime() <= Math.min(90, Math.max(1, windowDays)) * 86400000);
     if (recent.length < 30) return { sampleSize: recent.length, scorePercentile: null, averageScore: null, status: 'INSUFFICIENT_SAMPLE' as const, comparisonWindowDays: windowDays };
@@ -208,52 +261,62 @@ export class DatabaseRepository {
   }
 
   public async getSystemAnalyticsSummaryAsync(): Promise<SystemAnalyticsSummary & { tierCounts?: Record<string, number>; todayScans?: number }> {
-    if (this.postgresRepo) return this.postgresRepo.getSystemAnalyticsSummary();
+    const postgresRepo = this.getPostgresRepository();
+    if (postgresRepo) return postgresRepo.getSystemAnalyticsSummary();
     return this.getSystemAnalyticsSummary();
   }
 
   public async getScanSessionsPaginatedAsync(params: Parameters<DatabaseRepository['getScanSessionsPaginated']>[0]) {
-    if (this.postgresRepo) return this.postgresRepo.getScanSessionsPaginated(params);
+    const postgresRepo = this.getPostgresRepository();
+    if (postgresRepo) return postgresRepo.getScanSessionsPaginated(params);
     return this.getScanSessionsPaginated(params);
   }
 
   public async recordSecurityLogAsync(log: Omit<SecurityLogRecord, 'id' | 'createdAt'>): Promise<SecurityLogRecord> {
-    if (this.postgresRepo) return this.postgresRepo.recordSecurityLog(log);
+    const postgresRepo = this.getPostgresRepository();
+    if (postgresRepo) return postgresRepo.recordSecurityLog(log);
     return this.recordSecurityLog(log);
   }
 
   public async getSecurityLogsPaginatedAsync(params: Parameters<DatabaseRepository['getSecurityLogsPaginated']>[0]) {
-    if (this.postgresRepo) return this.postgresRepo.getSecurityLogsPaginated(params);
+    const postgresRepo = this.getPostgresRepository();
+    if (postgresRepo) return postgresRepo.getSecurityLogsPaginated(params);
     return this.getSecurityLogsPaginated(params);
   }
 
   public async recordPageViewAsync(pv: Omit<PageViewRecord, 'id' | 'createdAt'>): Promise<void> {
-    if (this.postgresRepo) return this.postgresRepo.recordPageView(pv);
+    const postgresRepo = this.getPostgresRepository();
+    if (postgresRepo) return postgresRepo.recordPageView(pv);
     this.recordPageView(pv);
   }
 
   public async getPageViewMetricsAsync() {
-    if (this.postgresRepo) return this.postgresRepo.getPageViewMetrics();
+    const postgresRepo = this.getPostgresRepository();
+    if (postgresRepo) return postgresRepo.getPageViewMetrics();
     return this.getPageViewMetrics();
   }
 
   public async recordPerformanceMetricAsync(perf: Omit<PerformanceMetricRecord, 'id' | 'createdAt'>): Promise<void> {
-    if (this.postgresRepo) return this.postgresRepo.recordPerformanceMetric(perf);
+    const postgresRepo = this.getPostgresRepository();
+    if (postgresRepo) return postgresRepo.recordPerformanceMetric(perf);
     this.recordPerformanceMetric(perf);
   }
 
   public async getPerformanceMetricsSummaryAsync() {
-    if (this.postgresRepo) return this.postgresRepo.getPerformanceMetricsSummary();
+    const postgresRepo = this.getPostgresRepository();
+    if (postgresRepo) return postgresRepo.getPerformanceMetricsSummary();
     return this.getPerformanceMetricsSummary();
   }
 
   public async recordAdminAuditAsync(audit: Omit<AdminAuditRecord, 'id' | 'createdAt'>): Promise<void> {
-    if (this.postgresRepo) return this.postgresRepo.recordAdminAudit(audit);
+    const postgresRepo = this.getPostgresRepository();
+    if (postgresRepo) return postgresRepo.recordAdminAudit(audit);
     this.recordAdminAudit(audit);
   }
 
   public async getAdminAuditLogsPaginatedAsync(params: Parameters<DatabaseRepository['getAdminAuditLogsPaginated']>[0] = {}) {
-    if (this.postgresRepo) return this.postgresRepo.getAdminAuditLogsPaginated(params);
+    const postgresRepo = this.getPostgresRepository();
+    if (postgresRepo) return postgresRepo.getAdminAuditLogsPaginated(params);
     return this.getAdminAuditLogsPaginated(params);
   }
 
@@ -434,8 +497,9 @@ export class DatabaseRepository {
     }
 
     // If PostgreSQL repository is active, asynchronously persist to database
-    if (this.postgresRepo) {
-      this.postgresRepo.bootstrapAdminCredentials(username, passwordPlain, options).catch((err) => {
+    const postgresRepo = this.getPostgresRepository();
+    if (postgresRepo) {
+      postgresRepo.bootstrapAdminCredentials(username, passwordPlain, options).catch((err) => {
         console.error('[DATABASE] Async bootstrap to PostgreSQL failed:', err.message);
       });
     }
@@ -479,8 +543,9 @@ export class DatabaseRepository {
       details: 'Password hash rotated. Active sessions revoked.',
     });
 
-    if (this.postgresRepo) {
-      this.postgresRepo.rotateAdminCredentials(username, newPasswordPlain).catch((err) => {
+    const postgresRepo = this.getPostgresRepository();
+    if (postgresRepo) {
+      postgresRepo.rotateAdminCredentials(username, newPasswordPlain).catch((err) => {
         console.error('[DATABASE] Async rotate credentials to PostgreSQL failed:', err.message);
       });
     }
@@ -528,8 +593,9 @@ export class DatabaseRepository {
 
     this.activeSessions.set(token, session);
 
-    if (this.postgresRepo) {
-      this.postgresRepo.createSession(username, userId, ipAddress).catch((err) => {
+    const postgresRepo = this.getPostgresRepository();
+    if (postgresRepo) {
+      postgresRepo.createSession(username, userId, ipAddress).catch((err) => {
         console.error('[DATABASE] Async session create in PostgreSQL failed:', err.message);
       });
     }
@@ -553,8 +619,9 @@ export class DatabaseRepository {
 
   public invalidateSession(token: string): boolean {
     const result = this.activeSessions.delete(token);
-    if (this.postgresRepo && token) {
-      this.postgresRepo.invalidateSession(token).catch((err) => {
+    const postgresRepo = this.getPostgresRepository();
+    if (postgresRepo && token) {
+      postgresRepo.invalidateSession(token).catch((err) => {
         console.error('[DATABASE] Async session invalidate in PostgreSQL failed:', err.message);
       });
     }
@@ -614,8 +681,9 @@ export class DatabaseRepository {
       this.scanSessions = this.scanSessions.slice(0, 10000);
     }
 
-    if (this.postgresRepo) {
-      this.postgresRepo.recordScanSession(record).catch((err) => {
+    const postgresRepo = this.getPostgresRepository();
+    if (postgresRepo) {
+      postgresRepo.recordScanSession(record).catch((err) => {
         console.error('[DATABASE] Async scan session record in PostgreSQL failed:', err.message);
       });
     }
@@ -793,8 +861,9 @@ export class DatabaseRepository {
       this.securityLogs = this.securityLogs.slice(0, 5000);
     }
 
-    if (this.postgresRepo) {
-      this.postgresRepo.recordSecurityLog(log).catch((err) => {
+    const postgresRepo = this.getPostgresRepository();
+    if (postgresRepo) {
+      postgresRepo.recordSecurityLog(log).catch((err) => {
         console.error('[DATABASE] Async security log record in PostgreSQL failed:', err.message);
       });
     }
@@ -857,8 +926,9 @@ export class DatabaseRepository {
       this.pageViews = this.pageViews.slice(0, 10000);
     }
 
-    if (this.postgresRepo) {
-      this.postgresRepo.recordPageView(pv).catch((err) => {
+    const postgresRepo = this.getPostgresRepository();
+    if (postgresRepo) {
+      postgresRepo.recordPageView(pv).catch((err) => {
         console.error('[DATABASE] Async page view record in PostgreSQL failed:', err.message);
       });
     }
@@ -893,8 +963,9 @@ export class DatabaseRepository {
       this.performanceMetrics = this.performanceMetrics.slice(0, 5000);
     }
 
-    if (this.postgresRepo) {
-      this.postgresRepo.recordPerformanceMetric(perf).catch((err) => {
+    const postgresRepo = this.getPostgresRepository();
+    if (postgresRepo) {
+      postgresRepo.recordPerformanceMetric(perf).catch((err) => {
         console.error('[DATABASE] Async performance metric record in PostgreSQL failed:', err.message);
       });
     }
@@ -946,8 +1017,9 @@ export class DatabaseRepository {
       this.adminAuditLogs = this.adminAuditLogs.slice(0, 5000);
     }
 
-    if (this.postgresRepo) {
-      this.postgresRepo.recordAdminAudit(audit).catch((err) => {
+    const postgresRepo = this.getPostgresRepository();
+    if (postgresRepo) {
+      postgresRepo.recordAdminAudit(audit).catch((err) => {
         console.error('[DATABASE] Async admin audit record in PostgreSQL failed:', err.message);
       });
     }

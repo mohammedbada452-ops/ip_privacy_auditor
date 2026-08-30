@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "node scripts/prepare-seo.mjs && vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
-    "start": "node dist/server.cjs",
+    "build": "npm run build:cloudflare",
+    "start": "npm run build:server && node dist/server.cjs",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
     "test": "tsx server/tests/ip.test.ts && tsx server/tests/ipUi.test.ts && tsx server/tests/privacyEngine.test.ts && tsx server/tests/browserIntelligence.test.ts && tsx server/tests/headersIntelligence.test.ts && tsx server/tests/i18n.test.ts && tsx server/tests/adminConsole.test.ts && tsx server/tests/productionHardening.test.ts && tsx server/tests/finalIntegration.test.ts && tsx server/tests/fix1Verification.test.ts && tsx server/tests/fix2BrowserIntelligence.test.ts && tsx server/tests/headersExperience.test.ts && tsx server/tests/unifiedPrivacyDashboard.test.ts && tsx server/tests/fix5TrustAccuracy.test.ts && tsx server/tests/fix6Remediation.test.ts && tsx server/tests/fix7TrustConsistency.test.ts && tsx server/tests/fix7_1ConsistencyCorrection.test.ts && tsx server/tests/fix7_2AccuracyCorrection.test.ts && tsx server/tests/fix7_3SnapshotConsistency.test.ts && tsx server/tests/adminCredentialConfiguration.test.ts && tsx server/tests/fix8_1AdminSecurity.test.ts && tsx server/tests/fix8_2DatabasePersistence.test.ts && tsx server/tests/fix8_3ProductionDataIntegrity.test.ts && tsx server/tests/fix8_4NetworkAccuracy.test.ts && tsx server/tests/fix8_4_1GeoIPProvider.test.ts && tsx server/tests/finalHardening.test.ts && tsx server/tests/headerScoreScope.test.ts && tsx server/tests/globalAccuracy.test.ts",
@@ -28,7 +28,8 @@
     "test:release": "npm run test:cloudflare-guard && npm run test:production-truth && npm run test:accuracy",
     "build:cloudflare:verify": "npm run build:cloudflare && node scripts/verify-cloudflare-deployment.mjs",
     "test:production-truth": "node scripts/verify-production-truth.mjs",
-    "test:worker-native": "node scripts/verify-cloudflare-deployment.mjs"
+    "test:worker-native": "node scripts/verify-cloudflare-deployment.mjs",
+    "build:server": "esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.14",
