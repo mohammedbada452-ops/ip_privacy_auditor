@@ -1,5 +1,6 @@
 import type { GeoIPResult, IGeoIPProvider } from './IGeoIPProvider';
 import { validateIp } from '../../utils/ipExtractor';
+import { getRequestEnv } from '../../config/requestEnv';
 
 interface IpInfoLitePayload {
   ip?: string;
@@ -19,7 +20,7 @@ export class IpInfoLiteProvider implements IGeoIPProvider {
   private readonly baseUrl = 'https://api.ipinfo.io/lite';
 
   constructor(options: { token?: string; timeoutMs?: number } = {}) {
-    this.token = (options.token || process.env.IPINFO_TOKEN || '').trim();
+    this.token = (options.token || getRequestEnv('IPINFO_TOKEN') || '').trim();
     this.timeoutMs = options.timeoutMs || 5000;
   }
 

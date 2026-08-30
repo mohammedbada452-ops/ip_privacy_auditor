@@ -5,6 +5,7 @@ import { IpApiProvider } from '../providers/geoip/IpApiProvider';
 import { MockGeoIPProvider } from '../providers/geoip/MockGeoIPProvider';
 import { IpInfoLiteProvider } from '../providers/geoip/IpInfoLiteProvider';
 import { validateIp } from '../utils/ipExtractor';
+import { getRequestEnv } from '../config/requestEnv';
 
 interface CacheEntry {
   data: GeoIPResult;
@@ -82,9 +83,9 @@ export class GeoIPService {
 
       // Optional free secondary source: IPinfo Lite. It requires only a free token
       // and intentionally supplements, rather than replaces, the current provider.
-      if (process.env.IPINFO_TOKEN && this.provider.name !== 'IPinfo Lite' && validation.isPublic) {
+      if (getRequestEnv('IPINFO_TOKEN') && this.provider.name !== 'IPinfo Lite' && validation.isPublic) {
         try {
-          result = await new IpInfoLiteProvider().lookup(normalizedIp);
+          result = await new IpInfoLiteProvider({ token: getRequestEnv('IPINFO_TOKEN') }).lookup(normalizedIp);
         } catch (secondaryErr: unknown) {
           const secondaryMessage = secondaryErr instanceof Error ? secondaryErr.message : String(secondaryErr);
           console.warn(`[GeoIPService] IPinfo Lite fallback failed: ${secondaryMessage}`);
@@ -132,9 +133,9 @@ export class GeoIPService {
       country: primary.geo.country || null,
       asn: /^AS\d+$/i.test(primary.network.asn || '') ? primary.network.asn.toUpperCase() : null,
     });
-    if (process.env.IPINFO_TOKEN && validation.isPublic && this.provider.name !== 'IPinfo Lite') {
+    if (getRequestEnv('IPINFO_TOKEN') && validation.isPublic && this.provider.name !== 'IPinfo Lite') {
       try {
-        const secondary = await new IpInfoLiteProvider().lookup(normalizedIp);
+        const secondary = await new IpInfoLiteProvider({ token: getRequestEnv('IPINFO_TOKEN') }).lookup(normalizedIp);
         observations.push({ provider: 'IPinfo Lite', status: 'VERIFIED', countryCode: secondary.geo.countryCode || null, country: secondary.geo.country || null, asn: /^AS\d+$/i.test(secondary.network.asn || '') ? secondary.network.asn.toUpperCase() : null });
       } catch {
         observations.push({ provider: 'IPinfo Lite', status: 'ERROR', countryCode: null, country: null, asn: null });

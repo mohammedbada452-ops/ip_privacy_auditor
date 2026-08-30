@@ -1,5 +1,6 @@
 import { validateIp } from '../utils/ipExtractor';
 import type { IpReputationResponse } from '@packages/api-contract';
+import { getRequestEnv } from '../config/requestEnv';
 
 interface CacheEntry {
   data: IpReputationResponse;
@@ -67,8 +68,8 @@ class IpReputationService {
       };
     }
 
-    const apiKey = typeof process.env.ABUSEIPDB_API_KEY === 'string'
-      ? process.env.ABUSEIPDB_API_KEY.trim()
+    const apiKey = typeof getRequestEnv('ABUSEIPDB_API_KEY') === 'string'
+      ? getRequestEnv('ABUSEIPDB_API_KEY')!.trim()
       : '';
     if (!apiKey) {
       return this.disabledResult(

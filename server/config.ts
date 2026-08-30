@@ -13,6 +13,8 @@ export interface FoundationConfig {
   nodeEnv: 'development' | 'production' | 'test';
 }
 
+import { getRequestEnv } from './config/requestEnv';
+
 export interface AdminAuthConfig {
   adminUsername?: string;
   adminPassword?: string;
@@ -141,10 +143,10 @@ export function validateAdminPassword(
  * - Requires either (ADMIN_USERNAME & ADMIN_PASSWORD), or an ADMIN_SECRET_KEY bound to ADMIN_USERNAME.
  */
 export function getAdminAuthConfig(): AdminAuthConfig {
-  const adminUsername = process.env.ADMIN_USERNAME ? process.env.ADMIN_USERNAME.trim() : undefined;
-  const adminPassword = process.env.ADMIN_PASSWORD || undefined;
-  const adminSecretKey = process.env.ADMIN_SECRET_KEY ? process.env.ADMIN_SECRET_KEY.trim() : undefined;
-  const isProduction = process.env.NODE_ENV === 'production';
+  const adminUsername = getRequestEnv('ADMIN_USERNAME') ? getRequestEnv('ADMIN_USERNAME')!.trim() : undefined;
+  const adminPassword = getRequestEnv('ADMIN_PASSWORD') || undefined;
+  const adminSecretKey = getRequestEnv('ADMIN_SECRET_KEY') ? getRequestEnv('ADMIN_SECRET_KEY')!.trim() : undefined;
+  const isProduction = getRequestEnv('NODE_ENV') === 'production';
 
   if (adminUsername) {
     const userVal = validateAdminUsername(adminUsername);

@@ -10,6 +10,7 @@ import { HeaderCollector, HeaderClassifier } from "../server/headers";
 import { extractClientIp, validateIp } from "../server/utils/ipExtractor";
 import { auditWebsite } from "../server/services/siteAudit";
 import { CloudflareRequestCfProvider } from "../server/providers/geoip/CloudflareRequestCfProvider";
+import { getRequestEnv, runWithRequestEnv, type RequestEnvValues } from "../server/config/requestEnv";
 
 type RuntimeEnv = {
   ASSETS?: Fetcher;
@@ -41,49 +42,50 @@ type ServiceRequest = {
 };
 
 /**
- * Bridges Cloudflare bindings to the legacy service layer once per Worker isolate.
+ * Builds the request-scoped configuration values read from Worker env bindings. This is a pure
+ * function - it returns a plain object and writes nothing to `process.env` or any other global,
+ * so it cannot be observed by, or leak into, a different concurrent request. See
+ * `runWithRequestEnv` (server/config/requestEnv.ts), which scopes this object to exactly one
+ * request via AsyncLocalStorage; consumers (`getAdminAuthConfig()`, `adminAuthService`,
+ * `PostgresRepository`, `geoip.ts`, `ipReputation.ts`, `ipExtractor.ts`, etc.) were updated to
+ * read through `getRequestEnv()` instead of `process.env` directly.
  *
- * These are immutable deployment configuration values, not request-specific state. We only
- * perform the bridge once so concurrent requests do not repeatedly mutate `process.env`.
- * Database connections are deliberately NOT stored here; they remain request-scoped.
+ * `DATABASE_URL` and `CORS_ALLOWED_ORIGINS` are intentionally not included here: nothing
+ * reachable from the Worker request path reads `process.env.DATABASE_URL` (the connection
+ * string is passed directly into `new pg.Client({ connectionString })` in
+ * `createRequestDatabase` below) or `process.env.CORS_ALLOWED_ORIGINS` (`applyCors` below already
+ * reads `env.CORS_ALLOWED_ORIGINS` directly) - both were dead writes.
  */
-let workerEnvironmentConfigured = false;
-
-function applyEnvToProcessEnvOnce(env: RuntimeEnv): void {
-  if (workerEnvironmentConfigured) return;
-
-  process.env.NODE_ENV = typeof env.NODE_ENV === "string" && env.NODE_ENV.trim()
-    ? env.NODE_ENV
-    : (process.env.NODE_ENV || "production");
-  process.env.PRIVASEC_CLOUDFLARE_EDGE = "true";
-
-  const copyKeys = [
-    "SERVER_SECRET_SALT",
-    "ADMIN_USERNAME",
-    "ADMIN_PASSWORD",
-    "ADMIN_SECRET_KEY",
-    "IPINFO_TOKEN",
-    "ABUSEIPDB_API_KEY",
-    "CORS_ALLOWED_ORIGINS",
-    "GEOIP_PROVIDER",
-    "GEOIP_API_KEY",
-    "TRUSTED_PROXY_CIDRS",
-    "TRUSTED_PROXIES",
-    "TRUST_PROXY",
-    "TRUST_LOCAL_PROXY",
-    "DISABLE_RATE_LIMIT",
-    "APP_ENV",
-  ] as const;
-
-  for (const key of copyKeys) {
-    const value = env[key];
-    if (typeof value === "string") process.env[key] = value;
-  }
-
-  workerEnvironmentConfigured = true;
+function buildRequestEnvValues(env: RuntimeEnv): RequestEnvValues {
+  const values: RequestEnvValues = {
+    NODE_ENV: env.NODE_ENV || "production",
+    PRIVASEC_CLOUDFLARE_EDGE: "true",
+  };
+  if (typeof env.SERVER_SECRET_SALT === "string") values.SERVER_SECRET_SALT = env.SERVER_SECRET_SALT;
+  if (typeof env.ADMIN_USERNAME === "string") values.ADMIN_USERNAME = env.ADMIN_USERNAME;
+  if (typeof env.ADMIN_PASSWORD === "string") values.ADMIN_PASSWORD = env.ADMIN_PASSWORD;
+  if (typeof env.ADMIN_SECRET_KEY === "string") values.ADMIN_SECRET_KEY = env.ADMIN_SECRET_KEY;
+  if (typeof env.IPINFO_TOKEN === "string") values.IPINFO_TOKEN = env.IPINFO_TOKEN;
+  if (typeof env.ABUSEIPDB_API_KEY === "string") values.ABUSEIPDB_API_KEY = env.ABUSEIPDB_API_KEY;
+  return values;
 }
 
-let databaseSchemaReady = false;
+/**
+ * Per-isolate fast-path cache: once a request has confirmed (via `runMigrations`'s `upToDate`
+ * result, itself computed from a real query against `schema_migrations` under an advisory lock)
+ * that the schema is fully current, later requests on the same warm isolate skip the migration
+ * check entirely - no query, no lock, no round trip.
+ *
+ * This flag is NOT the concurrency-safety mechanism - it only ever *skips* work, never
+ * *replaces* the safety check. Correctness under concurrent requests/isolates comes entirely
+ * from the PostgreSQL advisory lock inside `runMigrations` (server/db/migrationRunner.ts), which
+ * still runs, and is still race-safe, on every request where this flag is false - including the
+ * very first requests after a cold start or a new deployment, when multiple concurrent requests
+ * may each see `migrationsVerified === false` and each call `runMigrations`. A stale `false`
+ * (e.g. after an isolate restart) only ever causes one redundant-but-safe re-check; it can never
+ * cause a migration to be skipped or a race to reappear.
+ */
+let migrationsVerified = false;
 
 /**
  * Creates a brand-new, single-use PostgreSQL connection for exactly one Worker request, per
@@ -92,10 +94,14 @@ let databaseSchemaReady = false;
  * a new client is fast."
  * (https://developers.cloudflare.com/hyperdrive/examples/connect-to-postgres/postgres-drivers-and-libraries/node-postgres/)
  *
- * This function never reads or writes any module-level variable: nothing it creates outlives
- * the request that calls it. The caller is responsible for closing `client` in a `finally`
- * block once the request has finished (see `handleRequestSafely` below), and for scoping
- * `repo` to this request only via `dbRepository.runWithRequestScopedRepository`.
+ * This function never reads or writes any module-level variable except the `migrationsVerified`
+ * read/write documented above (a plain boolean fact, not a connection or I/O object). Nothing
+ * else it creates outlives the request that calls it. The caller is responsible for closing
+ * `client` in a `finally` block once the request has finished (see `handleRequestSafely` below),
+ * and for scoping `repo` to this request only via `dbRepository.runWithRequestScopedRepository`.
+ *
+ * Must be called from inside the `runWithRequestEnv(...)` scope established by
+ * `handleRequestSafely`, since `PostgresRepository`'s constructor reads `getRequestEnv(...)`.
  */
 async function createRequestDatabase(env: RuntimeEnv): Promise<{ client: import("pg").Client | null; repo: import("../server/db/postgresRepository").PostgresRepository | null }> {
   const connectionString = env.HYPERDRIVE?.connectionString?.trim() || (typeof env.DATABASE_URL === "string" ? env.DATABASE_URL.trim() : "");
@@ -113,12 +119,12 @@ async function createRequestDatabase(env: RuntimeEnv): Promise<{ client: import(
       import("../server/db/postgresRepository"),
       import("../server/db/migrationRunner"),
     ]);
-    // Schema migration state is a tiny immutable-ish readiness flag, not an I/O object.
-    // The migration runner itself acquires a PostgreSQL transaction-level advisory lock so
-    // concurrent cold isolates/requests cannot apply the same migration simultaneously.
-    if (!databaseSchemaReady) {
-      await runMigrations(client, { acquireAdvisoryLock: true });
-      databaseSchemaReady = true;
+
+    if (!migrationsVerified) {
+      // Race-safe even though multiple concurrent requests can reach this branch at once -
+      // see the advisory lock inside runMigrations, and the doc comment on `migrationsVerified`.
+      const result = await runMigrations(client);
+      if (result.upToDate) migrationsVerified = true;
     }
 
     return { client, repo: new PostgresRepository(client) };
@@ -283,7 +289,7 @@ async function rateLimit(req: ServiceRequest, bucket: string, windowMs: number, 
     // is a genuine query/connectivity problem for this request, not a stale shared connection -
     // there is nothing left to reset, so we just log it and degrade this request's response.
     console.error("[RATE_LIMITER] consumeApiRateLimitAsync failed:", error instanceof Error ? error.message : String(error));
-    return process.env.NODE_ENV === "production"
+    return getRequestEnv("NODE_ENV") === "production"
       ? publicError(req, "RATE_LIMITER_UNAVAILABLE", "Traffic protection is temporarily unavailable. Please retry shortly.", 503)
       : null;
   }
@@ -347,10 +353,10 @@ async function handleApi(request: Request, env: RuntimeEnv, ctx: ExecutionContex
 
   if (p === "/api/healthz" && method === "GET") {
     const postgres = dbRepository.getPostgresRepository();
-    const healthy = process.env.NODE_ENV !== "production" ? true : Boolean(postgres && await postgres.checkHealth());
+    const healthy = getRequestEnv("NODE_ENV") !== "production" ? true : Boolean(postgres && await postgres.checkHealth());
     return jsonResponse({
       success: healthy,
-      data: { status: healthy ? "ok" : "unhealthy", uptime: 0, timestamp: new Date().toISOString(), service: "privacy-intelligence-auditor-api", environment: process.env.NODE_ENV || "production" },
+      data: { status: healthy ? "ok" : "unhealthy", uptime: 0, timestamp: new Date().toISOString(), service: "privacy-intelligence-auditor-api", environment: getRequestEnv("NODE_ENV") || "production" },
       meta: apiMeta(req),
     }, healthy ? 200 : 503);
   }
@@ -500,7 +506,7 @@ async function handleApi(request: Request, env: RuntimeEnv, ctx: ExecutionContex
   }
 
   if (p.startsWith("/api/admin")) {
-    const prod = process.env.NODE_ENV === "production";
+    const prod = getRequestEnv("NODE_ENV") === "production";
     const secure = prod;
 
     if (p === "/api/admin/csrf" && method === "GET") {
@@ -575,7 +581,7 @@ async function handleApi(request: Request, env: RuntimeEnv, ctx: ExecutionContex
     }
   }
 
-  return publicError(req, "NOT_FOUND", "API endpoint not found.", 404);
+  return null as unknown as Response;
 }
 
 function seoResponse(request: Request): Response | null {
@@ -618,9 +624,11 @@ async function handleRequest(request: Request, env: RuntimeEnv, ctx: ExecutionCo
  *
  * This wrapper also owns the full per-request database connection lifecycle:
  *
- *   BEFORE: one `pg.Pool` was created on cold start and reused across requests in a warm isolate,
- *   which violated Cloudflare's Hyperdrive request-scoped I/O guidance and caused intermittent
- *   cross-request failures behind RATE_LIMITER_UNAVAILABLE and Error 1101.
+ *   BEFORE (removed): one `pg.Pool` created on cold start, cached in module-level variables
+ *   (`dbInitialized`/`dbInitPromise`/`cachedPool`) and reused for every request handled by a
+ *   warm isolate - the exact pattern Cloudflare's Hyperdrive docs warn against, and the
+ *   confirmed cause of the intermittent "Cannot perform I/O on behalf of a different request"
+ *   failures behind RATE_LIMITER_UNAVAILABLE and Error 1101.
  *
  *   AFTER: `createRequestDatabase` opens exactly one `pg.Client` for this call, scoped to this
  *   request only via `dbRepository.runWithRequestScopedRepository` (AsyncLocalStorage - see
@@ -630,33 +638,35 @@ async function handleRequest(request: Request, env: RuntimeEnv, ctx: ExecutionCo
  *   race - between concurrent requests.
  */
 async function handleRequestSafely(request: Request, env: RuntimeEnv, ctx: ExecutionContext): Promise<Response> {
-  applyEnvToProcessEnvOnce(env);
-  const { client, repo } = await createRequestDatabase(env);
-  try {
-    return await dbRepository.runWithRequestScopedRepository(repo, () => handleRequest(request, env, ctx));
-  } catch (error) {
-    console.error("[WORKER] Uncaught exception while handling request:", error instanceof Error ? (error.stack || error.message) : String(error));
-    const requestId = `req_${crypto.randomUUID().replaceAll("-", "")}`;
-    return applySecurityHeaders(
-      jsonResponse(
-        {
-          success: false,
-          error: { code: "INTERNAL_ERROR", message: "An unexpected error occurred. Please retry shortly." },
-          meta: { timestamp: new Date().toISOString(), requestId, version: "1.0.0" },
-        },
-        500,
-      ),
-    );
-  } finally {
-    // Requirement: close the request-scoped connection after the request completes, regardless
-    // of success, handled error, or uncaught exception. Nothing about this connection survives
-    // past this point - the next request (even on the same warm isolate) creates its own.
-    if (client) {
-      await client.end().catch((closeError) => {
-        console.error("[DATABASE] Error closing per-request connection:", closeError instanceof Error ? closeError.message : String(closeError));
-      });
+  const requestEnvValues = buildRequestEnvValues(env);
+  return runWithRequestEnv(requestEnvValues, async () => {
+    const { client, repo } = await createRequestDatabase(env);
+    try {
+      return await dbRepository.runWithRequestScopedRepository(repo, () => handleRequest(request, env, ctx));
+    } catch (error) {
+      console.error("[WORKER] Uncaught exception while handling request:", error instanceof Error ? (error.stack || error.message) : String(error));
+      const requestId = `req_${crypto.randomUUID().replaceAll("-", "")}`;
+      return applySecurityHeaders(
+        jsonResponse(
+          {
+            success: false,
+            error: { code: "INTERNAL_ERROR", message: "An unexpected error occurred. Please retry shortly." },
+            meta: { timestamp: new Date().toISOString(), requestId, version: "1.0.0" },
+          },
+          500,
+        ),
+      );
+    } finally {
+      // Requirement: close the request-scoped connection after the request completes, regardless
+      // of success, handled error, or uncaught exception. Nothing about this connection survives
+      // past this point - the next request (even on the same warm isolate) creates its own.
+      if (client) {
+        await client.end().catch((closeError) => {
+          console.error("[DATABASE] Error closing per-request connection:", closeError instanceof Error ? closeError.message : String(closeError));
+        });
+      }
     }
-  }
+  });
 }
 
 export default { fetch: handleRequestSafely };

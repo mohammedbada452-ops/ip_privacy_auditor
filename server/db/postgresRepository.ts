@@ -15,6 +15,7 @@ import type {
   AdminSession,
 } from './repository';
 import { validateAdminUsername, validateAdminPassword } from '../config';
+import { getRequestEnv } from '../config/requestEnv';
 
 // Runtime (non-type-only) binding used solely for `instanceof` checks below, since the
 // `pg` import above is type-only and cannot be used as a value.
@@ -48,7 +49,7 @@ export class PostgresRepository {
 
   constructor(connection: pg.Pool | pg.Client) {
     this.connection = connection;
-    this.serverSalt = process.env.SERVER_SECRET_SALT || (process.env.NODE_ENV === 'production' ? '' : crypto.randomBytes(32).toString('hex'));
+    this.serverSalt = getRequestEnv('SERVER_SECRET_SALT') || (getRequestEnv('NODE_ENV') === 'production' ? '' : crypto.randomBytes(32).toString('hex'));
   }
 
   /**

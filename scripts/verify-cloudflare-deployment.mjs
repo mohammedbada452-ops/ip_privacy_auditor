@@ -30,7 +30,7 @@ assert(/"not_found_handling"\s*:\s*"single-page-application"/.test(wranglerText)
 assert(/"run_worker_first"\s*:\s*\[[\s\S]*"\/api\/\*"[\s\S]*\]/.test(wranglerText), 'API routes must run through Worker first');
 assert(/"exclude"\s*:\s*\[[\s\S]*worker\/\*\*\/\*\.ts[\s\S]*worker-configuration\.d\.ts/.test(tsconfigText), 'root TS config must isolate Worker generated types');
 assert(/"cf:typecheck"\s*:\s*"wrangler types && tsc -p tsconfig.worker.json"/.test(packageText), 'Worker typecheck must regenerate Wrangler types');
-assert(/export default\s*\{\s*fetch:\s*handle(Request|RequestSafely)\s*\}/.test(workerText), 'Worker must export a native fetch handler');
+assert(workerText.includes('export default { fetch: handleRequest }'), 'Worker must export a native fetch handler');
 assert(!workerText.includes("from 'express'") && !workerText.includes("from \"express\""), 'Production Worker must not import Express runtime');
 assert(workerText.includes('async function handleRequest(') && workerText.includes('fetch: handleRequest'), 'Worker must dispatch requests through its native fetch handler');
 assert(!workerText.includes('handleAsNodeRequest'), 'Worker must not use handleAsNodeRequest');

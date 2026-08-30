@@ -1,5 +1,6 @@
 import type { IGeoIPProvider, GeoIPResult } from './IGeoIPProvider';
 import { validateIp } from '../../utils/ipExtractor';
+import { getRequestEnv } from '../../config/requestEnv';
 
 /**
  * Uses Cloudflare's authoritative per-request `request.cf` metadata passed to
@@ -26,7 +27,7 @@ export class CloudflareRequestCfProvider implements IGeoIPProvider {
       };
     }
 
-    if (process.env.PRIVASEC_CLOUDFLARE_EDGE !== 'true') {
+    if (getRequestEnv('PRIVASEC_CLOUDFLARE_EDGE') !== 'true') {
       throw new Error('Cloudflare edge bridge is not active.');
     }
 

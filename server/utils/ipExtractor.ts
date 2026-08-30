@@ -1,5 +1,6 @@
 import net from 'net';
 import type { Request } from 'express';
+import { getRequestEnv } from '../config/requestEnv';
 
 export interface IpValidationResult {
   isValid: boolean;
@@ -274,7 +275,7 @@ export function extractClientIp(req: Request): ExtractedClientIpInfo {
   // In the Cloudflare Worker deployment, the Worker overwrites this internal header
   // from Cloudflare's CF-Connecting-IP before handing the request to Express.
   const workerObservedIp = req.headers['x-privasec-observed-ip'];
-  if (process.env.PRIVASEC_CLOUDFLARE_EDGE === 'true' && typeof workerObservedIp === 'string') {
+  if (getRequestEnv('PRIVASEC_CLOUDFLARE_EDGE') === 'true' && typeof workerObservedIp === 'string') {
     const normalizedWorkerIp = normalizeIp(workerObservedIp);
     if (validateIp(normalizedWorkerIp).isValid) {
       candidateIp = normalizedWorkerIp;
