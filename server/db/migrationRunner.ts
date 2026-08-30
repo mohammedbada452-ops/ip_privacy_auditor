@@ -212,48 +212,20 @@ export const MIGRATIONS: Migration[] = [
 ];
 
 /**
- * Fixed advisory-lock key used to serialize migration execution across concurrent connections.
- * Any 64-bit signed integer works; this one has no special meaning beyond being a stable,
- * collision-unlikely constant reserved for this specific purpose in this database.
- */
-const MIGRATION_ADVISORY_LOCK_KEY = 872234510;
-
-/**
- * Runs pending migrations against either:
- *  - a `pg.Pool` (Node/Express dev server: checks a client out of the pool, runs migrations,
- *    releases it back), or
- *  - a single already-connected `pg.Client` (Cloudflare Worker: this IS the one connection for
- *    the current request - see `createRequestDatabase` in worker/index.ts - so migrations run
- *    directly on it with no separate connect()/release() step, and closing it afterward is the
- *    caller's responsibility, not this function's).
+ * Runs pending migrations against either a pg.Pool or a request-scoped pg.Client.
  *
- * Concurrency safety: two connections (from two concurrent Worker requests, or two different
- * Worker isolates, or a Worker request racing the Node dev server) can call this at the same
- * moment against a fresh database. Rather than relying on `schema_migrations`'s primary key to
- * reject a duplicate INSERT after the fact (which would surface as a thrown "duplicate key"
- * error on whichever request loses the race), this function takes a PostgreSQL session advisory
- * lock (`pg_advisory_lock`) as its very first step. Advisory locks live in PostgreSQL itself, not
- * in Worker/Node memory, so this requires no shared `pg.Client`/`pg.Pool` and no I/O object is
- * ever shared between requests - each request still opens and closes its own connection exactly
- * as before; the lock just means whichever connection asks second waits its turn, then finds
- * (via the same idempotent version check below) that there is nothing left to apply.
- *
- * Callers are expected to skip calling this entirely once they have confirmed (via the returned
- * `upToDate` flag) that the schema is current, so this full check only actually runs on the
- * requests that need it - see `createRequestDatabase` in worker/index.ts.
+ * Hyperdrive does not support PostgreSQL advisory locks. Migration safety therefore relies on
+ * idempotent DDL (`IF NOT EXISTS`) and idempotent migration markers (`ON CONFLICT DO NOTHING`).
+ * This is safe for concurrent Worker isolates: a loser in a concurrent marker race simply sees
+ * the migration as already applied on its next check. Normal requests should call this only when
+ * the per-isolate schema verification flag is false; callers remain responsible for request
+ * connection lifecycle.
  */
 export async function runMigrations(connection: pg.Pool | pg.Client): Promise<{ applied: number; currentVersion: number; upToDate: boolean }> {
   const isPool = connection instanceof PgPool;
   const client = isPool ? await (connection as pg.Pool).connect() : (connection as pg.Client);
-  let lockAcquired = false;
-  try {
-    // Serialize concurrent migration attempts. This blocks (does not fail) if another
-    // connection is currently applying migrations, then proceeds once it releases the lock -
-    // at which point the version check below will correctly see nothing pending.
-    await client.query('SELECT pg_advisory_lock($1)', [MIGRATION_ADVISORY_LOCK_KEY]);
-    lockAcquired = true;
 
-    // 1. Ensure migrations tracking table exists
+  try {
     await client.query(`
       CREATE TABLE IF NOT EXISTS schema_migrations (
         version INTEGER PRIMARY KEY,
@@ -262,43 +234,54 @@ export async function runMigrations(connection: pg.Pool | pg.Client): Promise<{ 
       );
     `);
 
-    // 2. Fetch applied migration versions
     const appliedResult = await client.query<{ version: number }>(
       'SELECT version FROM schema_migrations ORDER BY version ASC'
     );
     const appliedVersions = new Set(appliedResult.rows.map((r) => r.version));
 
     let appliedCount = 0;
-    let latestVersion = appliedResult.rows.length > 0 ? appliedResult.rows[appliedResult.rows.length - 1].version : 0;
+    let latestVersion = appliedResult.rows.length > 0
+      ? appliedResult.rows[appliedResult.rows.length - 1].version
+      : 0;
 
-    // 3. Execute pending migrations in sequence
     for (const migration of MIGRATIONS) {
-      if (!appliedVersions.has(migration.version)) {
-        await client.query('BEGIN');
-        try {
-          await client.query(migration.sql);
-          await client.query(
-            'INSERT INTO schema_migrations (version, name, applied_at) VALUES ($1, $2, NOW())',
-            [migration.version, migration.name]
-          );
-          await client.query('COMMIT');
-          appliedCount++;
-          latestVersion = migration.version;
-        } catch (err) {
-          await client.query('ROLLBACK');
-          throw new Error(`Migration ${migration.version} (${migration.name}) failed: ${(err as Error).message}`);
-        }
+      if (appliedVersions.has(migration.version)) continue;
+
+      await client.query('BEGIN');
+      try {
+        await client.query(migration.sql);
+        const marker = await client.query(
+          `INSERT INTO schema_migrations (version, name, applied_at)
+           VALUES ($1, $2, NOW())
+           ON CONFLICT (version) DO NOTHING`,
+          [migration.version, migration.name]
+        );
+        await client.query('COMMIT');
+
+        // If another concurrent request inserted the marker first, this request may still have
+        // executed the idempotent migration SQL successfully. Treat the schema as current and do
+        // not report a duplicate application as a failure.
+        if (marker.rowCount === 1) appliedCount++;
+        appliedVersions.add(migration.version);
+        latestVersion = Math.max(latestVersion, migration.version);
+      } catch (err) {
+        await client.query('ROLLBACK');
+        throw new Error(
+          `Migration ${migration.version} (${migration.name}) failed: ${err instanceof Error ? err.message : String(err)}`
+        );
       }
     }
 
-    const latestKnownVersion = MIGRATIONS.length > 0 ? MIGRATIONS[MIGRATIONS.length - 1].version : 0;
-    return { applied: appliedCount, currentVersion: latestVersion, upToDate: latestVersion >= latestKnownVersion };
+    const latestKnownVersion = MIGRATIONS.length > 0
+      ? MIGRATIONS[MIGRATIONS.length - 1].version
+      : 0;
+
+    return {
+      applied: appliedCount,
+      currentVersion: latestVersion,
+      upToDate: appliedVersions.has(latestKnownVersion),
+    };
   } finally {
-    if (lockAcquired) {
-      await client.query('SELECT pg_advisory_unlock($1)', [MIGRATION_ADVISORY_LOCK_KEY]).catch((unlockErr) => {
-        console.error('[MIGRATIONS] Failed to release advisory lock (it will still auto-release when this connection closes):', unlockErr instanceof Error ? unlockErr.message : String(unlockErr));
-      });
-    }
     if (isPool) (client as pg.PoolClient).release();
   }
 }

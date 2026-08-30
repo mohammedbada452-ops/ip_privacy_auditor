@@ -88,14 +88,14 @@ function buildRequestEnvValues(env: RuntimeEnv): RequestEnvValues {
 
 /**
  * Per-isolate fast-path cache: once a request has confirmed (via `runMigrations`'s `upToDate`
- * result, itself computed from a real query against `schema_migrations` under an advisory lock)
+ * result, itself computed from a real query against `schema_migrations`)
  * that the schema is fully current, later requests on the same warm isolate skip the migration
  * check entirely - no query, no lock, no round trip.
  *
  * This flag is NOT the concurrency-safety mechanism - it only ever *skips* work, never
  * *replaces* the safety check. Correctness under concurrent requests/isolates comes entirely
- * from the PostgreSQL advisory lock inside `runMigrations` (server/db/migrationRunner.ts), which
- * still runs, and is still race-safe, on every request where this flag is false - including the
+ * from the idempotent migration logic inside `runMigrations` (server/db/migrationRunner.ts),
+ * which remains safe under concurrent invocation - including the
  * very first requests after a cold start or a new deployment, when multiple concurrent requests
  * may each see `migrationsVerified === false` and each call `runMigrations`. A stale `false`
  * (e.g. after an isolate restart) only ever causes one redundant-but-safe re-check; it can never
@@ -137,8 +137,8 @@ async function createRequestDatabase(env: RuntimeEnv): Promise<{ client: import(
     ]);
 
     if (!migrationsVerified) {
-      // Race-safe even though multiple concurrent requests can reach this branch at once -
-      // see the advisory lock inside runMigrations, and the doc comment on `migrationsVerified`.
+      // Multiple concurrent requests may reach this branch during a cold start.
+      // runMigrations is designed to be idempotent for concurrent invocation.
       const result = await runMigrations(client);
       if (result.upToDate) migrationsVerified = true;
     }
@@ -467,9 +467,49 @@ async function handleApi(request: Request, env: RuntimeEnv, ctx: ExecutionContex
     const validation = validateIp(targetIp);
     if (!validation.isValid) return publicError(req, "INVALID_IP", "Provided IP address is not valid.", 400);
     if (!validation.isPublic) return jsonResponse({ success: true, data: { ip: targetIp, measurementStatus: "NOT_MEASURED", geo: { country: "Not measured", countryCode: "XX", region: "Not measured", city: "Not measured", postalCode: "Not measured", latitude: null, longitude: null, timezone: "Unknown" }, network: { isp: "Not measured", organization: "Not measured", asn: "Not measured", isMobile: null, isProxy: null, isVpn: null, isTor: null, isHosting: null, provider: "NONE", providerStatus: "UNAVAILABLE" } }, meta: apiMeta(req) });
-    const current = await new CloudflareRequestCfProvider(req.headers as any).lookup(validation.normalizedIp).catch(() => null);
-    const details = current || await geoIPService.getDetails(validation.normalizedIp);
-    return jsonResponse({ success: true, data: { ip: validation.normalizedIp, measurementStatus: details.network.providerStatus === "VERIFIED" ? "MEASURED" : "UNKNOWN", geo: details.geo, network: details.network }, meta: apiMeta(req) });
+    // For the current client IP, combine authoritative Cloudflare edge metadata with a
+    // real free GeoIP provider so VPN/proxy/hosting signals are measured when the provider
+    // supplies them. Both lookups run in parallel and the provider is bounded by its own
+    // 5-second timeout; the endpoint never waits on an unbounded external call.
+    const [current, providerDetails] = await Promise.all([
+      new CloudflareRequestCfProvider(req.headers as any).lookup(validation.normalizedIp).catch(() => null),
+      geoIPService.getDetails(validation.normalizedIp).catch(() => null),
+    ]);
+
+    const providerVerified = providerDetails?.network?.providerStatus === 'VERIFIED';
+    const edgeVerified = current?.network?.providerStatus === 'VERIFIED';
+    const merged = providerVerified
+      ? {
+          geo: current?.geo?.countryCode && current.geo.countryCode !== 'XX' ? current.geo : providerDetails!.geo,
+          network: providerDetails!.network,
+        }
+      : edgeVerified
+        ? { geo: current!.geo, network: current!.network }
+        : null;
+
+    if (!merged) {
+      return jsonResponse({
+        success: true,
+        data: {
+          ip: validation.normalizedIp,
+          measurementStatus: 'UNKNOWN',
+          geo: { country: 'Unknown', countryCode: 'XX', region: '', city: '', postalCode: '', latitude: null, longitude: null, timezone: '' },
+          network: { isp: 'Unavailable', organization: 'Unavailable', asn: '—', isMobile: null, isProxy: null, isVpn: null, isTor: null, isHosting: null, provider: 'UNAVAILABLE', providerStatus: 'UNAVAILABLE' },
+        },
+        meta: apiMeta(req),
+      });
+    }
+
+    return jsonResponse({
+      success: true,
+      data: {
+        ip: validation.normalizedIp,
+        measurementStatus: merged.network.providerStatus === 'VERIFIED' ? 'MEASURED' : 'UNKNOWN',
+        geo: merged.geo,
+        network: merged.network,
+      },
+      meta: apiMeta(req),
+    });
   }
 
   if ((p === "/api/headers" || p === "/api/check/headers") && method === "GET") {
@@ -657,7 +697,14 @@ async function handleRequestSafely(request: Request, env: RuntimeEnv, ctx: Execu
   const requestEnvValues = buildRequestEnvValues(env);
   return runWithRequestEnv(requestEnvValues, async () => {
     const pathname = new URL(request.url).pathname;
-    const needsDatabase = pathname.startsWith("/api/");
+    const needsDatabase =
+      pathname === "/api/health/ready" ||
+      pathname === "/api/healthz" ||
+      pathname === "/api/analyze/browser" ||
+      pathname === "/api/privacy/score" ||
+      pathname === "/api/insights/population" ||
+      pathname === "/api/ip/reputation" ||
+      pathname.startsWith("/api/admin");
     const { client, repo } = needsDatabase
       ? await createRequestDatabase(env)
       : { client: null, repo: null };
