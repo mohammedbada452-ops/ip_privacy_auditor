@@ -12,6 +12,7 @@ import { ipReputationService } from '../services/ipReputation';
 import { rdapService } from '../services/rdap';
 import { reverseDnsService } from '../services/reverseDns';
 import type { IpNetworkIntelligenceResponse } from '@packages/api-contract';
+import type { GeoIPResult } from '../providers/geoip/IGeoIPProvider';
 import { CloudflareRequestCfProvider } from '../providers/geoip/CloudflareRequestCfProvider';
 
 const router = Router();
@@ -38,7 +39,7 @@ async function getCurrentClientGeoDetails(req: Request, ip: string): Promise<IpD
   }
 }
 
-function mergeCurrentClientDetails(primary: IpDetailsResponse | null, edge: IpDetailsResponse | null, ip: string): IpDetailsResponse {
+function mergeCurrentClientDetails(primary: GeoIPResult | null, edge: IpDetailsResponse | null, ip: string): IpDetailsResponse {
   const primaryGeo = primary?.geo;
   const edgeGeo = edge?.geo;
   const primaryNetwork = primary?.network;
