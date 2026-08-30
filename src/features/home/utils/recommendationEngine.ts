@@ -86,10 +86,8 @@ export function generateSmartRecommendations(risks: UnifiedRiskItem[]): SmartRec
 
     recommendationsMap.set('rec_fingerprint', {
       id: 'rec_fingerprint',
-      title: hasWebgl ? 'Reduce WebGL Hardware Exposure' : 'Review Browser Fingerprinting Surfaces',
-      description: hasWebgl
-        ? 'WebGL renderer exposure currently affects the canonical privacy score. Canvas and AudioContext remain visible fingerprinting surfaces but are currently score-neutral.'
-        : 'These signals can contribute to fingerprinting. Informational surfaces are shown for awareness and do not imply a score deduction.',
+      title: 'Reduce Hardware Canvas, WebGL & Audio Entropy',
+      description: 'These signals can contribute to fingerprinting. This recommendation only quantifies improvement for factors that currently affect the canonical score; informational surfaces remain unscored.',
       sourceCategory: 'browser',
       priority: 'high',
       estimatedScoreBoost: totalBoost,
@@ -112,7 +110,7 @@ export function generateSmartRecommendations(risks: UnifiedRiskItem[]): SmartRec
         id: 'fix_gpc_enable',
         title: 'Enable Global Privacy Control (Sec-GPC: 1)',
         description: 'Turn on GPC in browser settings or install Privacy Badger / DuckDuckGo extension.',
-        expectedImprovementPts: 0,
+        expectedImprovementPts: 5,
         actor: 'BROWSER SETTING',
       },
     ];
@@ -120,13 +118,13 @@ export function generateSmartRecommendations(risks: UnifiedRiskItem[]): SmartRec
     recommendationsMap.set('rec_gpc', {
       id: 'rec_gpc',
       title: 'Broadcast Global Privacy Control (Sec-GPC: 1)',
-      description: 'Communicates a privacy preference to participating sites. This signal is optional, browser-dependent, and currently score-neutral.',
+      description: 'Legally signals websites and data brokers under CCPA and GDPR not to sell or share your personal browsing data.',
       sourceCategory: 'headers',
       priority: 'medium',
-      estimatedScoreBoost: 0,
+      estimatedScoreBoost: 5,
       steps: [
-        'Enable Global Privacy Control only when your browser or privacy tool supports it.',
-        'Use a privacy tool that explicitly supports GPC if you want to broadcast the preference.',
+        'Enable "Global Privacy Control" or "Send websites a Do Not Track request" in your browser Privacy & Security settings.',
+        'Alternatively, install privacy extensions like Privacy Badger, DuckDuckGo Privacy Essentials, or EFF Privacy Badger.',
         'Recheck headers to verify Sec-GPC: 1 transmission.',
       ],
       fixes,

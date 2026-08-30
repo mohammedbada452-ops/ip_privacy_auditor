@@ -240,9 +240,6 @@ export class FactorRegistry {
       evaluate: (input): PrivacyFactor => {
         const available = Boolean(input.ipCheck?.headers);
         const isGpcActive = input.ipCheck?.headers?.secGpc === '1';
-        const userAgent = String(input.ipCheck?.headers?.userAgent || '');
-        const chromeMatch = userAgent.match(/(?:Chrome|Chromium)\/(\d+)/i);
-        const gpcNativeSupportUnknown = Boolean(chromeMatch && Number(chromeMatch[1]) >= 120 && !/Edg\//i.test(userAgent));
         return {
           id: 'HDR_SEC_GPC_SIGNAL',
           category: 'HEADERS',
@@ -256,8 +253,8 @@ export class FactorRegistry {
           reason: isGpcActive
             ? 'Global Privacy Control (Sec-GPC: 1) signal is active, communicating opt-out preference under applicable privacy regulations.'
             : 'Global Privacy Control (Sec-GPC) signal header is not enabled.',
-          recommendation: !isGpcActive && !gpcNativeSupportUnknown
-            ? 'Enable Global Privacy Control (GPC) where your browser or privacy tool supports it to communicate a recognized privacy preference.'
+          recommendation: !isGpcActive
+            ? 'Enable Global Privacy Control (GPC) to send a recognized privacy preference signal to participating sites.'
             : undefined,
           detected: isGpcActive,
           available,
@@ -287,7 +284,7 @@ export class FactorRegistry {
           reason: isDntActive
             ? 'Do Not Track (DNT: 1) header is active.'
             : 'Do Not Track (DNT) header is not set.',
-          recommendation: undefined,
+          recommendation: !isDntActive ? 'Consider enabling Sec-GPC for modern tracker opt-out.' : undefined,
           detected: isDntActive,
           available,
           source: 'headers',
@@ -410,7 +407,7 @@ export class FactorRegistry {
             : available
               ? 'WebGL hardware renderer masked or standard.'
               : 'WebGL context not available or blocked in this environment.',
-          recommendation: isUnmasked ? 'Use a browser privacy mode or configuration that reduces or standardizes WebGL renderer exposure, then re-run the audit to verify the observed result.' : undefined,
+          recommendation: isUnmasked ? 'Enable WebGL parameter masking or use Safari / Brave privacy shields.' : undefined,
           detected: isUnmasked,
           available,
           source: 'browser',

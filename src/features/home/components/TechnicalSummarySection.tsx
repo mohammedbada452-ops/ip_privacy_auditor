@@ -264,7 +264,7 @@ export const TechnicalSummarySection: React.FC<TechnicalSummarySectionProps> = (
             <div className="p-4 rounded-xl bg-slate-900/50 border border-slate-800">
               <div className="flex items-center gap-2.5 mb-3"><ShieldCheck className="w-4 h-4 text-cyan-400" /><span className="text-xs font-mono font-bold text-slate-200">Evidence</span></div>
               <div className="space-y-2 text-xs">
-                <div className="flex items-center justify-between"><span className="text-slate-500">Network provider</span><span className="font-mono text-slate-300 truncate max-w-[160px]">{ipDetails?.network?.isp || 'Unavailable'}</span></div>
+                <div className="flex items-center justify-between"><span className="text-slate-500">Network provider</span><span className="font-mono text-slate-300 truncate max-w-[160px]">{ipDetails?.network?.provider || 'Unavailable'}</span></div>
                 <div className="flex items-center justify-between"><span className="text-slate-500">Measurement</span><span className="font-mono text-slate-300">{ipDetails?.measurementStatus || 'UNKNOWN'}</span></div>
                 <div className="flex items-center justify-between"><span className="text-slate-500">Country code</span><span className="font-mono text-cyan-300">{countryCode || 'XX'}</span></div>
                 <div className="flex items-center justify-between"><span className="text-slate-500">Network type</span><span className="font-mono text-slate-300">{networkType}</span></div>

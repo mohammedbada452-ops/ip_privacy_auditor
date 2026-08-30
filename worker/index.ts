@@ -427,18 +427,6 @@ async function handleApi(request: Request, env: RuntimeEnv, ctx: ExecutionContex
     }
 
     const details = multiSource.primary;
-    // Preserve the primary GeoIP provider as the network-intelligence source.
-    // Only backfill missing ASN/AS-organization from authoritative edge/consensus evidence.
-    const isUsableAsn = (value: unknown) => /^AS\d+$/i.test(String(value ?? '').trim());
-    const resolvedAsn = isUsableAsn(details.network.asn)
-      ? details.network.asn!.toUpperCase()
-      : (isUsableAsn(cfDetails?.network.asn)
-        ? cfDetails!.network.asn!.toUpperCase()
-        : (isUsableAsn(multiSource.consensus.asn) ? multiSource.consensus.asn!.toUpperCase() : '—'));
-    const resolvedAsOrganization = (details.network.asOrganization && details.network.asOrganization.trim())
-      ? details.network.asOrganization
-      : (cfDetails?.network.asOrganization || null);
-    const mergedNetwork = { ...details.network, asn: resolvedAsn, asOrganization: resolvedAsOrganization };
     const providers = [details.network.provider || "GeoIP"];
     if (cfDetails?.network.providerStatus === "VERIFIED") providers.push(cfDetails.network.provider);
     if (reputation.provider) providers.push(reputation.provider);
@@ -451,7 +439,7 @@ async function handleApi(request: Request, env: RuntimeEnv, ctx: ExecutionContex
     return jsonResponse({ success: true, data: {
       ip: normalizedIp,
       geo: details.geo,
-      network: mergedNetwork,
+      network: details.network,
       reputation,
       rdap,
       reverseDns,
