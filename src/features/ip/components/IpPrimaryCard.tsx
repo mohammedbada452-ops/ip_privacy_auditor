@@ -99,7 +99,7 @@ export const IpPrimaryCard: React.FC<IpPrimaryCardProps> = ({
 
         <div className="flex items-center gap-2 text-[11px] text-slate-500 font-mono">
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-          <span>Source: {network.provider || 'network intelligence'} · Status: {data.details.measurementStatus || 'UNKNOWN'} · Results are provider-observed and may be approximate.</span>
+          <span>Source: {network.provider || 'network intelligence'} · Status: {data.details.measurementStatus || 'UNKNOWN'} · Network provider: {isp} · Results are provider-observed and may be approximate.</span>
         </div>
       </CardBody>
     </Card>

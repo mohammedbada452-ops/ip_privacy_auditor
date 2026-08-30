@@ -32,7 +32,7 @@ async function getCurrentClientGeoDetails(req: Request, ip: string): Promise<IpD
       ip,
       measurementStatus: details.network.providerStatus === 'VERIFIED' ? 'MEASURED' : 'UNKNOWN',
       geo: details.geo,
-      network: details.network,
+      network: mergedNetwork,
     };
   } catch {
     return null;
@@ -189,6 +189,18 @@ router.get('/ip/network-intelligence', async (req: Request, res: Response) => {
   }
 
   const details = multiSource.primary;
+  // Preserve the primary GeoIP provider as the network-intelligence source.
+  // Only backfill missing ASN/AS-organization from authoritative edge/consensus evidence.
+  const isUsableAsn = (value: unknown) => /^AS\d+$/i.test(String(value ?? '').trim());
+  const resolvedAsn = isUsableAsn(details.network.asn)
+    ? details.network.asn!.toUpperCase()
+    : (isUsableAsn(cfDetails?.network.asn)
+      ? cfDetails!.network.asn!.toUpperCase()
+      : (isUsableAsn(multiSource.consensus.asn) ? multiSource.consensus.asn!.toUpperCase() : '—'));
+  const resolvedAsOrganization = (details.network.asOrganization && details.network.asOrganization.trim())
+    ? details.network.asOrganization
+    : (cfDetails?.network.asOrganization || null);
+  const mergedNetwork = { ...details.network, asn: resolvedAsn, asOrganization: resolvedAsOrganization };
   if (cfDetails && cfDetails.network.providerStatus === 'VERIFIED' && cfDetails.geo.countryCode && details.geo.countryCode && cfDetails.geo.countryCode !== details.geo.countryCode) {
     console.warn('[GeoIP] Cloudflare edge and provider country disagreement', { edge: cfDetails.geo.countryCode, provider: details.geo.countryCode, ip: normalizedIp });
   }
@@ -205,7 +217,7 @@ router.get('/ip/network-intelligence', async (req: Request, res: Response) => {
     data: {
       ip: normalizedIp,
       geo: details.geo,
-      network: details.network,
+      network: mergedNetwork,
       reputation,
       rdap,
       reverseDns,

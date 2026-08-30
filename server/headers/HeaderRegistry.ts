@@ -29,7 +29,7 @@ export const HEADER_DEFINITIONS: Record<string, HeaderDefinition> = {
     riskPoints: 0,
     isPrivacyControl: true,
     isStandard: true,
-    recommendation: 'Complement DNT with modern Sec-GPC header for recognized tracker opt-out signals.',
+    recommendation: 'DNT is a legacy signal. Prefer GPC where the browser supports it and where your privacy preference requires it.',
   },
   'save-data': {
     canonicalName: 'Save-Data',
@@ -417,7 +417,7 @@ export const HEADER_DEFINITIONS: Record<string, HeaderDefinition> = {
     canonicalName: 'Sec-Fetch-Site',
     category: 'SECURITY_TRANSPORT',
     description: 'Fetch Metadata request header indicating relationship between request initiator and requested resource (same-origin, same-site, cross-site, none).',
-    privacyImpact: 'Protects against Cross-Site Request Forgery (CSRF) and XS-Leaks.',
+    privacyImpact: 'Provides request-context information that servers can use as part of CSRF and cross-site request-isolation defenses.',
     defaultStatus: 'SAFE',
     severity: 'info',
     riskPoints: 0,
@@ -500,7 +500,7 @@ export const HEADER_DEFINITIONS: Record<string, HeaderDefinition> = {
     canonicalName: 'Accept',
     category: 'CONTENT_NEGOTIATION',
     description: 'Informs the server about MIME types the client is capable of processing and prioritizing.',
-    privacyImpact: 'Discloses client MIME type capabilities and priority q-weights.',
+    privacyImpact: 'Discloses the response media types the client accepts; any q-values are preferences only when present in the header.',
     defaultStatus: 'SAFE',
     severity: 'info',
     riskPoints: 0,
@@ -676,6 +676,14 @@ export const RECOMMENDED_MISSING_HEADERS: MissingHeaderDefinition[] = [
     purpose: 'Signals user non-consent to third-party data sales and tracking under applicable privacy regulations (such as CCPA/CPRA).',
     recommendation: 'Enable Global Privacy Control (GPC) in your browser settings (Brave, Firefox, DuckDuckGo) or via privacy extensions.',
     benefit: 'Automated opt-out signal recognized by participating websites and frameworks in regulated jurisdictions.',
-    checkCondition: (headers) => Boolean(headers['sec-gpc'] && headers['sec-gpc'] === '1'),
+    checkCondition: (headers) => {
+      if (headers['sec-gpc'] === '1') return true;
+      const ua = String(headers['user-agent'] || '');
+      // Chrome/Chromium currently does not expose native GPC support; do not show an
+      // actionable 'missing header' finding for browsers that cannot send the signal.
+      const chromeMatch = ua.match(/(?:Chrome|Chromium)\/(\d+)/i);
+      if (chromeMatch && Number(chromeMatch[1]) >= 120 && !/Edg\//i.test(ua)) return true;
+      return false;
+    },
   },
 ];
