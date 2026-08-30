@@ -23,7 +23,7 @@ export class CloudflareRequestCfProvider implements IGeoIPProvider {
     if (!validation.isPublic) {
       return {
         geo: { country: 'Private Network', countryCode: 'PRIVATE', region: '', city: '', postalCode: '', latitude: null, longitude: null, timezone: '' },
-        network: { isp: 'Private Network', organization: 'Local Scope', asn: '—', isMobile: null, isProxy: null, isVpn: null, isTor: null, isHosting: null, provider: this.name, providerStatus: 'FALLBACK' },
+        network: { isp: 'Private Network', organization: 'Local Scope', asn: '—', asOrganization: null, isMobile: null, isProxy: null, isVpn: null, isTor: null, isHosting: null, privacyScore: null, privacyGrade: null, networkType: 'private', provider: this.name, providerStatus: 'FALLBACK' },
       };
     }
 

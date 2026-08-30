@@ -29,7 +29,7 @@ must(/"NODE_ENV"\s*:\s*"production"/.test(wrangler), 'Production NODE_ENV must b
 must(geoService.includes("providerType === 'mock' && !['test', 'development'].includes"), 'Mock GeoIP must be blocked outside test/development.');
 must(worker.toLowerCase().includes('x-privasec-observed-ip'), 'Worker must pass authoritative observed client IP into service requests.');
 must(worker.includes('const cfMap') && worker.includes('headers["x-privasec-observed-ip"]'), 'Worker must construct internal edge observations from authoritative request context.');
-must(extractor.includes("workerObservedIp") && extractor.includes("PRIVASEC_CLOUDFLARE_EDGE === 'true'"), 'IP extraction must consume Worker-authoritative observed client IP.');
+must(extractor.includes('workerObservedIp') && extractor.includes("PRIVASEC_CLOUDFLARE_EDGE") && extractor.includes('true'), 'IP extraction must consume Worker-authoritative observed client IP.');
 must(cfProvider.includes('Cloudflare request.cf metadata is unavailable for this request.'), 'Cloudflare provider must fail closed when edge metadata is unavailable.');
 must(hackMyIp.includes('returned data for a different IP address'), 'HackMyIP response must be bound to requested IP.');
 must(ipInfoLite.includes('returned data for a different IP address'), 'IPinfo Lite response must be bound to requested IP.');

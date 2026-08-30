@@ -36,7 +36,7 @@ export const LocaleTimezoneCard: React.FC<LocaleTimezoneCardProps> = ({
             <p className="text-xs text-slate-400">{t.browser.localeTimezoneSubtitle}</p>
           </div>
         </div>
-        <StatusBadge status="neutral" label="Synchronized" size="sm" />
+        <StatusBadge status="neutral" label="Browser-reported" size="sm" />
       </div>
 
       {/* Regional & Timezone Grid */}

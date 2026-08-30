@@ -24,67 +24,66 @@ async function getCurrentClientGeoDetails(req: Request, ip: string): Promise<IpD
   const observedIp = req.headers['x-privasec-observed-ip'];
   const observed = typeof observedIp === 'string' ? observedIp.trim() : '';
   if (!observed || validateIp(observed).normalizedIp !== validateIp(ip).normalizedIp) return null;
-
-  // For the current client IP, Cloudflare's request.cf metadata is authoritative for the
-  // request path, while the configured GeoIP provider supplies the human-readable country,
-  // city, ISP and privacy classification fields that request.cf does not expose.
   try {
-    const cfProvider = new CloudflareRequestCfProvider(getRequestHeaderMap(req));
-    const [cfResult, providerResult] = await Promise.all([
-      cfProvider.lookup(ip).catch(() => null),
-      geoIpService.getDetails(ip).catch(() => null),
-    ]);
-
-    if (!cfResult && !providerResult) return null;
-    if (!providerResult) {
-      return {
-        ip,
-        measurementStatus: cfResult?.network.providerStatus === 'VERIFIED' ? 'MEASURED' : 'UNKNOWN',
-        geo: cfResult!.geo,
-        network: cfResult!.network,
-      };
-    }
-    if (!cfResult) {
-      return {
-        ip,
-        measurementStatus: providerResult.network.providerStatus === 'VERIFIED' ? 'MEASURED' : 'UNKNOWN',
-        geo: providerResult.geo,
-        network: providerResult.network,
-      };
-    }
-
-    const geo = {
-      ...providerResult.geo,
-      // request.cf is tied to this exact request; preserve its observed region/timezone
-      // where the external provider does not supply a value.
-      region: providerResult.geo.region || cfResult.geo.region,
-      city: providerResult.geo.city || cfResult.geo.city,
-      postalCode: providerResult.geo.postalCode || cfResult.geo.postalCode,
-      timezone: providerResult.geo.timezone || cfResult.geo.timezone,
-      latitude: providerResult.geo.latitude ?? cfResult.geo.latitude,
-      longitude: providerResult.geo.longitude ?? cfResult.geo.longitude,
-    };
-    const network = {
-      ...providerResult.network,
-      // Keep the current-request ASN/org only when the provider has no value. This avoids
-      // overwriting richer provider privacy flags (VPN/proxy/Tor/hosting/mobile).
-      organization: providerResult.network.organization || cfResult.network.organization,
-      isp: providerResult.network.isp || cfResult.network.isp,
-      asn: providerResult.network.asn !== '—' ? providerResult.network.asn : cfResult.network.asn,
-    };
-
+    const provider = new CloudflareRequestCfProvider(getRequestHeaderMap(req));
+    const details = await provider.lookup(ip);
     return {
       ip,
-      measurementStatus: providerResult.network.providerStatus === 'VERIFIED' || cfResult.network.providerStatus === 'VERIFIED'
-        ? 'MEASURED'
-        : 'UNKNOWN',
-      geo,
-      network,
+      measurementStatus: details.network.providerStatus === 'VERIFIED' ? 'MEASURED' : 'UNKNOWN',
+      geo: details.geo,
+      network: details.network,
     };
   } catch {
     return null;
   }
 }
+
+function mergeCurrentClientDetails(primary: IpDetailsResponse | null, edge: IpDetailsResponse | null, ip: string): IpDetailsResponse {
+  const primaryGeo = primary?.geo;
+  const edgeGeo = edge?.geo;
+  const primaryNetwork = primary?.network;
+  const edgeNetwork = edge?.network;
+  const pick = (a: unknown, b: unknown, fallback: string) => {
+    const av = String(a ?? '').trim();
+    if (av && !/^(unknown|unavailable|not measured|not assigned|—)$/i.test(av)) return av;
+    const bv = String(b ?? '').trim();
+    return bv && !/^(unknown|unavailable|not measured|not assigned|—)$/i.test(bv) ? bv : fallback;
+  };
+  const pickNullableNumber = (a: number | null | undefined, b: number | null | undefined) => Number.isFinite(a as number) ? a! : Number.isFinite(b as number) ? b! : null;
+  const pickBool = (a: boolean | null | undefined, b: boolean | null | undefined) => a !== null && a !== undefined ? a : (b !== null && b !== undefined ? b : null);
+  const providerStatus = primaryNetwork?.providerStatus === 'VERIFIED' ? 'VERIFIED' : edgeNetwork?.providerStatus === 'VERIFIED' ? 'VERIFIED' : 'UNAVAILABLE';
+  return {
+    ip,
+    measurementStatus: providerStatus === 'VERIFIED' ? 'MEASURED' : 'UNKNOWN',
+    geo: {
+      country: pick(primaryGeo?.country, edgeGeo?.country, 'Unknown'),
+      countryCode: pick(primaryGeo?.countryCode, edgeGeo?.countryCode, 'XX').toUpperCase(),
+      region: pick(primaryGeo?.region, edgeGeo?.region, ''),
+      city: pick(primaryGeo?.city, edgeGeo?.city, ''),
+      postalCode: pick(primaryGeo?.postalCode, edgeGeo?.postalCode, ''),
+      latitude: pickNullableNumber(primaryGeo?.latitude, edgeGeo?.latitude),
+      longitude: pickNullableNumber(primaryGeo?.longitude, edgeGeo?.longitude),
+      timezone: pick(primaryGeo?.timezone, edgeGeo?.timezone, ''),
+    },
+    network: {
+      isp: pick(primaryNetwork?.isp, edgeNetwork?.isp, 'Unavailable'),
+      organization: pick(primaryNetwork?.organization, edgeNetwork?.organization, 'Unavailable'),
+      asn: pick(primaryNetwork?.asn, edgeNetwork?.asn, '—'),
+      asOrganization: pick(primaryNetwork?.asOrganization, edgeNetwork?.asOrganization, '') || null,
+      isMobile: pickBool(primaryNetwork?.isMobile, edgeNetwork?.isMobile),
+      isProxy: pickBool(primaryNetwork?.isProxy, edgeNetwork?.isProxy),
+      isVpn: pickBool(primaryNetwork?.isVpn, edgeNetwork?.isVpn),
+      isTor: pickBool(primaryNetwork?.isTor, edgeNetwork?.isTor),
+      isHosting: pickBool(primaryNetwork?.isHosting, edgeNetwork?.isHosting),
+      privacyScore: primaryNetwork?.privacyScore ?? null,
+      privacyGrade: primaryNetwork?.privacyGrade ?? null,
+      networkType: primaryNetwork?.networkType ?? null,
+      provider: primaryNetwork?.provider || edgeNetwork?.provider || 'UNAVAILABLE',
+      providerStatus,
+    },
+  };
+}
+
 
 /**
  * GET /api/ip
@@ -111,9 +110,6 @@ router.get('/ip', (req: Request, res: Response) => {
     ip: extracted.ip,
     ipVersion: extracted.version,
     isPrivate: extracted.isPrivate,
-    isAuthoritativeForClientEgress: extracted.isAuthoritativeForClientEgress,
-    observationSource: extracted.observationSource,
-    observationScope: extracted.observationScope,
     headers,
     connectionFlags,
     publicIpStatus: extracted.isPublic && extracted.isAuthoritativeForClientEgress ? 'MEASURED' : 'NOT_MEASURED',
@@ -304,14 +300,11 @@ router.get('/ip/details', async (req: Request, res: Response) => {
   }
 
   try {
-    const details = (await getCurrentClientGeoDetails(req, targetIp)) || await geoIpService.getDetails(targetIp);
-
-    const data: IpDetailsResponse = {
-      ip: targetIp,
-      measurementStatus: details.network.providerStatus === 'VERIFIED' ? 'MEASURED' : 'UNKNOWN',
-      geo: details.geo,
-      network: details.network,
-    };
+    const [primary, edge] = await Promise.all([
+      geoIpService.getDetails(targetIp).catch(() => null),
+      !queryIp ? getCurrentClientGeoDetails(req, targetIp) : Promise.resolve(null),
+    ]);
+    const data = mergeCurrentClientDetails(primary, edge, targetIp);
 
     const response: ApiSuccessResponse<IpDetailsResponse> = {
       success: true,

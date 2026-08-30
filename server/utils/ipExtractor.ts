@@ -264,10 +264,14 @@ export function extractClientIp(req: Request): ExtractedClientIpInfo {
   const directPeer = normalizeIp(rawDirectPeer);
   const peerValidation = validateIp(directPeer);
 
-  // Trust proxy if the direct connection is from a trusted proxy or TRUST_PROXY is enabled
+  // Trust proxy if the direct connection is from a trusted proxy or TRUST_PROXY is enabled.
+  // In the Cloudflare Worker path, the Worker supplies an internal observed-IP header that
+  // is written after stripping any client-supplied copy, so that header is authoritative for
+  // this application path and Cloudflare forwarding metadata must not be mislabeled as an
+  // untrusted user VPN/proxy leak. The actual VPN/proxy decision still comes from GeoIP
+  // intelligence on the observed public IP.
   const trustProxyOverride = getRequestEnv('TRUST_PROXY') === 'true' && getRequestEnv('NODE_ENV') !== 'production';
   const isPeerTrusted = isTrustedProxy(directPeer) || trustProxyOverride;
-  const isInfrastructureProxy = isPeerTrusted && hasProxyHeaders;
 
   let candidateIp: string | null = null;
   let observationSource: 'SOCKET_PEER' | 'TRUSTED_PROXY_CHAIN' = 'SOCKET_PEER';
@@ -275,6 +279,10 @@ export function extractClientIp(req: Request): ExtractedClientIpInfo {
   // In the Cloudflare Worker deployment, the Worker overwrites this internal header
   // from Cloudflare's CF-Connecting-IP before handing the request to Express.
   const workerObservedIp = req.headers['x-privasec-observed-ip'];
+  const workerObservedValidation = typeof workerObservedIp === 'string' ? validateIp(normalizeIp(workerObservedIp)) : null;
+  const isCloudflareWorkerObservation = getRequestEnv('PRIVASEC_CLOUDFLARE_EDGE') === 'true'
+    && Boolean(workerObservedValidation?.isValid && workerObservedValidation.isPublic);
+  const isInfrastructureProxy = Boolean(isCloudflareWorkerObservation || (isPeerTrusted && hasProxyHeaders));
   if (getRequestEnv('PRIVASEC_CLOUDFLARE_EDGE') === 'true' && typeof workerObservedIp === 'string') {
     const normalizedWorkerIp = normalizeIp(workerObservedIp);
     if (validateIp(normalizedWorkerIp).isValid) {

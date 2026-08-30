@@ -113,7 +113,6 @@ export interface Translations {
     overview: string;
     browser: string;
     headers: string;
-    siteAudit: string;
     privacyPolicy: string;
     admin: string;
     adminDashboard: string;

@@ -5,6 +5,7 @@ interface HackMyIPLocation {
   city?: string;
   region?: string;
   country?: string;
+  country_code?: string;
   country_name?: string;
   latitude?: number;
   longitude?: number;
@@ -16,12 +17,16 @@ interface HackMyIPNetwork {
   asn?: number | string;
   isp?: string;
   org?: string;
+  connection_type?: string;
 }
 
 interface HackMyIPPrivacy {
   hosting?: boolean;
   proxy?: boolean;
   mobile?: boolean;
+  score?: number;
+  grade?: string;
+  type?: string;
   is_vpn?: boolean;
   is_datacenter?: boolean;
   is_residential?: boolean;
@@ -178,12 +183,17 @@ export class HackMyIPProvider implements IGeoIPProvider {
       const rawLongitude = Number(location.longitude);
       const latitude = Number.isFinite(rawLatitude) && rawLatitude >= -90 && rawLatitude <= 90 ? rawLatitude : null;
       const longitude = Number.isFinite(rawLongitude) && rawLongitude >= -180 && rawLongitude <= 180 ? rawLongitude : null;
-      const rawCountryCode = String(location.country || '').trim();
+      const rawCountryCode = String(location.country_code || location.country || '').trim();
       const countryCode = /^[A-Za-z]{2}$/.test(rawCountryCode) ? rawCountryCode.toUpperCase() : 'XX';
+      const countryName = String(location.country_name || '').trim() || countryCode;
+      const rawPrivacyScore = Number(privacy.score);
+      const privacyScore = Number.isFinite(rawPrivacyScore) && rawPrivacyScore >= 0 && rawPrivacyScore <= 100 ? Math.round(rawPrivacyScore) : null;
+      const privacyGrade = String(privacy.grade || '').trim() || null;
+      const networkType = String(privacy.type || network.connection_type || '').trim() || null;
 
       return {
         geo: {
-          country: location.country_name || location.country || 'Unknown',
+          country: countryName || 'Unknown',
           countryCode,
           region: location.region || '',
           city: location.city || '',
@@ -196,11 +206,15 @@ export class HackMyIPProvider implements IGeoIPProvider {
           isp,
           organization: org,
           asn: asnFormatted,
+          asOrganization: org || null,
           isMobile,
           isProxy,
           isVpn,
           isTor,
           isHosting,
+          privacyScore,
+          privacyGrade,
+          networkType,
           provider: this.name,
           providerStatus: 'VERIFIED',
         },

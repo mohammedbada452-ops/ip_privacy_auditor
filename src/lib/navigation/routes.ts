@@ -40,14 +40,6 @@ export const ROUTES: Record<string, RouteConfig> = {
     description: 'HTTP Header Privacy & Security Inspector',
     category: 'public',
   },
-  SITE_AUDIT: {
-    id: 'site-audit',
-    path: '/site-audit',
-    title: 'Website Audit',
-    titleAr: 'تدقيق الموقع',
-    description: 'Static HTTPS privacy, security header, cookie, and tracker-signal audit',
-    category: 'public',
-  },
   PRIVACY_POLICY: {
     id: 'privacy-policy',
     path: '/privacy',
@@ -129,8 +121,6 @@ export function getRouteTitle(route: RouteConfig, lang: Language): string {
       return dict.nav.browser;
     case 'headers':
       return dict.nav.headers;
-    case 'site-audit':
-      return dict.nav.siteAudit;
     case 'privacy-policy':
       return dict.nav.privacyPolicy;
     case 'admin':

@@ -98,7 +98,6 @@ export const pt: Translations = {
     overview: 'Visão Geral',
     browser: 'Sinais do Navegador',
     headers: 'Cabeçalhos HTTP',
-    siteAudit: 'Auditoria do site',
     privacyPolicy: 'Política de privacidade',
     admin: 'Administração',
     adminDashboard: 'Painel do Administrador',

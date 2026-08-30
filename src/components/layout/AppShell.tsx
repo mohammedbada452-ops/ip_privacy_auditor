@@ -16,7 +16,6 @@ const AdminRoute = lazy(() => import('../../routes/AdminRoute').then((m) => ({ d
 const AdminDashboardRoute = lazy(() => import('../../routes/AdminDashboardRoute').then((m) => ({ default: m.AdminDashboardRoute })));
 const DesignSystemShowcase = lazy(() => import('../../routes/DesignSystemShowcase').then((m) => ({ default: m.DesignSystemShowcase })));
 const NotFoundPage = lazy(() => import('../../routes/NotFoundPage').then((m) => ({ default: m.NotFoundPage })));
-const SiteAuditRoute = lazy(() => import('../../routes/SiteAuditRoute').then((m) => ({ default: m.SiteAuditRoute })));
 const PrivacyPolicyRoute = lazy(() => import('../../routes/PrivacyPolicyRoute').then((m) => ({ default: m.PrivacyPolicyRoute })));
 const LearnRoute = lazy(() => import('../../routes/LearnRoute').then((m) => ({ default: m.LearnRoute })));
 
@@ -35,7 +34,6 @@ export const AppShell: React.FC = () => {
       '/': { title: 'PrivaSec — Free Privacy & Browser Intelligence Auditor', description: 'Free, evidence-first privacy auditing for IP, networks, browser signals, fingerprint exposure, HTTP headers, and website security.' },
       '/browser': { title: 'Browser Privacy & Fingerprint Test | PrivaSec', description: 'Measure browser privacy signals, fingerprint exposure, WebRTC, graphics, hardware, storage, and automation indicators.' },
       '/headers': { title: 'HTTP Security & Privacy Headers Test | PrivaSec', description: 'Inspect HTTP privacy and security headers, client hints, proxy signals, and configuration evidence.' },
-      '/site-audit': { title: 'Website Privacy & Security Audit | PrivaSec', description: 'Free public HTTPS website audit for security headers, cookies, redirects, and visible tracker signatures.' },
       '/privacy': { title: 'Privacy Policy | PrivaSec', description: 'Learn what PrivaSec measures, processes, stores, and deliberately does not collect.' },
       '/learn': { title: 'Privacy & Security Learning Center | PrivaSec', description: 'Practical guides to IP privacy, browser fingerprinting, WebRTC, security headers, and IP reputation.' },
     };
@@ -51,8 +49,6 @@ export const AppShell: React.FC = () => {
         return <BrowserRoute />;
       case '/headers':
         return <HeadersRoute />;
-      case '/site-audit':
-        return <SiteAuditRoute />;
       case '/privacy':
         return <PrivacyPolicyRoute />;
       case '/learn':

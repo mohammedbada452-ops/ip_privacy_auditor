@@ -109,11 +109,16 @@ export interface IpNetworkDetails {
   isp: string;
   organization: string;
   asn: string;
+  asOrganization?: string | null;
   isMobile: boolean | null;
   isProxy: boolean | null;
   isVpn: boolean | null;
   isTor: boolean | null;
   isHosting: boolean | null;
+  /** Provider-supplied network privacy posture; not a global anonymity guarantee. */
+  privacyScore?: number | null;
+  privacyGrade?: string | null;
+  networkType?: string | null;
   provider?: string;
   providerStatus?: 'VERIFIED' | 'UNAVAILABLE' | 'FALLBACK';
 }
@@ -476,37 +481,6 @@ export interface HeadersAnalysisResponse {
 }
 
 
-
-
-export interface SiteAuditHeaderFinding {
-  name: string;
-  present: boolean;
-  value: string | null;
-  secure: boolean;
-  recommendation: string;
-}
-
-export interface SiteTrackerSignal {
-  host: string;
-  category: string;
-  evidence: string;
-}
-
-export interface SiteAuditResponse {
-  input: string;
-  finalUrl: string;
-  status: number;
-  ok: boolean;
-  contentType: string;
-  responseTimeMs: number;
-  redirectCount: number;
-  headers: SiteAuditHeaderFinding[];
-  cookies: Array<{ name: string; secure: boolean; httpOnly: boolean; sameSite: boolean }>;
-  trackers: SiteTrackerSignal[];
-  scores: { privacy: number; security: number; headers: number };
-  limitations: string[];
-  evidence: { fetchedBytes: number; htmlAnalyzed: boolean; source: string };
-}
 
 export interface PopulationInsightResponse {
   sampleSize: number;

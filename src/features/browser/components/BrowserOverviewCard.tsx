@@ -51,16 +51,17 @@ export const BrowserOverviewCard: React.FC<BrowserOverviewCardProps> = ({
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
-  const canvasData = profile.groups.GRAPHICS?.data as { hash?: string } | null;
-  const webglData = profile.groups.GRAPHICS?.data as { hardwareHash?: string } | null;
+  const canvasData = profile.groups.GRAPHICS?.data as { canvas?: { hash?: string }; hash?: string } | null;
+  const webglData = profile.groups.GRAPHICS?.data as { webgl?: { hardwareHash?: string }; hardwareHash?: string } | null;
   const audioData = profile.groups.AUDIO?.data as { hash?: string } | null;
+  const payload = profile.fingerprintPayload;
   const webRtcData = profile.groups.WEBRTC?.data as { status?: string; leakDetected?: boolean } | null;
 
   const compositeHashParts = [
-    canvasData?.hash?.slice(0, 8),
-    webglData?.hardwareHash?.slice(0, 8),
-    audioData?.hash?.slice(0, 8),
-  ];
+    payload?.canvasHash || canvasData?.canvas?.hash || canvasData?.hash,
+    webglData?.webgl?.hardwareHash || webglData?.hardwareHash || payload?.webgl?.renderer,
+    payload?.audioHash || audioData?.hash,
+  ].map((value) => value ? value.slice(0, 8) : undefined);
   const compositeHash = compositeHashParts.every(Boolean)
     ? compositeHashParts.join('-')
     : 'NOT_AVAILABLE';

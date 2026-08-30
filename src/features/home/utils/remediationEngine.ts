@@ -19,6 +19,7 @@ import type {
   BrowserProfile,
   WebRtcData,
 } from '../types';
+import { getLanguageCountryConsistency } from './networkPresentation';
 
 /**
  * Detect client platform context from userAgent and browser profile.
@@ -785,7 +786,8 @@ export function generateRemediationFindings(
   });
 
   // Language Consistency
-  const netCountry = ipDetails?.geo?.country || ipDetails?.geo?.countryCode || 'Unknown';
+  const netCountryCode = ipDetails?.geo?.countryCode || null;
+  const netCountry = ipDetails?.geo?.country || netCountryCode || 'Unknown';
   let browserLang = 'Unknown';
   if ((browserProfile as any)?.languages && (browserProfile as any).languages.length > 0) {
     browserLang = (browserProfile as any).languages[0];
@@ -795,17 +797,31 @@ export function generateRemediationFindings(
     browserLang = navigator.language || (navigator.languages ? navigator.languages[0] : 'Unknown');
   }
 
+  const languageConsistency = getLanguageCountryConsistency(browserLang, netCountryCode);
+  const languageStatusMap: Record<typeof languageConsistency, ConsistencyObservation['status']> = {
+    MATCH: 'MATCH',
+    MISMATCH: 'MISMATCH',
+    AMBIGUOUS: 'UNAVAILABLE',
+    UNAVAILABLE: 'UNAVAILABLE',
+  };
+  const languageExplanationMap: Record<typeof languageConsistency, string> = {
+    MATCH: `Browser language region (${browserLang}) matches the network-observed country (${netCountry}).`,
+    MISMATCH: `Browser language region (${browserLang}) does not match the network-observed country (${netCountry}). This is common for multilingual users, travelers, or VPN/proxy usage, and is only supporting evidence.`,
+    AMBIGUOUS: `Browser language (${browserLang}) does not specify a region, so it cannot be compared against the network country (${netCountry}).`,
+    UNAVAILABLE: 'Network country or browser language could not be measured.',
+  };
+
   consistencyObservations.push({
     id: 'obs_language_consistency',
     type: 'LANGUAGE',
     title: 'Language & Locale Consistency',
-    status: netCountry === 'Unknown' || browserLang === 'Unknown' ? 'UNAVAILABLE' : 'MATCH',
+    status: languageStatusMap[languageConsistency],
     networkValue: netCountry,
     browserValue: browserLang,
-    explanation: `Network region (${netCountry}) evaluated alongside browser language (${browserLang}). Multilingual preferences and international locales are fully respected.`,
+    explanation: languageExplanationMap[languageConsistency],
     privacyRelevance:
-      'Language preferences are communicated via standard HTTP headers for proper localization.',
-    confidence: 'HIGH',
+      'Language preferences are communicated via standard HTTP headers and can be combined with other signals for locale inference, but a mismatch alone does not indicate anonymity or exposure.',
+    confidence: languageConsistency === 'MATCH' || languageConsistency === 'MISMATCH' ? 'HIGH' : 'LOW',
   });
 
   return { findings, summary, consistencyObservations };

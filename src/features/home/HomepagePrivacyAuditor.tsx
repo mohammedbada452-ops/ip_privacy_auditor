@@ -25,6 +25,7 @@ export const HomepagePrivacyAuditor: React.FC = () => {
     privacyAnalysis,
     ipCheck,
     ipDetails,
+    networkIntelligence,
     browserProfile,
     headersData,
     steps,
@@ -74,6 +75,17 @@ export const HomepagePrivacyAuditor: React.FC = () => {
 
   return (
     <div className="w-full py-4 sm:py-6 space-y-8 animate-fadeIn">
+      {/* Primary visitor-first connection identity: IP, location, provider, VPN/proxy/Tor and network privacy signals. */}
+      <TechnicalSummarySection
+        ipCheck={ipCheck}
+        ipDetails={ipDetails}
+        networkIntelligence={networkIntelligence}
+        browserProfile={browserProfile}
+        headersData={headersData}
+        onRefresh={privacyAnalysis ? recheck : undefined}
+        isRefreshing={isRechecking}
+      />
+
       <FreeToolsSection />
 
       {/* Dynamic Scan Progress Indicator */}
@@ -148,13 +160,6 @@ export const HomepagePrivacyAuditor: React.FC = () => {
           {/* Active Protections */}
           <ActiveProtectionsSection factors={privacyAnalysis.factors} />
 
-          {/* Quick Technical Intelligence Overview */}
-          <TechnicalSummarySection
-            ipCheck={ipCheck}
-            ipDetails={ipDetails}
-            browserProfile={browserProfile}
-            headersData={headersData}
-          />
         </>
       ) : null}
 

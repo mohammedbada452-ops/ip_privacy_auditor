@@ -1,6 +1,7 @@
 import type {
   IpCheckResponse,
   IpDetailsResponse,
+  IpNetworkIntelligenceResponse,
   PrivacyScoreAnalysis,
   PrivacyDeduction,
   PrivacyFactor,
@@ -29,6 +30,8 @@ export type SubsystemStatus = 'COMPLETE' | 'PARTIAL' | 'ERROR' | 'UNAVAILABLE';
 export interface NetworkSubsystemSnapshot {
   ipCheck: IpCheckResponse | null;
   ipDetails: IpDetailsResponse | null;
+  /** Additive multi-provider cross-check; never used to alter the canonical privacy score. */
+  intelligence: IpNetworkIntelligenceResponse | null;
   durationMs: number;
   status: SubsystemStatus;
 }

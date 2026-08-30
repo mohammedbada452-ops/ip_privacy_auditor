@@ -1,6 +1,7 @@
 import type {
   IpCheckResponse,
   IpDetailsResponse,
+  IpNetworkIntelligenceResponse,
   PrivacyScoreAnalysis,
   PrivacyFactor,
   PrivacyScoreTier,
@@ -231,6 +232,8 @@ export interface StageTimingMetrics {
 export interface HomepagePrivacyData {
   ipCheck: IpCheckResponse | null;
   ipDetails: IpDetailsResponse | null;
+  /** Additive multi-provider cross-check; never used to alter the canonical privacy score. */
+  networkIntelligence: IpNetworkIntelligenceResponse | null;
   browserProfile: BrowserProfile | null;
   headersData: HeadersAnalysisResponse | null;
   privacyAnalysis: PrivacyScoreAnalysis | null;

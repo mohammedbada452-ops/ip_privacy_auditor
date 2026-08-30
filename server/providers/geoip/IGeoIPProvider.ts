@@ -13,11 +13,15 @@ export interface GeoIPResult {
     isp: string;
     organization: string;
     asn: string;
+    asOrganization?: string | null;
     isMobile: boolean | null;
     isProxy: boolean | null;
     isVpn: boolean | null;
     isTor: boolean | null;
     isHosting: boolean | null;
+    privacyScore?: number | null;
+    privacyGrade?: string | null;
+    networkType?: string | null;
     provider: string;
     providerStatus: 'VERIFIED' | 'UNAVAILABLE' | 'FALLBACK';
   };

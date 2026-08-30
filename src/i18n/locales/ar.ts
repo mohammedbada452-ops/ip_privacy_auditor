@@ -98,7 +98,6 @@ export const ar: Translations = {
     overview: 'نظرة عامة',
     browser: 'إشارات المتصفح',
     headers: 'ترويسات HTTP',
-    siteAudit: 'تدقيق الموقع',
     privacyPolicy: 'سياسة الخصوصية',
     admin: 'الإدارة',
     adminDashboard: 'لوحة الإدارة',

@@ -11,6 +11,7 @@ import { browserOrchestrator } from '../features/browser/orchestrator/BrowserOrc
 import type {
   IpCheckResponse,
   IpDetailsResponse,
+  IpNetworkIntelligenceResponse,
   PrivacyScoreAnalysis,
 } from '@packages/api-contract';
 import type { BrowserProfile, WebRtcData } from '../features/browser/types';
@@ -95,6 +96,7 @@ export const UnifiedScanProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
     let ipCheckRes: IpCheckResponse | null = null;
     let ipDetailsRes: IpDetailsResponse | null = null;
+    let networkIntelligenceRes: IpNetworkIntelligenceResponse | null = null;
     let browserProfileRes: BrowserProfile | null = null;
     let headersRes: HeadersAnalysisResponse | null = null;
     let partialDetected = false;
@@ -116,12 +118,14 @@ export const UnifiedScanProvider: React.FC<{ children: React.ReactNode }> = ({ c
       // -------------------------------------------------------------
       const netStart = performance.now();
       try {
-        const [ipCheck, ipDetails] = await Promise.all([
+        const [ipCheck, ipDetails, networkIntelligence] = await Promise.all([
           apiClient.getIp(),
           apiClient.getIpDetails().catch(() => null),
+          apiClient.getIpNetworkIntelligence().catch(() => null),
         ]);
         ipCheckRes = ipCheck;
         ipDetailsRes = ipDetails;
+        networkIntelligenceRes = networkIntelligence;
         networkDuration = Math.round(performance.now() - netStart);
         networkStatus = ipCheck ? 'COMPLETE' : 'PARTIAL';
 
@@ -387,6 +391,7 @@ export const UnifiedScanProvider: React.FC<{ children: React.ReactNode }> = ({ c
         network: {
           ipCheck: ipCheckRes,
           ipDetails: ipDetailsRes,
+          intelligence: networkIntelligenceRes,
           durationMs: networkDuration,
           status: networkStatus,
         },

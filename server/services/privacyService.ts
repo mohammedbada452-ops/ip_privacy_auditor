@@ -33,6 +33,7 @@ export class PrivacyService {
 
     const connectionFlags = {
       hasProxyHeaders: extracted.hasProxyHeaders,
+      isInfrastructureProxy: extracted.isInfrastructureProxy,
       viaHeader: extracted.viaHeader,
     };
 

@@ -16,12 +16,11 @@ export const ActiveProtectionsSection: React.FC<ActiveProtectionsSectionProps> =
     const valStr = typeof f.currentValue === 'string' ? f.currentValue : String(f.currentValue ?? '');
     if (f.id === 'HDR_SEC_GPC_SIGNAL' && valStr.includes('Active')) return true;
     if (f.id === 'HDR_DNT_SIGNAL' && valStr.includes('DNT: 1')) return true;
-    // Only call an observation a "verified protection" when the browser or user has an
-    // actual defensive control enabled. A clean/no-leak observation is a baseline, not a
-    // protection; detecting a VPN/Tor is evidence about the route, not an active defense.
-    if (f.id === 'FP_WEBGL_HARDWARE' && f.status === 'SAFE' && !f.detected && /masked|generic|standard/i.test(valStr)) return true;
-    if (f.id === 'FP_CANVAS_UNIQUE' && f.status === 'SAFE' && /random|masked/i.test(valStr)) return true;
-    if (f.id === 'FP_WEBRTC_LEAK' && f.status === 'SAFE' && /mdns|obfusc|protected/i.test(valStr)) return true;
+    if (f.id === 'FP_WEBRTC_LEAK' && (f.status === 'SAFE' || valStr === 'No leak' || !f.detected)) return true;
+    if (f.id === 'NET_TOR_DETECTED' && f.detected) return true;
+    if (f.id === 'NET_VPN_DETECTED' && f.detected) return true;
+    if (f.id === 'FP_WEBGL_HARDWARE' && f.status === 'SAFE') return true;
+    if (f.id === 'FP_CANVAS_UNIQUE' && f.status === 'SAFE') return true;
     if (f.id === 'HDR_PROXY_FLAGS' && valStr.includes('Protected Infrastructure')) return true;
     return false;
   };

@@ -14,7 +14,6 @@ import type {
   PrivacyScoreAnalysis,
   HeadersAnalysisResponse,
   PopulationInsightResponse,
-  SiteAuditResponse,
 } from '@packages/api-contract';
 
 export class ApiClientError extends Error {
@@ -149,9 +148,6 @@ export class ApiClient {
     return this.fetch<PopulationInsightResponse>(`/api/insights/population?score=${encodeURIComponent(String(score))}`);
   }
 
-  async auditSite(url: string): Promise<SiteAuditResponse> {
-    return this.fetch<SiteAuditResponse>(`/api/site-audit?url=${encodeURIComponent(url)}`);
-  }
 }
 
 export const apiClient = new ApiClient();

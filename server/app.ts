@@ -15,7 +15,6 @@ import ipRouter from './routes/ip';
 import headersRouter from './routes/headers';
 import { privacyRouter } from './routes/privacy';
 import { adminRouter } from './routes/admin';
-import siteAuditRouter from './routes/siteAudit';
 import { dbRepository } from './db/repository';
 import { extractClientIp } from './utils/ipExtractor';
 
@@ -176,7 +175,6 @@ export function createApiApp(options: CreateApiAppOptions = {}): express.Express
   app.use('/api', ipRouter);
   app.use('/api', headersRouter);
   app.use('/api', privacyRouter);
-  app.use('/api', siteAuditRouter);
   app.use('/api', adminRouter);
 
   if (options.includeErrorHandler) app.use(errorHandler);

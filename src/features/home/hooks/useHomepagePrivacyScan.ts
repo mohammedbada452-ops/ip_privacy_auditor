@@ -31,6 +31,7 @@ export function useHomepagePrivacyScan(): UseHomepagePrivacyScanResult {
     return {
       ipCheck: currentSnapshot?.network?.ipCheck ?? null,
       ipDetails: currentSnapshot?.network?.ipDetails ?? null,
+      networkIntelligence: currentSnapshot?.network?.intelligence ?? null,
       browserProfile: currentSnapshot?.browser?.profile ?? null,
       headersData: currentSnapshot?.headers?.data ?? null,
       privacyAnalysis: currentSnapshot?.privacyAnalysis ?? null,

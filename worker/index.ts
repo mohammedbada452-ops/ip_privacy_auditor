@@ -8,7 +8,6 @@ import { rdapService } from "../server/services/rdap";
 import { reverseDnsService } from "../server/services/reverseDns";
 import { HeaderCollector, HeaderClassifier } from "../server/headers";
 import { extractClientIp, validateIp } from "../server/utils/ipExtractor";
-import { auditWebsite } from "../server/services/siteAudit";
 import { CloudflareRequestCfProvider } from "../server/providers/geoip/CloudflareRequestCfProvider";
 import { getRequestEnv, runWithRequestEnv, type RequestEnvValues } from "../server/config/requestEnv";
 
@@ -155,7 +154,6 @@ const INDEXABLE_PATHS = [
   "/",
   "/browser",
   "/headers",
-  "/site-audit",
   "/privacy",
   "/learn",
 ];
@@ -471,21 +469,54 @@ async function handleApi(request: Request, env: RuntimeEnv, ctx: ExecutionContex
     // real free GeoIP provider so VPN/proxy/hosting signals are measured when the provider
     // supplies them. Both lookups run in parallel and the provider is bounded by its own
     // 5-second timeout; the endpoint never waits on an unbounded external call.
-    const [current, providerDetails] = await Promise.all([
+    const [edgeDetails, providerDetails] = await Promise.all([
       new CloudflareRequestCfProvider(req.headers as any).lookup(validation.normalizedIp).catch(() => null),
       geoIPService.getDetails(validation.normalizedIp).catch(() => null),
     ]);
 
+    const isMeaningful = (value: unknown) => {
+      const text = String(value ?? '').trim();
+      return Boolean(text && !/^(unknown|unavailable|not measured|not assigned|—|xx)$/i.test(text));
+    };
+    const pickText = (primary: unknown, secondary: unknown, fallback: string) =>
+      isMeaningful(primary) ? String(primary).trim() : isMeaningful(secondary) ? String(secondary).trim() : fallback;
+    const pickNumber = (primary: number | null | undefined, secondary: number | null | undefined) =>
+      Number.isFinite(primary as number) ? primary : Number.isFinite(secondary as number) ? secondary : null;
+    const pickBool = (primary: boolean | null | undefined, secondary: boolean | null | undefined) =>
+      primary !== null && primary !== undefined ? primary : secondary !== null && secondary !== undefined ? secondary : null;
+
     const providerVerified = providerDetails?.network?.providerStatus === 'VERIFIED';
-    const edgeVerified = current?.network?.providerStatus === 'VERIFIED';
-    const merged = providerVerified
+    const edgeVerified = edgeDetails?.network?.providerStatus === 'VERIFIED';
+    const merged = providerVerified || edgeVerified
       ? {
-          geo: current?.geo?.countryCode && current.geo.countryCode !== 'XX' ? current.geo : providerDetails!.geo,
-          network: providerDetails!.network,
+          geo: {
+            country: pickText(providerDetails?.geo.country, edgeDetails?.geo.country, 'Unknown'),
+            countryCode: pickText(providerDetails?.geo.countryCode, edgeDetails?.geo.countryCode, 'XX').toUpperCase(),
+            region: pickText(providerDetails?.geo.region, edgeDetails?.geo.region, ''),
+            city: pickText(providerDetails?.geo.city, edgeDetails?.geo.city, ''),
+            postalCode: pickText(providerDetails?.geo.postalCode, edgeDetails?.geo.postalCode, ''),
+            latitude: pickNumber(providerDetails?.geo.latitude, edgeDetails?.geo.latitude),
+            longitude: pickNumber(providerDetails?.geo.longitude, edgeDetails?.geo.longitude),
+            timezone: pickText(providerDetails?.geo.timezone, edgeDetails?.geo.timezone, ''),
+          },
+          network: {
+            isp: pickText(providerDetails?.network.isp, edgeDetails?.network.isp, 'Unavailable'),
+            organization: pickText(providerDetails?.network.organization, edgeDetails?.network.organization, 'Unavailable'),
+            asn: pickText(providerDetails?.network.asn, edgeDetails?.network.asn, '—'),
+            asOrganization: pickText(providerDetails?.network.asOrganization, edgeDetails?.network.asOrganization, '') || null,
+            isMobile: pickBool(providerDetails?.network.isMobile, edgeDetails?.network.isMobile),
+            isProxy: pickBool(providerDetails?.network.isProxy, edgeDetails?.network.isProxy),
+            isVpn: pickBool(providerDetails?.network.isVpn, edgeDetails?.network.isVpn),
+            isTor: pickBool(providerDetails?.network.isTor, edgeDetails?.network.isTor),
+            isHosting: pickBool(providerDetails?.network.isHosting, edgeDetails?.network.isHosting),
+            privacyScore: providerDetails?.network.privacyScore ?? null,
+            privacyGrade: providerDetails?.network.privacyGrade ?? null,
+            networkType: providerDetails?.network.networkType ?? null,
+            provider: providerDetails?.network.provider || edgeDetails?.network.provider || 'UNAVAILABLE',
+            providerStatus: providerVerified ? 'VERIFIED' : edgeVerified ? 'VERIFIED' : 'UNAVAILABLE',
+          },
         }
-      : edgeVerified
-        ? { geo: current!.geo, network: current!.network }
-        : null;
+      : null;
 
     if (!merged) {
       return jsonResponse({
@@ -554,12 +585,6 @@ async function handleApi(request: Request, env: RuntimeEnv, ctx: ExecutionContex
     return jsonResponse({ success: true, data: await dbRepository.getPopulationInsightAsync(score, 30), meta: apiMeta(req) });
   }
 
-  if (p === "/api/site-audit" && method === "GET") {
-    const url = req.query.url || "";
-    if (!url.trim()) return publicError(req, "URL_REQUIRED", "A website URL is required.", 400);
-    try { return jsonResponse({ success: true, data: await auditWebsite(url), meta: apiMeta(req) }); }
-    catch (error) { return publicError(req, "SITE_AUDIT_FAILED", error instanceof Error ? error.message : "Website audit failed.", 400); }
-  }
 
   if (p.startsWith("/api/admin")) {
     const prod = getRequestEnv("NODE_ENV") === "production";

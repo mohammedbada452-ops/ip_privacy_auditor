@@ -295,11 +295,12 @@ export function buildBrowserProfile(outputs: CollectorOutputs, totalDurationMs: 
   let exposedHardwareSignals = 0;
   if (outputs.webGl.status === 'SUCCESS' && outputs.webGl.data?.isUnmasked === true) exposedHardwareSignals++;
 
+  // This summary metric is intentionally limited to explicit user privacy controls.
+  // mDNS/WebRTC protection and Canvas/WebGL masking remain visible in their dedicated
+  // collectors but are not mislabeled as GPC/DNT controls.
   let privacyProtectionsActive = 0;
   if (outputs.privacyProtections.data?.globalPrivacyControl) privacyProtectionsActive++;
   if (outputs.privacyProtections.data?.doNotTrack) privacyProtectionsActive++;
-  if (outputs.privacyProtections.data?.canvasMasked) privacyProtectionsActive++;
-  if (outputs.webRtc.data?.mdnsCandidates && outputs.webRtc.data.mdnsCandidates.length > 0) privacyProtectionsActive++;
 
   let leaksDetected = 0;
   if (outputs.webRtc.data?.leakDetected) leaksDetected++;

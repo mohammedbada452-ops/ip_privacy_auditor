@@ -98,7 +98,6 @@ export const tr: Translations = {
     overview: 'Genel Bakış',
     browser: 'Tarayıcı Sinyalleri',
     headers: 'HTTP Başlıkları',
-    siteAudit: 'Web Sitesi Denetimi',
     privacyPolicy: 'Gizlilik Politikası',
     admin: 'Yönetim',
     adminDashboard: 'Yönetici Paneli',
