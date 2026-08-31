@@ -2,11 +2,11 @@ import React from 'react';
 import { ArrowRight, Cpu, FileCode2, Globe, MapPin, Network, ShieldCheck } from 'lucide-react';
 import { Link } from '../../../router/Router';
 import { useLanguage } from '../../../i18n/LanguageContext';
-import { Card, CardBody, CardHeader, CopyValue, CountryFlag, RefreshButton, StatusBadge } from '../../../components/ui';
+import { Card, CardBody, CardHeader, CopyValue, RefreshButton, StatusBadge } from '../../../components/ui';
 import type { IpCheckResponse, IpDetailsResponse, IpNetworkIntelligenceResponse } from '@packages/api-contract';
 import type { BrowserProfile, IdentityData } from '../../browser/types';
 import type { HeadersAnalysisResponse } from '../../headers/types';
-import { getCountryName, getLanguageCountryConsistency, getSafeNetworkText, getStatusLabel } from '../utils/networkPresentation';
+import { getCountryFlag, getCountryName, getLanguageCountryConsistency, getSafeNetworkText, getStatusLabel } from '../utils/networkPresentation';
 
 interface TechnicalSummarySectionProps {
   ipCheck: IpCheckResponse | null;
@@ -36,7 +36,8 @@ export const TechnicalSummarySection: React.FC<TechnicalSummarySectionProps> = (
     ? ipDetails.geo.countryCode
     : undefined;
   const countryName = getCountryName(ipDetails?.geo?.country, countryCode);
-    const locationParts = [ipDetails?.geo?.city, ipDetails?.geo?.region, countryName]
+  const countryFlag = getCountryFlag(countryCode);
+  const locationParts = [ipDetails?.geo?.city, ipDetails?.geo?.region, countryName]
     .map((value) => String(value || '').trim())
     .filter((value) => value && !/^(unknown|unavailable|not measured)$/i.test(value));
   const location = locationParts.length ? locationParts.join(', ') : 'Unavailable';
@@ -136,28 +137,27 @@ export const TechnicalSummarySection: React.FC<TechnicalSummarySectionProps> = (
           }
         />
         <CardBody className="space-y-5">
-          <div className="grid grid-cols-1 lg:grid-cols-[1.45fr_1fr_1fr] gap-4 items-stretch">
-            <div className="ip-hero-card rounded-2xl border p-5 sm:p-6">
-              <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.16em] text-slate-400 font-mono mb-3">
+          <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr_1fr] gap-4 items-stretch">
+            <div className="rounded-xl border border-slate-800 bg-slate-950/75 p-4 sm:p-5">
+              <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-slate-500 font-mono mb-2">
                 <span>ACTIVE ADDRESS</span>
                 <span className="rounded bg-slate-800 px-1.5 py-0.5 text-slate-400">{ipCheck?.ipVersion || 'IP'}</span>
               </div>
-              <div className="min-w-0 w-full mt-1">
-                {observedIp ? (
-                  <CopyValue value={observedIp} />
-                ) : (
-                  <span className="text-xl sm:text-2xl font-mono font-bold text-slate-500">Unavailable</span>
-                )}
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-2xl sm:text-3xl font-mono font-bold text-cyan-300 break-all select-all">
+                  {observedIp || 'Unavailable'}
+                </span>
+                {observedIp && <CopyValue value={observedIp} label={t.ip.copyIp} />}
               </div>
-              <div className="text-[11px] text-slate-500 font-mono mt-3 technical-scroll">
+              <div className="text-[11px] text-slate-500 font-mono mt-2">
                 Source: {ipCheck?.observationSource || ipCheck?.ipSource || 'server observed'}
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/65 p-5 sm:p-6">
+            <div className="rounded-xl border border-slate-800 bg-slate-900/65 p-4 sm:p-5">
               <div className="text-[10px] uppercase tracking-[0.18em] text-slate-500 font-mono mb-2">LOCATION</div>
               <div className="flex items-center gap-3">
-                <CountryFlag countryCode={countryCode} countryName={countryName} className="h-8 w-12 shrink-0 rounded-md overflow-hidden border border-slate-700/70" />
+                <span className="text-3xl" role="img" aria-label={countryName}>{countryFlag}</span>
                 <div className="min-w-0">
                   <div className="font-semibold text-slate-100 truncate">{countryName}</div>
                   <div className="text-xs text-slate-400 truncate flex items-center gap-1">
@@ -186,13 +186,13 @@ export const TechnicalSummarySection: React.FC<TechnicalSummarySectionProps> = (
               )}
             </div>
 
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/65 p-5 sm:p-6">
+            <div className="rounded-xl border border-slate-800 bg-slate-900/65 p-4 sm:p-5">
               <div className="text-[10px] uppercase tracking-[0.18em] text-slate-500 font-mono mb-2">NETWORK</div>
-              <div className="grid grid-cols-1 gap-3">
-                <div className="info-pair"><span className="info-label">ISP</span><span className="info-value technical">{isp}</span></div>
-                <div className="info-pair"><span className="info-label">Organization</span><span className="info-value technical">{organization}</span></div>
-                <div className="info-pair"><span className="info-label">AS Organization</span><span className="info-value technical">{asOrganization}</span></div>
-                <div className="info-pair"><span className="info-label">ASN</span><span className="info-value technical text-cyan-300">{asn}</span></div>
+              <div className="space-y-1.5 text-xs font-mono">
+                <div className="flex justify-between gap-3"><span className="text-slate-500">ISP</span><span className="text-slate-200 truncate max-w-[220px]">{isp}</span></div>
+                <div className="flex justify-between gap-3"><span className="text-slate-500">Organization</span><span className="text-slate-200 truncate max-w-[220px]">{organization}</span></div>
+                <div className="flex justify-between gap-3"><span className="text-slate-500">AS Organization</span><span className="text-slate-200 truncate max-w-[220px]">{asOrganization}</span></div>
+                <div className="flex justify-between gap-3"><span className="text-slate-500">ASN</span><span className="text-cyan-300 truncate max-w-[220px]">{asn}</span></div>
               </div>
             </div>
           </div>

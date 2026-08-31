@@ -61,5 +61,3 @@ export * from './privacy/Recommendation';
 
 // Icons
 export * from './icons/IconWrapper';
-
-export * from './data/CountryFlag';
