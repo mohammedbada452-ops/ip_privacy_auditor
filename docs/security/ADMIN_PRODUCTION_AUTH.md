@@ -8,8 +8,8 @@ The **PrivaSec Administrator Subsystem** provides a zero-compromise, defense-in-
 1. **Zero Hardcoded Production Credentials**: No default passwords or static admin secrets exist in source code or production database seeds.
 2. **Server-Authoritative Identity**: The server is the sole source of truth for administrative sessions.
 3. **No Client-Side Token Storage**: Browser JavaScript has zero access to session secrets. `localStorage`, `sessionStorage`, `IndexedDB`, and URL query parameters are strictly forbidden from storing admin tokens.
-4. **Transport Security**: Sessions are maintained exclusively via `HttpOnly`, `Secure` (in production), `SameSite=Lax` cookies.
-5. **Cryptographic Rigor**: Passwords are saved solely as PBKDF2 hashes (100,000 iterations, SHA-256) with unique per-user 16-byte random salts. Verification employs constant-time buffer comparison to neutralize timing attacks.
+4. **Transport Security**: Sessions are maintained exclusively via `HttpOnly`, `Secure` (in production), `SameSite=Strict` cookies.
+5. **Cryptographic Rigor**: Passwords are saved solely as PBKDF2 hashes (600,000 iterations, SHA-256) with unique per-user 16-byte random salts. Verification employs constant-time buffer comparison to neutralize timing attacks.
 6. **Active Defenses**: Multi-layered protection against brute-force attacks (rate limiting with exponential cooldown) and CSRF (SameSite cookies + Fetch Metadata validation).
 
 ---
@@ -28,7 +28,7 @@ Administrator access in production is configured strictly via environment variab
 ### Bootstrap Lifecycle
 1. On startup or first admin authentication attempt, `AdminAuthService` reads `ADMIN_USERNAME` and `ADMIN_PASSWORD`.
 2. Credentials undergo structural validation and weak-password rejection.
-3. The plain password is immediately hashed with a unique 16-byte random salt using PBKDF2 (100,000 iterations).
+3. The plain password is immediately hashed with a unique 16-byte random salt using PBKDF2 (600,000 iterations).
 4. The hashed record is stored in memory/database. **Plaintext passwords are never retained or logged**.
 5. Server restarts are **idempotent**: re-evaluating the same bootstrap credentials will not invalidate active sessions or overwrite hashes.
 
@@ -66,7 +66,7 @@ To safeguard cookie-based authentication, all state-changing endpoints (`POST`, 
 | Threat Vector | Mitigation Strategy |
 |---|---|
 | **XSS Token Theft** | `HttpOnly` cookies ensure tokens cannot be accessed by malicious scripts or injected DOM payloads. |
-| **CSRF Attacks** | `SameSite=Lax` cookies, Fetch Metadata (`Sec-Fetch-Site`) validation, and same-origin host verification. |
+| **CSRF Attacks** | `SameSite=Strict` cookies, Fetch Metadata (`Sec-Fetch-Site`) validation, and same-origin host verification. |
 | **Credential Stuffing / Brute-Force** | IP-level exponential rate limiter blocking client after 5 consecutive failures. |
 | **Timing Attacks** | `crypto.timingSafeEqual` constant-time comparison for password hashes and secret keys. |
 | **Server Restart Session Loss** | Non-destructive bootstrap idempotency preserves existing sessions and credentials. |

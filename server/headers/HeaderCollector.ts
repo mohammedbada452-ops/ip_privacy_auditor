@@ -7,6 +7,12 @@ export interface RawHeaderEntry {
   value: string;
 }
 
+export interface ServerDerivedHeaderEntry {
+  key: string;
+  normalizedKey: string;
+  sanitizedValue: string;
+}
+
 export class HeaderCollector {
   /**
    * Extracts headers from an Express Request object with case preservation,
@@ -23,6 +29,7 @@ export class HeaderCollector {
         const rawVal = req.rawHeaders[i + 1] ?? '';
         if (typeof rawKey !== 'string') continue;
         const normalizedKey = rawKey.toLowerCase().trim();
+        if (HeaderCollector.isServerDerived(normalizedKey)) continue;
 
         if (!seenNormalized.has(normalizedKey)) {
           seenNormalized.add(normalizedKey);
@@ -38,6 +45,7 @@ export class HeaderCollector {
     // 2. Supplement with any entries in req.headers that were not in rawHeaders
     for (const [key, val] of Object.entries(req.headers)) {
       const normalizedKey = key.toLowerCase().trim();
+      if (HeaderCollector.isServerDerived(normalizedKey)) continue;
       if (!seenNormalized.has(normalizedKey)) {
         seenNormalized.add(normalizedKey);
         const stringVal = Array.isArray(val) ? val.join(', ') : (typeof val === 'string' ? val : val == null ? '' : String(val));
@@ -49,6 +57,40 @@ export class HeaderCollector {
       }
     }
 
+    return entries;
+  }
+
+  /**
+   * Internal metadata injected by the Privasec worker is not a browser-originated
+   * request header. Keep it available as a separate evidence channel so it does
+   * not inflate the browser header surface or fingerprint/header counts.
+   */
+  public static isServerDerived(normalizedKey: string): boolean {
+    return normalizedKey.toLowerCase().startsWith('x-privasec-');
+  }
+
+  public static collectServerDerivedMetadata(req: Request): ServerDerivedHeaderEntry[] {
+    const entries: ServerDerivedHeaderEntry[] = [];
+    const seen = new Set<string>();
+    const add = (rawKey: string, rawVal: unknown) => {
+      const normalizedKey = rawKey.toLowerCase().trim();
+      if (!HeaderCollector.isServerDerived(normalizedKey) || seen.has(normalizedKey)) return;
+      seen.add(normalizedKey);
+      const value = Array.isArray(rawVal) ? rawVal.join(', ') : rawVal == null ? '' : String(rawVal);
+      entries.push({
+        key: rawKey,
+        normalizedKey,
+        sanitizedValue: HeaderCollector.sanitizeValue(normalizedKey, value),
+      });
+    };
+
+    if (Array.isArray(req.rawHeaders)) {
+      for (let i = 0; i < req.rawHeaders.length; i += 2) {
+        const rawKey = req.rawHeaders[i];
+        if (typeof rawKey === 'string') add(rawKey, req.rawHeaders[i + 1] ?? '');
+      }
+    }
+    for (const [key, value] of Object.entries(req.headers)) add(key, value);
     return entries;
   }
 

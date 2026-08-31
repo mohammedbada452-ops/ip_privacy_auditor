@@ -254,7 +254,7 @@ export class FactorRegistry {
             ? 'Global Privacy Control (Sec-GPC: 1) signal is active, communicating opt-out preference under applicable privacy regulations.'
             : 'Global Privacy Control (Sec-GPC) signal header is not enabled.',
           recommendation: !isGpcActive
-            ? 'Enable Global Privacy Control (GPC) to send a recognized privacy preference signal to participating sites.'
+            ? 'If supported by the current browser, enable Global Privacy Control (GPC); otherwise use a reputable extension that explicitly sends Sec-GPC: 1.'
             : undefined,
           detected: isGpcActive,
           available,
@@ -365,7 +365,13 @@ export class FactorRegistry {
           source: 'browser',
           confidence: hasLocalExposure ? 'HIGH' : (correlation === 'MATCHES_SERVER_EGRESS' ? 'HIGH' : 'MEDIUM'),
           evidenceState: available ? (hasLocalExposure ? 'CONFIRMED' : 'NOT_DETECTED') : 'UNAVAILABLE',
-          metadata: { correlation, publicCandidateCount: publicCandidates.length, privateIpLeak: hasLocalExposure, publicCandidateStatus: publicCandidates.length ? 'DETECTED' : 'NONE' },
+          metadata: {
+            correlation,
+            publicCandidateCount: publicCandidates.length,
+            privateIpLeak: hasLocalExposure,
+            publicCandidateStatus: publicCandidates.length ? 'DETECTED' : 'NONE',
+            mdnsProtectionConfirmed: !hasLocalExposure && Array.isArray(webRtc?.mdnsCandidates) && webRtc.mdnsCandidates.length > 0,
+          },
           classification: hasLocalExposure ? 'PRIVACY_EXPOSURE' : 'FINGERPRINTING_SURFACE',
         };
       },
@@ -407,7 +413,7 @@ export class FactorRegistry {
             : available
               ? 'WebGL hardware renderer masked or standard.'
               : 'WebGL context not available or blocked in this environment.',
-          recommendation: isUnmasked ? 'Enable WebGL parameter masking or use Safari / Brave privacy shields.' : undefined,
+          recommendation: isUnmasked ? 'Use a browser privacy feature that masks or standardizes WebGL renderer exposure where supported, then re-run the audit to verify the result.' : undefined,
           detected: isUnmasked,
           available,
           source: 'browser',

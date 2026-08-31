@@ -12,7 +12,8 @@ const router = Router();
 const handleHeadersAnalysis = (req: Request, res: Response) => {
   const extracted = extractClientIp(req);
   const entries = HeaderCollector.collect(req);
-  const analysis = HeaderClassifier.analyze(entries, extracted.isInfrastructureProxy);
+  const serverDerivedMetadata = HeaderCollector.collectServerDerivedMetadata(req);
+  const analysis = HeaderClassifier.analyze(entries, extracted.isInfrastructureProxy, serverDerivedMetadata);
 
   const response: ApiSuccessResponse<HeadersAnalysisResponse> = {
     success: true,
@@ -43,7 +44,8 @@ router.get('/check/headers', handleHeadersAnalysis);
 router.get('/headers/raw', (req: Request, res: Response) => {
   const extracted = extractClientIp(req);
   const entries = HeaderCollector.collect(req);
-  const analysis = HeaderClassifier.analyze(entries, extracted.isInfrastructureProxy);
+  const serverDerivedMetadata = HeaderCollector.collectServerDerivedMetadata(req);
+  const analysis = HeaderClassifier.analyze(entries, extracted.isInfrastructureProxy, serverDerivedMetadata);
 
   res.setHeader('Content-Type', 'text/plain; charset=utf-8');
   res.status(200).send(analysis.rawExport.rawHttp);

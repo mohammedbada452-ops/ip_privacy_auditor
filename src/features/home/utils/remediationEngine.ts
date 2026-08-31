@@ -298,22 +298,25 @@ function buildStepsForFactor(
       ];
     }
 
+    const nativeGpcSupported = platform.browserFamily === 'FIREFOX' || platform.browserFamily === 'BRAVE';
     return [
       {
         stepNumber: 1,
-        title: 'Enable Sec-GPC Header Signal',
-        instruction: `In ${platform.browserName}, enable Global Privacy Control in settings or via Privacy Badger / uBlock Origin.`,
+        title: nativeGpcSupported ? 'Enable Sec-GPC Header Signal' : 'Use a GPC-capable Privacy Control',
+        instruction: nativeGpcSupported
+          ? `In ${platform.browserName}, enable the available Global Privacy Control setting.`
+          : `This browser does not expose native Global Privacy Control. Use a reputable extension that explicitly sends Sec-GPC: 1.`,
       },
       {
         stepNumber: 2,
-        title: 'Assert CCPA/GDPR Legal Opt-Out',
-        instruction: 'Ensure outgoing requests include the header "Sec-GPC: 1".',
+        title: 'Verify Sec-GPC Signal',
+        instruction: 'Ensure outgoing requests include the header "Sec-GPC: 1" when the control is enabled.',
         codeSnippet: 'Sec-GPC: 1',
       },
       {
         stepNumber: 3,
         title: 'Verify Opt-Out Header',
-        instruction: 'Click Recheck to verify the Sec-GPC signal is asserted.',
+        instruction: 'Click Recheck to verify the Sec-GPC signal is actually transmitted.',
       },
     ];
   }
@@ -576,7 +579,7 @@ export function generateRemediationFindings(
       impactExplanation:
         'Canvas, WebGL, and AudioContext APIs generate persistent device-specific rendering signatures used to track you across websites without cookies.',
       expectedOutcome:
-        'Graphics and audio buffer readbacks will inject randomized noise, neutralizing cross-site persistent tracking.',
+        'Privacy impact may be reduced for the affected fingerprinting surfaces; re-run the audit to verify whether the observed signals and any score deductions changed.',
       steps: buildStepsForFactor('CANVAS_FINGERPRINT', platform),
       affectedFactorIds: affectedIds,
       isMultiFactor: true,
@@ -657,7 +660,10 @@ export function generateRemediationFindings(
           ? `Detected value: ${String(factor.currentValue)}`
           : factor.reason || 'Active telemetry detected',
       impactExplanation: factor.description || factor.reason || 'Exposes identifiable system configuration to remote web servers.',
-      expectedOutcome: `Eliminates deduction and shields ${factor.name || factor.id} from remote extraction.`,
+      expectedOutcome:
+        factor.id === 'FP_WEBGL_HARDWARE'
+          ? 'A suitable browser privacy control may reduce or mask WebGL hardware disclosure; re-run the audit to verify whether the deduction is removed.'
+          : 'A successful mitigation may reduce the observed exposure; re-run the audit to verify the resulting evidence and score.' ,
       steps: buildStepsForFactor(factor.id, platform),
       affectedFactorIds: [factor.id],
       isMultiFactor: false,
@@ -693,7 +699,7 @@ export function generateRemediationFindings(
             actionability: 'ACTIONABLE_NOW',
             evidence: 'Remediation successfully verified. 0 points deducted.',
             impactExplanation: 'Previous privacy vulnerability has been corrected.',
-            expectedOutcome: 'Vulnerability eliminated. Privacy score restored.',
+            expectedOutcome: 'Previous deduction is no longer present in the current audit. Re-run the audit later to verify that the improvement remains.',
             steps: [],
             affectedFactorIds: [prevFactor.id],
             isMultiFactor: false,

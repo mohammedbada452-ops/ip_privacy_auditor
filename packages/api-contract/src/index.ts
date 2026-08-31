@@ -459,9 +459,17 @@ export interface HeaderClientHintsAnalysis {
   highEntropy: HeaderClientHintItem[];
 }
 
+export interface ServerDerivedHeaderMetadata {
+  name: string;
+  normalizedName: string;
+  value: string;
+}
+
 export interface HeadersAnalysisResponse {
   scoreScope?: 'HEADERS_ONLY';
   headers: HeaderItem[];
+  /** Metadata injected by the server/worker, not originated by the browser. */
+  serverDerivedMetadata?: ServerDerivedHeaderMetadata[];
   missingHeaders: MissingHeaderItem[];
   summary: HeaderSummaryStats;
   /** @deprecated Use headerPrivacyExposureScore. Kept for backward compatibility only. */

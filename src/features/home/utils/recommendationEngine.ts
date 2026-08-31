@@ -84,17 +84,26 @@ export function generateSmartRecommendations(risks: UnifiedRiskItem[]): SmartRec
 
     const totalBoost = fixes.reduce((sum, f) => sum + f.expectedImprovementPts, 0);
 
+    const scoredFingerprintLabels = fixes
+      .filter((f) => f.expectedImprovementPts > 0)
+      .map((f) => f.title.replace(/^Mask /i, '').replace(/ Hardware Renderer Parameters$/i, ''));
+    const scoredSummary = scoredFingerprintLabels.length
+      ? `Only confirmed scored exposure${scoredFingerprintLabels.length > 1 ? 's' : ''} currently contribute${scoredFingerprintLabels.length > 1 ? '' : 's'} to recovery: ${scoredFingerprintLabels.join(', ')}.`
+      : 'Current Canvas, WebGL, and Audio observations are informational and do not currently affect the canonical score.';
+
     recommendationsMap.set('rec_fingerprint', {
       id: 'rec_fingerprint',
-      title: 'Reduce Hardware Canvas, WebGL & Audio Entropy',
-      description: 'These signals can contribute to fingerprinting. This recommendation only quantifies improvement for factors that currently affect the canonical score; informational surfaces remain unscored.',
+      title: hasWebgl && !hasCanvas && !hasAudio
+        ? 'Reduce WebGL Hardware Exposure'
+        : 'Review Canvas, WebGL & Audio Fingerprinting',
+      description: `These signals can contribute to fingerprinting. ${scoredSummary}`,
       sourceCategory: 'browser',
       priority: 'high',
       estimatedScoreBoost: totalBoost,
       steps: [
         'Enable built-in anti-fingerprinting protections (e.g. Firefox privacy.resistFingerprinting = true).',
-        'Use privacy-focused browsers with native canvas noise injection (Brave Shields, Mullvad Browser, or LibreWolf).',
-        'Install fingerprint spoofing extensions like Canvas Defender or Privacy Badger.',
+        'Use privacy-focused browser features that reduce fingerprinting surface where supported.',
+        'After changing browser privacy settings, re-run the audit to verify which observed signals changed.',
       ],
       fixes,
       actionLabel: 'Review Fingerprint Vector',
@@ -103,14 +112,14 @@ export function generateSmartRecommendations(risks: UnifiedRiskItem[]): SmartRec
     });
   }
 
-  // Rule 3: Enable Global Privacy Control (Sec-GPC: 1) (+5 pts)
+  // Rule 3: GPC is a privacy preference signal. It is intentionally score-neutral.
   if (hasGpcMissing) {
     const fixes: RecommendationFixItem[] = [
       {
         id: 'fix_gpc_enable',
         title: 'Enable Global Privacy Control (Sec-GPC: 1)',
-        description: 'Turn on GPC in browser settings or install Privacy Badger / DuckDuckGo extension.',
-        expectedImprovementPts: 5,
+        description: 'Use native GPC support when available, or a reputable extension that explicitly sends Sec-GPC: 1. This is a privacy-preference improvement, not a guaranteed score increase.',
+        expectedImprovementPts: 0,
         actor: 'BROWSER SETTING',
       },
     ];
@@ -118,14 +127,14 @@ export function generateSmartRecommendations(risks: UnifiedRiskItem[]): SmartRec
     recommendationsMap.set('rec_gpc', {
       id: 'rec_gpc',
       title: 'Broadcast Global Privacy Control (Sec-GPC: 1)',
-      description: 'Legally signals websites and data brokers under CCPA and GDPR not to sell or share your personal browsing data.',
+      description: 'Sends a standardized privacy preference signal to participating services; support and legal recognition vary by browser, site, and jurisdiction. This signal is currently informational and score-neutral in Privasec.',
       sourceCategory: 'headers',
-      priority: 'medium',
-      estimatedScoreBoost: 5,
+      priority: 'low',
+      estimatedScoreBoost: 0,
       steps: [
-        'Enable "Global Privacy Control" or "Send websites a Do Not Track request" in your browser Privacy & Security settings.',
-        'Alternatively, install privacy extensions like Privacy Badger, DuckDuckGo Privacy Essentials, or EFF Privacy Badger.',
-        'Recheck headers to verify Sec-GPC: 1 transmission.',
+        'If your browser supports GPC natively, enable its Global Privacy Control setting.',
+        'If your browser does not expose GPC natively, use a reputable extension that explicitly adds Sec-GPC: 1.',
+        'Recheck headers to verify whether Sec-GPC: 1 is actually transmitted.',
       ],
       fixes,
       actionLabel: 'Verify Header Controls',

@@ -34,7 +34,7 @@ ADMIN_SECRET_KEY=<optional-production-secret>
 
 - **Algorithm:** PBKDF2 (Password-Based Key Derivation Function 2)
 - **HMAC Digest:** SHA-256 (`crypto.pbkdf2Sync(..., 'sha256')`)
-- **Iteration Count:** `100,000` iterations
+- **Iteration Count:** `600,000` iterations
 - **Key Output Length:** 32 bytes (256-bit hash, represented as 64 hexadecimal characters)
 - **Cryptographic Salt:** Per-user unique 16-byte random salt generated via `crypto.randomBytes(16).toString('hex')` (32 hex characters)
 - **Constant-Time Verification:** Password and Master Secret comparisons execute strictly using `crypto.timingSafeEqual()` on equal-length binary buffers to eliminate side-channel timing attack vectors.
@@ -53,7 +53,7 @@ Read ADMIN_USERNAME & ADMIN_PASSWORD from Environment
         ├── Validate password constraints (Min 8 chars, reject default/weak list)
         │
         ▼
-Compute PBKDF2 Hash (100,000 iters) with 16-byte cryptographically random salt
+Compute PBKDF2 Hash (600,000 iters) with 16-byte cryptographically random salt
         │
         ▼
 Store ONLY (username, passwordHash, salt) in Repository

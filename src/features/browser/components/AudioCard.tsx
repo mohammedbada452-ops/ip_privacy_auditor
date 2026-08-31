@@ -13,11 +13,11 @@ export const AudioCard: React.FC<AudioCardProps> = ({ group }) => {
   const [copied, setCopied] = useState<boolean>(false);
 
   const data = group.data;
-  const hash = data?.hash || 'Unavailable';
+  const hash = data?.hash || t.ui.unavailable;
   const sampleSum = data?.sampleSum ?? 0;
   const sampleLength = data?.sampleLength ?? 0;
 
-  const isUnavailable = !data || hash === 'Unavailable' || hash === '0000000000000000' || group.status === 'UNAVAILABLE' || group.status === 'ERROR' || data?.status === 'UNAVAILABLE' || data?.status === 'ERROR' || data?.status === 'TIMEOUT';
+  const isUnavailable = !data || hash === t.ui.unavailable || hash === '0000000000000000' || group.status === 'UNAVAILABLE' || group.status === 'ERROR' || data?.status === 'UNAVAILABLE' || data?.status === 'ERROR' || data?.status === 'TIMEOUT';
   const isProtected = !isUnavailable && data?.status === 'BLOCKED';
 
   const handleCopy = () => {
@@ -28,7 +28,7 @@ export const AudioCard: React.FC<AudioCardProps> = ({ group }) => {
   };
 
   const badgeStatus = isUnavailable ? 'neutral' : isProtected ? 'success' : 'warning';
-  const badgeLabel = isUnavailable ? 'Not measured' : isProtected ? 'Blocked' : 'Signature observed';
+  const badgeLabel = isUnavailable ? t.ui.notMeasured : isProtected ? t.ui.blockedNotMeasured : t.ui.signatureObserved;
 
   return (
     <Card id="audio" variant="standard" className="p-5 flex flex-col justify-between space-y-4 scroll-mt-24">

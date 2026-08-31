@@ -16,7 +16,11 @@ export const ActiveProtectionsSection: React.FC<ActiveProtectionsSectionProps> =
     const valStr = typeof f.currentValue === 'string' ? f.currentValue : String(f.currentValue ?? '');
     if (f.id === 'HDR_SEC_GPC_SIGNAL' && valStr.includes('Active')) return true;
     if (f.id === 'HDR_DNT_SIGNAL' && valStr.includes('DNT: 1')) return true;
-    if (f.id === 'FP_WEBRTC_LEAK' && (f.status === 'SAFE' || valStr === 'No leak' || !f.detected)) return true;
+    if (f.id === 'FP_WEBRTC_LEAK') {
+      const metadata = (f as PrivacyFactor & { metadata?: Record<string, unknown> }).metadata;
+      const mdnsProtectionConfirmed = metadata?.mdnsProtectionConfirmed === true;
+      if (mdnsProtectionConfirmed) return true;
+    }
     if (f.id === 'NET_TOR_DETECTED' && f.detected) return true;
     if (f.id === 'NET_VPN_DETECTED' && f.detected) return true;
     if (f.id === 'FP_WEBGL_HARDWARE' && f.status === 'SAFE') return true;

@@ -14,7 +14,7 @@ import type {
   PrivacyScoreTier,
 } from './types';
 import { HEADER_DEFINITIONS, RECOMMENDED_MISSING_HEADERS } from './HeaderRegistry';
-import { HeaderCollector, type RawHeaderEntry } from './HeaderCollector';
+import { HeaderCollector, type RawHeaderEntry, type ServerDerivedHeaderEntry } from './HeaderCollector';
 
 
 type HeaderFindingClassification = 'SECURITY' | 'PRIVACY_EXPOSURE' | 'FINGERPRINTING_SURFACE' | 'CONFIGURATION' | 'INFORMATIONAL';
@@ -31,7 +31,7 @@ export class HeaderClassifier {
    * Performs full classification, privacy scoring, problem extraction,
    * client hints entropy audit, and trusted proxy analysis on collected headers.
    */
-  public static analyze(entries: RawHeaderEntry[], isInfrastructureProxy = false): HeadersAnalysisResponse {
+  public static analyze(entries: RawHeaderEntry[], isInfrastructureProxy = false, serverDerivedMetadata: ServerDerivedHeaderEntry[] = []): HeadersAnalysisResponse {
     const headersMap: Record<string, string> = {};
     for (const entry of entries) {
       const rawKey = entry.key || (entry as any).name || '';
@@ -654,6 +654,11 @@ export class HeaderClassifier {
 
     return {
       headers: items,
+      serverDerivedMetadata: serverDerivedMetadata.map((entry) => ({
+        name: entry.key,
+        normalizedName: entry.normalizedKey,
+        value: entry.sanitizedValue,
+      })),
       missingHeaders,
       summary,
       privacyScore,

@@ -48,7 +48,10 @@ export const PrivacyScoreHero: React.FC<PrivacyScoreHeroProps> = ({
     const valStr = typeof f.currentValue === 'string' ? f.currentValue : String(f.currentValue ?? '');
     if (f.id === 'HDR_SEC_GPC_SIGNAL' && valStr.includes('Active')) return true;
     if (f.id === 'HDR_DNT_SIGNAL' && (valStr.includes('DNT: 1') || valStr.includes('Active'))) return true;
-    if (f.id === 'FP_WEBRTC_LEAK' && (f.evidenceState === 'NOT_DETECTED' || valStr === 'No address candidates exposed')) return true;
+    if (f.id === 'FP_WEBRTC_LEAK') {
+      const metadata = (f as PrivacyScoreAnalysis['factors'][number] & { metadata?: Record<string, unknown> }).metadata;
+      if (metadata?.mdnsProtectionConfirmed === true) return true;
+    }
     if (f.id === 'NET_TOR_DETECTED' && f.detected) return true;
     if (f.id === 'NET_VPN_DETECTED' && f.detected) return true;
     if (f.id === 'FP_WEBGL_HARDWARE' && f.status === 'SAFE') return true;
