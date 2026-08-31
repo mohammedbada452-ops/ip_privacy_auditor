@@ -1,0 +1,72 @@
+{
+  "name": "privasec-privacy-auditor",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx server.ts",
+    "build": "npm run build:cloudflare",
+    "start": "npm run build:server && node dist/server.cjs",
+    "clean": "rm -rf dist",
+    "lint": "tsc --noEmit",
+    "test": "tsx server/tests/ip.test.ts && tsx server/tests/ipUi.test.ts && tsx server/tests/privacyEngine.test.ts && tsx server/tests/browserIntelligence.test.ts && tsx server/tests/headersIntelligence.test.ts && tsx server/tests/i18n.test.ts && tsx server/tests/adminConsole.test.ts && tsx server/tests/productionHardening.test.ts && tsx server/tests/finalIntegration.test.ts && tsx server/tests/fix1Verification.test.ts && tsx server/tests/fix2BrowserIntelligence.test.ts && tsx server/tests/headersExperience.test.ts && tsx server/tests/unifiedPrivacyDashboard.test.ts && tsx server/tests/fix5TrustAccuracy.test.ts && tsx server/tests/fix6Remediation.test.ts && tsx server/tests/fix7TrustConsistency.test.ts && tsx server/tests/fix7_1ConsistencyCorrection.test.ts && tsx server/tests/fix7_2AccuracyCorrection.test.ts && tsx server/tests/fix7_3SnapshotConsistency.test.ts && tsx server/tests/adminCredentialConfiguration.test.ts && tsx server/tests/fix8_1AdminSecurity.test.ts && tsx server/tests/fix8_2DatabasePersistence.test.ts && tsx server/tests/fix8_3ProductionDataIntegrity.test.ts && tsx server/tests/fix8_4NetworkAccuracy.test.ts && tsx server/tests/fix8_4_1GeoIPProvider.test.ts && tsx server/tests/finalHardening.test.ts && tsx server/tests/headerScoreScope.test.ts && tsx server/tests/globalAccuracy.test.ts",
+    "test:signal-corrections": "tsx server/tests/finalSignalCorrections.test.ts",
+    "test:accuracy": "tsx server/tests/headerScoreScope.test.ts && tsx server/tests/globalAccuracy.test.ts",
+    "test:release-guards": "node scripts/prepare-seo.mjs",
+    "test:e2e": "playwright test",
+    "test:accuracy-core": "tsx server/tests/accuracyCoreAuthority.test.ts",
+    "test:free-intelligence": "tsx server/tests/freeIntelligenceServices.test.ts",
+    "test:free-intelligence-release": "node scripts/verify-free-intelligence-release.mjs",
+    "test:admin-metrics": "node scripts/verify-admin-metrics.mjs",
+    "cf:typegen": "wrangler types",
+    "cf:typecheck": "wrangler types && tsc -p tsconfig.worker.json",
+    "build:cloudflare": "node scripts/prepare-seo.mjs && vite build && node scripts/verify-build-output.mjs && npm run cf:typecheck",
+    "deploy:cloudflare": "npm run build:cloudflare && npx --yes wrangler@4.125.0 deploy",
+    "build:cloudflare:auto": "node scripts/resolve-workers-origin.mjs",
+    "deploy:cloudflare:auto": "npm run build:cloudflare:auto && wrangler deploy",
+    "test:cloudflare-guard": "node scripts/verify-cloudflare-deployment.mjs",
+    "deploy": "npm run build:cloudflare && npx --yes wrangler@4.125.0 deploy",
+    "test:release": "npm run test:cloudflare-guard && npm run test:production-truth && npm run test:accuracy",
+    "build:cloudflare:verify": "npm run build:cloudflare && node scripts/verify-cloudflare-deployment.mjs",
+    "test:production-truth": "node scripts/verify-production-truth.mjs",
+    "test:worker-native": "node scripts/verify-cloudflare-deployment.mjs",
+    "build:server": "esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs"
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "^4.1.14",
+    "@vitejs/plugin-react": "^5.0.4",
+    "dotenv": "^17.2.3",
+    "express": "^4.21.2",
+    "lucide-react": "^0.546.0",
+    "motion": "^12.23.24",
+    "pg": "^8.23.0",
+    "react": "^19.0.1",
+    "react-dom": "^19.0.1",
+    "vite": "^6.2.3"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.14.0",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "autoprefixer": "^10.4.21",
+    "esbuild": "^0.25.0",
+    "tailwindcss": "^4.1.14",
+    "tsx": "^4.21.0",
+    "typescript": "~5.8.2",
+    "@playwright/test": "^1.55.0",
+    "wrangler": "^4.127.0"
+  },
+  "packageManager": "npm@11.16.0",
+  "engines": {
+    "node": ">=22 <25",
+    "npm": ">=10 <12"
+  },
+  "allowScripts": {
+    "esbuild@0.25.12": true,
+    "esbuild@0.28.1": true,
+    "esbuild@0.28.2": true,
+    "workerd@1.20260828.1": true
+  }
+}
