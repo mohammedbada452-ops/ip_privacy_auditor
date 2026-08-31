@@ -341,8 +341,6 @@ export interface Translations {
   ip: {
     title: string;
     subtitle: string;
-    browserLabel: string;
-    osLabel: string;
     loadingMessage: string;
     loadingSubtitle: string;
     errorMessage: string;
@@ -398,9 +396,6 @@ export interface Translations {
     activeOne: string;
     notSet: string;
     networkGeolocation: string;
-    networkType: string;
-    evidenceLabel: string;
-    approximateLocationNote: string;
     geoSourceConflict: string;
     sourceAgreement: string;
     providerReported: string;
@@ -505,10 +500,6 @@ export interface Translations {
     privacyProtectionsTitle: string;
     privacyProtectionsSubtitle: string;
     gpcSignal: string;
-    gpcNativeAvailable: string;
-    gpcNotSupported: string;
-    gpcUseExtension: string;
-    gpcRecheck: string;
     dntSignal: string;
     incognitoHeuristic: string;
     adBlockHeuristic: string;
@@ -878,8 +869,6 @@ export interface Translations {
     version: string;
     suite: string;
     ownerAccess: string;
-    evidenceFirst: string;
-    rawTerminology: string;
   };
 
   placeholders: {

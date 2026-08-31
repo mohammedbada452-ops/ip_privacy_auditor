@@ -67,40 +67,16 @@ export const RemediationModal: React.FC<RemediationModalProps> = ({
           deepDiveLabel: 'Inspect WebRTC Candidates in Browser Intelligence',
         };
       case 'sec_gpc_missing':
-      case 'dnt_missing': {
-        const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
-        const isFirefox = /Firefox|FxiOS/i.test(ua);
-        const isBrave = /Brave/i.test(ua);
-        const isChromeFamily = /Chrome|CriOS|Edg\//i.test(ua) && !/Firefox|FxiOS/i.test(ua);
-        const gpcNotSupported = isChromeFamily && !isBrave && !isFirefox;
+      case 'dnt_missing':
         return {
-          steps: gpcNotSupported
-            ? [
-                t.browser.gpcNotSupported,
-                t.browser.gpcUseExtension,
-                t.browser.gpcRecheck,
-              ]
-            : isFirefox
-              ? [
-                  'Open Firefox Settings → Privacy & Security and enable the available Global Privacy Control preference.',
-                  'Confirm the browser is configured to send the GPC signal.',
-                  t.browser.gpcRecheck,
-                ]
-              : isBrave
-                ? [
-                    'Open Brave Shields settings and enable Global Privacy Control.',
-                    'Confirm the browser is configured to send Sec-GPC: 1.',
-                    t.browser.gpcRecheck,
-                  ]
-                : [
-                    t.browser.gpcNotSupported,
-                    t.browser.gpcUseExtension,
-                    t.browser.gpcRecheck,
-                  ],
+          steps: [
+            'Firefox: Open Settings → Privacy & Security → Check "Send websites a Do Not Track request" and "Tell websites not to sell or share my data".',
+            'Brave: GPC is enabled by default in Shields Settings.',
+            'Chrome / Edge: Install the Global Privacy Control extension from the official Chrome Web Store.',
+          ],
           deepDiveRoute: '/headers',
           deepDiveLabel: 'Inspect HTTP Privacy Headers',
         };
-      }
       case 'proxy_detected':
       case 'vpn_detected':
       case 'tor_detected':

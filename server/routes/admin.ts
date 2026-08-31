@@ -5,7 +5,6 @@ import { dbRepository } from '../db/repository';
 import { extractClientIp } from '../utils/ipExtractor';
 import crypto from 'crypto';
 import { hasPermission, type AdminPermission } from '../auth/rbac';
-import { getRequestEnv } from '../config/requestEnv';
 
 export const adminRouter = Router();
 
@@ -22,7 +21,7 @@ const asyncHandler = (handler: (req: Request, res: Response, next: NextFunction)
 /** Issue a non-HttpOnly CSRF token for double-submit protection. */
 adminRouter.get('/admin/csrf', (_req: Request, res: Response) => {
   const token = crypto.randomBytes(32).toString('hex');
-  const isProduction = getRequestEnv('NODE_ENV') === 'production';
+  const isProduction = process.env.NODE_ENV === 'production';
   res.cookie('privasec_admin_csrf', token, { httpOnly: false, secure: isProduction, sameSite: 'strict', path: '/api/admin', maxAge: 2 * 60 * 60 * 1000 });
   res.json({ success: true, data: { csrfToken: token }, meta: { timestamp: new Date().toISOString() } });
 });
@@ -76,7 +75,7 @@ export function adminCsrfGuard(req: Request, res: Response, next: NextFunction) 
   if (origin && host) {
     try {
       const originHost = new URL(origin).host;
-      const isDevelopment = getRequestEnv('NODE_ENV') !== 'production';
+      const isDevelopment = process.env.NODE_ENV !== 'production';
       const allowedDevelopmentOrigin = isDevelopment && (originHost === 'localhost:3000' || originHost === '127.0.0.1:3000');
       if (originHost !== host && !allowedDevelopmentOrigin) {
         const clientIp = extractClientIp(req).ip;
@@ -147,7 +146,7 @@ const handleLogin = async (req: Request, res: Response) => {
     return;
   }
 
-  const isProduction = getRequestEnv('NODE_ENV') === 'production';
+  const isProduction = process.env.NODE_ENV === 'production';
   if (result.token) {
     res.cookie('privasec_admin_session', result.token, {
       httpOnly: true,
@@ -198,11 +197,11 @@ const handleLogout = async (req: Request, res: Response) => {
     await adminAuthService.logoutAsync(token, req);
   }
 
-  const isProduction = getRequestEnv('NODE_ENV') === 'production';
+  const isProduction = process.env.NODE_ENV === 'production';
   res.clearCookie('privasec_admin_session', {
     httpOnly: true,
     secure: isProduction,
-    sameSite: 'strict',
+    sameSite: 'lax',
     path: '/',
   });
 

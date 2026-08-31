@@ -74,7 +74,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileNav }) => {
 
           <div className="hidden xl:inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-cyan-400/80">
             <Sparkles className="w-3 h-3" />
-            <span>{t.footer.evidenceFirst}</span>
+            <span>{language === 'ar' ? 'نتائج مدعومة بالأدلة' : language === 'es' ? 'Resultados con evidencia' : language === 'fr' ? 'Résultats fondés sur les preuves' : language === 'pt' ? 'Resultados baseados em evidências' : language === 'tr' ? 'Kanıt odaklı sonuçlar' : 'Evidence-first results'}</span>
           </div>
 
           {/* Language Selector */}

@@ -298,25 +298,22 @@ function buildStepsForFactor(
       ];
     }
 
-    const nativeGpcSupported = platform.browserFamily === 'FIREFOX' || platform.browserFamily === 'BRAVE';
     return [
       {
         stepNumber: 1,
-        title: nativeGpcSupported ? 'Enable Sec-GPC Header Signal' : 'Use a GPC-capable Privacy Control',
-        instruction: nativeGpcSupported
-          ? `In ${platform.browserName}, enable the available Global Privacy Control setting.`
-          : `This browser does not expose native Global Privacy Control. Use a reputable extension that explicitly sends Sec-GPC: 1.`,
+        title: 'Enable Sec-GPC Header Signal',
+        instruction: `In ${platform.browserName}, enable Global Privacy Control in settings or via Privacy Badger / uBlock Origin.`,
       },
       {
         stepNumber: 2,
-        title: 'Verify Sec-GPC Signal',
-        instruction: 'Ensure outgoing requests include the header "Sec-GPC: 1" when the control is enabled.',
+        title: 'Assert CCPA/GDPR Legal Opt-Out',
+        instruction: 'Ensure outgoing requests include the header "Sec-GPC: 1".',
         codeSnippet: 'Sec-GPC: 1',
       },
       {
         stepNumber: 3,
         title: 'Verify Opt-Out Header',
-        instruction: 'Click Recheck to verify the Sec-GPC signal is actually transmitted.',
+        instruction: 'Click Recheck to verify the Sec-GPC signal is asserted.',
       },
     ];
   }

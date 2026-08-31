@@ -98,7 +98,7 @@ async function runAdminCredentialConfigurationTests() {
     assert(emptyPassVal.valid === false, 'Empty string password rejected');
 
     // ------------------------------------------------------------
-    // 7. Password hashing (PBKDF2 with 600,000 iterations & random salt)
+    // 7. Password hashing (PBKDF2 with 100,000 iterations & random salt)
     // ------------------------------------------------------------
     console.log('\n7. Testing PBKDF2 password hashing & random salt...');
     const rawPlaintext = 'SecureTestOperatorPassword!2026';

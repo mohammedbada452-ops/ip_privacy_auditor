@@ -19,7 +19,7 @@ export const WebRtcCard: React.FC<WebRtcCardProps> = ({ group }) => {
   const mdnsCandidates = data?.mdnsCandidates || [];
 
   const badgeStatus = isUnavailable ? 'neutral' : leakDetected ? 'danger' : hasPublicCandidate ? 'warning' : 'success';
-  const badgeLabel = isUnavailable ? t.ui.unavailable : leakDetected ? t.browser.webrtcLeakDetected : hasPublicCandidate ? `${t.ui.publicIceCandidates} — ${t.ui.candidateUnknown}` : t.browser.webrtcNoLeak;
+  const badgeLabel = isUnavailable ? 'Unavailable' : leakDetected ? 'Private IP Leak' : hasPublicCandidate ? 'Public Candidate — Review' : 'No Private Leak Detected';
 
   return (
     <Card id="webrtc" variant="standard" className="p-5 flex flex-col justify-between space-y-4 scroll-mt-24">

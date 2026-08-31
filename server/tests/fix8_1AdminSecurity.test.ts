@@ -5,7 +5,7 @@
  * 1. Environment-driven administrator configuration (ADMIN_USERNAME & ADMIN_PASSWORD)
  * 2. Complete removal of hardcoded default credentials from repository seeds
  * 3. Validation & constraints for admin username and password
- * 4. PBKDF2 (600,000 iterations, 32-byte key, sha256) and per-user cryptographic salts
+ * 4. PBKDF2 (100,000 iterations, 32-byte key, sha256) and per-user cryptographic salts
  * 5. Constant-time equality checks against timing attacks
  * 6. HttpOnly, Secure, SameSite cookie transport for admin sessions
  * 7. Server-authoritative session lifecycle (login, validation, logout, invalidation)

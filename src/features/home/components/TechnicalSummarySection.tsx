@@ -40,7 +40,7 @@ export const TechnicalSummarySection: React.FC<TechnicalSummarySectionProps> = (
   const locationParts = [ipDetails?.geo?.city, ipDetails?.geo?.region, countryName]
     .map((value) => String(value || '').trim())
     .filter((value) => value && !/^(unknown|unavailable|not measured)$/i.test(value));
-  const location = locationParts.length ? locationParts.join(', ') : t.ui.unavailable;
+  const location = locationParts.length ? locationParts.join(', ') : 'Unavailable';
   const isp = getSafeNetworkText(ipDetails?.network?.isp);
   const organization = getSafeNetworkText(ipDetails?.network?.organization);
   const asn = getSafeNetworkText(ipDetails?.network?.asn, 'Not assigned');
@@ -53,9 +53,9 @@ export const TechnicalSummarySection: React.FC<TechnicalSummarySectionProps> = (
       return null;
     }
   })();
-  const postalCode = getSafeNetworkText(ipDetails?.geo?.postalCode, t.ui.notMeasured);
-  const asOrganization = getSafeNetworkText(ipDetails?.network?.asOrganization, t.ui.notMeasured);
-  const networkType = getSafeNetworkText(ipDetails?.network?.networkType, t.ui.notMeasured);
+  const postalCode = getSafeNetworkText(ipDetails?.geo?.postalCode, 'Not measured');
+  const asOrganization = getSafeNetworkText(ipDetails?.network?.asOrganization, 'Not measured');
+  const networkType = getSafeNetworkText(ipDetails?.network?.networkType, 'Not measured');
   const providerPrivacyScore = typeof ipDetails?.network?.privacyScore === 'number' ? ipDetails.network.privacyScore : null;
   const providerPrivacyGrade = ipDetails?.network?.privacyGrade || null;
   const browserTimezone = browserProfile?.groups?.IDENTITY?.data && typeof (browserProfile.groups.IDENTITY.data as IdentityData & { timezone?: string }).timezone === 'string'
@@ -69,7 +69,7 @@ export const TechnicalSummarySection: React.FC<TechnicalSummarySectionProps> = (
   const intelligenceConfidence = networkIntelligence?.intelligenceConfidence || null;
   const intelligenceSources = networkIntelligence?.providers?.length
     ? networkIntelligence.providers.join(', ')
-    : ipDetails?.network?.provider || t.ui.notMeasured;
+    : ipDetails?.network?.provider || 'Not measured';
   const vpnLabel = getStatusLabel(ipDetails?.network?.isVpn, {
     detected: 'VPN detected',
     clear: 'VPN not detected',
@@ -145,7 +145,7 @@ export const TechnicalSummarySection: React.FC<TechnicalSummarySectionProps> = (
               </div>
               <div className="flex items-center justify-between gap-3">
                 <span className="text-2xl sm:text-3xl font-mono font-bold text-cyan-300 break-all select-all">
-                  {observedIp || t.ui.unavailable}
+                  {observedIp || 'Unavailable'}
                 </span>
                 {observedIp && <CopyValue value={observedIp} label={t.ip.copyIp} />}
               </div>
@@ -168,7 +168,7 @@ export const TechnicalSummarySection: React.FC<TechnicalSummarySectionProps> = (
               <div className="grid grid-cols-2 gap-2 mt-3 text-[11px] font-mono">
                 <div><span className="text-slate-600">ZIP / Postal</span><div className="text-slate-300 mt-0.5">{postalCode}</div></div>
                 <div><span className="text-slate-600">Timezone</span><div className="text-slate-300 mt-0.5 truncate">{timezone}</div></div>
-                <div><span className="text-slate-600">IP local time</span><div className="text-slate-300 mt-0.5 truncate">{currentNetworkTime || t.ui.notMeasured}</div></div>
+                <div><span className="text-slate-600">IP local time</span><div className="text-slate-300 mt-0.5 truncate">{currentNetworkTime || 'Not measured'}</div></div>
               </div>
               {browserTimezone && <div className={`mt-2 text-[11px] ${timezoneMatch === true ? 'text-emerald-400' : timezoneMatch === false ? 'text-amber-400' : 'text-slate-500'}`}>
                 {timezoneMatch === true ? 'Network and device timezone match' : timezoneMatch === false ? `Timezone mismatch: device ${browserTimezone}` : 'Timezone consistency not measured'}
@@ -241,11 +241,11 @@ export const TechnicalSummarySection: React.FC<TechnicalSummarySectionProps> = (
             <div className="p-4 rounded-xl bg-slate-900/50 border border-slate-800">
               <div className="flex items-center gap-2.5 mb-3"><Cpu className="w-4 h-4 text-purple-400" /><span className="text-xs font-mono font-bold text-slate-200">{t.home.quickSummary.browserCardTitle}</span></div>
               <div className="space-y-1.5 text-xs font-mono">
-                <div className="flex justify-between gap-3"><span className="text-slate-500">{t.browser.browserLabel}</span><span className="text-slate-300">{identityData ? `${identityData.browserFamily} ${identityData.browserVersion}` : t.ui.unavailable}</span></div>
-                <div className="flex justify-between gap-3"><span className="text-slate-500">{t.browser.osLabel}</span><span className="text-slate-300">{identityData?.osFamily || t.ui.unavailable}</span></div>
-                <div className="flex justify-between gap-3"><span className="text-slate-500">{t.browser.canvasSignature}</span><span className={canvasRandomized ? 'text-emerald-400' : canvasStatus === 'UNAVAILABLE' ? 'text-slate-400' : 'text-amber-400'}>{canvasRandomized ? t.browser.canvasNoiseInjected : canvasStatus === 'UNAVAILABLE' ? t.ui.notMeasured : t.ui.signatureObserved}</span></div>
-                <div className="flex justify-between gap-3"><span className="text-slate-500">{t.browser.webglHardware}</span><span className={gpuUnmasked || gpuStatus === 'EXPOSED' ? 'text-amber-400' : gpuStatus === 'MASKED' ? 'text-emerald-400' : 'text-slate-400'}>{gpuStatus === 'EXPOSED' ? t.browser.webglExposed : gpuStatus === 'MASKED' ? t.browser.webglMasked : t.ui.notMeasured}</span></div>
-                <div className="flex justify-between gap-3"><span className="text-slate-500">{t.browser.webrtcTitle}</span><span className={leakDetected ? 'text-red-400' : webrtcStatus === 'NO_LEAK' || webrtcStatus === 'PROTECTED' ? 'text-emerald-400' : 'text-slate-400'}>{leakDetected ? t.browser.webrtcLeakDetected : webrtcStatus === 'NO_LEAK' || webrtcStatus === 'PROTECTED' ? t.browser.webrtcNoLeak : t.ui.notMeasured}</span></div>
+                <div className="flex justify-between gap-3"><span className="text-slate-500">Browser</span><span className="text-slate-300">{identityData ? `${identityData.browserFamily} ${identityData.browserVersion}` : 'Unavailable'}</span></div>
+                <div className="flex justify-between gap-3"><span className="text-slate-500">OS</span><span className="text-slate-300">{identityData?.osFamily || 'Unavailable'}</span></div>
+                <div className="flex justify-between gap-3"><span className="text-slate-500">Canvas</span><span className={canvasRandomized ? 'text-emerald-400' : canvasStatus === 'UNAVAILABLE' ? 'text-slate-400' : 'text-amber-400'}>{canvasRandomized ? 'Randomized' : canvasStatus === 'UNAVAILABLE' ? 'Not measured' : 'Signature observed'}</span></div>
+                <div className="flex justify-between gap-3"><span className="text-slate-500">WebGL</span><span className={gpuUnmasked || gpuStatus === 'EXPOSED' ? 'text-amber-400' : gpuStatus === 'MASKED' ? 'text-emerald-400' : 'text-slate-400'}>{gpuStatus === 'EXPOSED' ? 'Hardware exposed' : gpuStatus === 'MASKED' ? 'Masked' : 'Not measured'}</span></div>
+                <div className="flex justify-between gap-3"><span className="text-slate-500">WebRTC</span><span className={leakDetected ? 'text-red-400' : webrtcStatus === 'NO_LEAK' || webrtcStatus === 'PROTECTED' ? 'text-emerald-400' : 'text-slate-400'}>{leakDetected ? 'Private IP leak' : webrtcStatus === 'NO_LEAK' || webrtcStatus === 'PROTECTED' ? 'No private IP leak' : 'Not measured'}</span></div>
               </div>
               <Link to="/browser" className="inline-flex items-center gap-1.5 mt-4 text-xs text-purple-300 hover:text-purple-200"><span>{t.home.quickSummary.viewBrowserDetails}</span><ArrowRight className="w-3.5 h-3.5" /></Link>
             </div>
@@ -253,10 +253,10 @@ export const TechnicalSummarySection: React.FC<TechnicalSummarySectionProps> = (
             <div className="p-4 rounded-xl bg-slate-900/50 border border-slate-800">
               <div className="flex items-center gap-2.5 mb-3"><FileCode2 className="w-4 h-4 text-blue-400" /><span className="text-xs font-mono font-bold text-slate-200">{t.home.quickSummary.headersCardTitle}</span></div>
               <div className="space-y-1.5 text-xs font-mono">
-                <div className="flex justify-between"><span className="text-slate-500">{t.ui.headersCount}</span><span className="text-slate-300">{headersData?.summary?.totalReceived ?? '—'}</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">{t.ip.secGpc}</span><span className={headersData?.summary?.hasSecGpc ? 'text-emerald-400' : 'text-slate-400'}>{headersData ? (headersData.summary.hasSecGpc ? t.common.active : t.common.inactive) : t.ui.unavailable}</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">{t.ip.dnt}</span><span className={headersData?.summary?.hasDnt ? 'text-emerald-400' : 'text-slate-400'}>{headersData ? (headersData.summary.hasDnt ? t.common.active : t.common.inactive) : t.ui.unavailable}</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">{t.ip.proxyHeadersPresent}</span><span className={headersData?.summary?.hasProxyHeaders ? 'text-amber-400' : 'text-emerald-400'}>{headersData ? (headersData.summary.hasProxyHeaders ? t.common.detected : t.common.noneDetected) : t.ui.unavailable}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">Headers</span><span className="text-slate-300">{headersData?.summary?.totalReceived ?? '—'}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">Sec-GPC</span><span className={headersData?.summary?.hasSecGpc ? 'text-emerald-400' : 'text-slate-400'}>{headersData ? (headersData.summary.hasSecGpc ? 'Active' : 'Not set') : 'Unavailable'}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">DNT</span><span className={headersData?.summary?.hasDnt ? 'text-emerald-400' : 'text-slate-400'}>{headersData ? (headersData.summary.hasDnt ? 'Active' : 'Not set') : 'Unavailable'}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">Proxy metadata</span><span className={headersData?.summary?.hasProxyHeaders ? 'text-amber-400' : 'text-emerald-400'}>{headersData ? (headersData.summary.hasProxyHeaders ? 'Observed' : 'None') : 'Unavailable'}</span></div>
               </div>
               <Link to="/headers" className="inline-flex items-center gap-1.5 mt-4 text-xs text-blue-300 hover:text-blue-200"><span>{t.home.quickSummary.viewHeadersDetails}</span><ArrowRight className="w-3.5 h-3.5" /></Link>
             </div>
@@ -264,11 +264,11 @@ export const TechnicalSummarySection: React.FC<TechnicalSummarySectionProps> = (
             <div className="p-4 rounded-xl bg-slate-900/50 border border-slate-800">
               <div className="flex items-center gap-2.5 mb-3"><ShieldCheck className="w-4 h-4 text-cyan-400" /><span className="text-xs font-mono font-bold text-slate-200">Evidence</span></div>
               <div className="space-y-2 text-xs">
-                <div className="flex items-center justify-between"><span className="text-slate-500">{t.ip.providerObservations}</span><span className="font-mono text-slate-300 truncate max-w-[160px]">{ipDetails?.network?.provider || t.ui.unavailable}</span></div>
+                <div className="flex items-center justify-between"><span className="text-slate-500">Intelligence source</span><span className="font-mono text-slate-300 truncate max-w-[160px]">{ipDetails?.network?.provider || 'Unavailable'}</span></div>
                 <div className="flex items-center justify-between"><span className="text-slate-500">Measurement</span><span className="font-mono text-slate-300">{ipDetails?.measurementStatus || 'UNKNOWN'}</span></div>
-                <div className="flex items-center justify-between"><span className="text-slate-500">{t.ip.country}</span><span className="font-mono text-cyan-300">{countryCode || 'XX'}</span></div>
-                <div className="flex items-center justify-between"><span className="text-slate-500">{t.ip.networkType}</span><span className="font-mono text-slate-300">{networkType}</span></div>
-                <div className="text-[11px] leading-5 text-slate-500">{t.ip.approximateLocationNote}</div>
+                <div className="flex items-center justify-between"><span className="text-slate-500">Country code</span><span className="font-mono text-cyan-300">{countryCode || 'XX'}</span></div>
+                <div className="flex items-center justify-between"><span className="text-slate-500">Network type</span><span className="font-mono text-slate-300">{networkType}</span></div>
+                <div className="text-[11px] leading-5 text-slate-500">Location is approximate. VPN/proxy/Tor status and provider privacy score are shown only when an explicit source signal is available.</div>
               </div>
             </div>
           </div>

@@ -14,9 +14,9 @@ export const CanvasCard: React.FC<CanvasCardProps> = ({ group }) => {
   const [copied, setCopied] = useState<boolean>(false);
 
   const data = group.data;
-  const hash = data?.hash || t.ui.unavailable;
+  const hash = data?.hash || 'Unavailable';
   const isRandomized = data?.isRandomized ?? false;
-  const isUnavailable = !data || hash === t.ui.unavailable || group.status === 'UNAVAILABLE' || group.status === 'ERROR';
+  const isUnavailable = !data || hash === 'Unavailable' || group.status === 'UNAVAILABLE' || group.status === 'ERROR';
 
   // Render a visual replica in the preview canvas
   useEffect(() => {
@@ -74,7 +74,7 @@ export const CanvasCard: React.FC<CanvasCardProps> = ({ group }) => {
   };
 
   const badgeStatus = isUnavailable ? 'neutral' : isRandomized ? 'success' : 'warning';
-  const badgeLabel = isUnavailable ? t.ui.unavailable : isRandomized ? t.common.safe : t.common.detected;
+  const badgeLabel = isUnavailable ? 'Unavailable' : isRandomized ? 'Protected' : 'Detected';
 
   return (
     <Card id="canvas" variant="standard" className="p-5 flex flex-col justify-between space-y-4 scroll-mt-24">
