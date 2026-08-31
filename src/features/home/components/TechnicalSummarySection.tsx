@@ -70,6 +70,13 @@ export const TechnicalSummarySection: React.FC<TechnicalSummarySectionProps> = (
   const intelligenceSources = networkIntelligence?.providers?.length
     ? networkIntelligence.providers.join(', ')
     : ipDetails?.network?.provider || 'Not measured';
+  const geoSourceConflict = (() => {
+    const observations = networkIntelligence?.providerObservations || [];
+    const countryCodes = observations
+      .filter((o) => o.status === 'VERIFIED' && o.countryCode)
+      .map((o) => o.countryCode!.toUpperCase());
+    return new Set(countryCodes).size > 1;
+  })();
   const vpnLabel = getStatusLabel(ipDetails?.network?.isVpn, {
     detected: 'VPN detected',
     clear: 'VPN not detected',
@@ -211,6 +218,11 @@ export const TechnicalSummarySection: React.FC<TechnicalSummarySectionProps> = (
               </span>
             </div>
           </div>
+          {geoSourceConflict && (
+            <div className="rounded-lg border border-amber-500/20 bg-amber-950/20 px-4 py-2 text-[11px] text-amber-300" role="note">
+              {t.ip.geoSourceConflict}. {t.ip.geoSourceConflictNote}
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
             <div className="rounded-lg border border-slate-800 bg-slate-900/50 px-4 py-3 flex items-center justify-between gap-3">

@@ -106,7 +106,7 @@ export const WebRtcCard: React.FC<WebRtcCardProps> = ({ group }) => {
                 ))}
               </div>
             ) : (
-              <span className="text-slate-400 font-mono text-[11px]">{t.browser.webrtcNoLeak}</span>
+              <span className="text-slate-500 font-mono text-[11px]">{t.browser.webrtcNoPublicCandidates}</span>
             )}
           </div>
 

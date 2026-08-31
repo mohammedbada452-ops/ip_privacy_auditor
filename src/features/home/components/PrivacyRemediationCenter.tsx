@@ -92,7 +92,10 @@ export const PrivacyRemediationCenter: React.FC<PrivacyRemediationCenterProps> =
     return matchesCat && matchesStatus;
   });
 
-  const scoreAffectingCount = findings.filter((f) => f.status !== 'RESOLVED' && f.scoreImpact < 0).length;
+  const scoreAffectingCount = findings.filter((f) => f.status !== 'RESOLVED' && f.scoreImpact > 0).length;
+  const informationalCount = findings.filter(
+    (f) => f.status !== 'RESOLVED' && f.scoreImpact === 0 && !f.isInfrastructure
+  ).length;
 
   const getCategoryIcon = (cat: FindingCategory) => {
     switch (cat) {
@@ -286,7 +289,7 @@ export const PrivacyRemediationCenter: React.FC<PrivacyRemediationCenterProps> =
         {/* Summary Metric Counters */}
         <div
           id="remediation-metrics-summary"
-          className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3 pt-6 border-t border-slate-100 dark:border-slate-800"
+          className="mt-6 grid grid-cols-2 sm:grid-cols-5 gap-3 pt-6 border-t border-slate-100 dark:border-slate-800"
         >
           <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
             <div className="text-xs font-medium text-slate-500 dark:text-slate-400">
@@ -303,6 +306,15 @@ export const PrivacyRemediationCenter: React.FC<PrivacyRemediationCenterProps> =
             </div>
             <div className="text-2xl font-bold text-amber-900 dark:text-amber-300 mt-1">
               {scoreAffectingCount}
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+            <div className="text-xs font-medium text-slate-500 dark:text-slate-400">
+              {t.home.remediationCenter.informationalCount}
+            </div>
+            <div className="text-2xl font-bold text-slate-700 dark:text-slate-300 mt-1">
+              {informationalCount}
             </div>
           </div>
 
