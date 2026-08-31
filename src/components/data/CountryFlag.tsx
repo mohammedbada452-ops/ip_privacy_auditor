@@ -21,6 +21,7 @@ export const CountryFlag: React.FC<CountryFlagProps> = ({ countryCode, countryNa
   const label = countryName || code || 'Unknown country';
   const common = {
     className: `country-flag ${className}`,
+    focusable: 'false',
     role: 'img' as const,
     'aria-label': `${label} flag`,
     viewBox: '0 0 48 32',

@@ -51,9 +51,9 @@ export const IpPrimaryCard: React.FC<IpPrimaryCardProps> = ({
 
       <CardBody className="space-y-5">
         <div className="grid grid-cols-1 lg:grid-cols-[1.35fr_1fr_1fr] gap-4">
-          <div className="bg-slate-950/80 border border-slate-800 p-4 sm:p-5 rounded-xl">
-            <div className="text-[10px] font-mono tracking-widest text-slate-500 uppercase mb-2">ACTIVE ADDRESS</div>
-            <div className="min-w-0 w-full">
+          <div className="ip-hero-card rounded-2xl border p-5 sm:p-6">
+            <div className="text-[11px] font-mono tracking-[0.16em] text-slate-400 uppercase mb-3">ACTIVE ADDRESS</div>
+            <div className="min-w-0 w-full mt-1">
               {displayIp ? (
                 <CopyValue value={displayIp} />
               ) : (
@@ -63,7 +63,7 @@ export const IpPrimaryCard: React.FC<IpPrimaryCardProps> = ({
             <div className="text-[11px] text-slate-500 font-mono mt-2">{isPublic ? 'Public routable address' : 'Address scope could not be verified as public'}</div>
           </div>
 
-          <div className="bg-slate-900/60 border border-slate-800/80 p-4 rounded-xl">
+          <div className="bg-slate-900/60 border border-slate-800/80 p-5 rounded-2xl">
             <div className="text-[10px] font-mono tracking-widest text-slate-500 uppercase mb-2">LOCATION</div>
             <div className="flex items-center gap-3">
               <CountryFlag countryCode={countryCode} countryName={countryName} className="h-8 w-12 shrink-0 rounded-md overflow-hidden border border-slate-700/70" />
@@ -75,7 +75,7 @@ export const IpPrimaryCard: React.FC<IpPrimaryCardProps> = ({
             <div className="text-[11px] text-slate-500 font-mono mt-3 truncate">{geo.timezone || 'Timezone unavailable'}</div>
           </div>
 
-          <div className="bg-slate-900/60 border border-slate-800/80 p-4 rounded-xl">
+          <div className="bg-slate-900/60 border border-slate-800/80 p-5 rounded-2xl">
             <div className="text-[10px] font-mono tracking-widest text-slate-500 uppercase mb-2 flex items-center gap-1.5"><Network className="w-3.5 h-3.5" /> NETWORK</div>
             <div className="space-y-1.5 text-xs font-mono">
               <div className="flex justify-between gap-3"><span className="text-slate-500">ISP</span><span className="text-slate-200 truncate max-w-[180px]">{isp}</span></div>

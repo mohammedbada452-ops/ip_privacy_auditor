@@ -1,6 +1,0 @@
-{
-  "extends":"./tsconfig.json",
-  "include":["server/**/*.ts","packages/**/*.ts","/tmp/server-shims.d.ts"],
-  "exclude":["server/tests/**/*.ts"],
-  "compilerOptions":{"noEmit":true,"skipLibCheck":true,"types":[]}
-}
