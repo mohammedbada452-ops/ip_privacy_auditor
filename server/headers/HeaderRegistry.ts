@@ -674,7 +674,7 @@ export const RECOMMENDED_MISSING_HEADERS: MissingHeaderDefinition[] = [
     importance: 'recommended',
     description: 'Global Privacy Control (GPC) header communicates an opt-out preference from data selling and cross-site tracking.',
     purpose: 'Signals user non-consent to third-party data sales and tracking under applicable privacy regulations (such as CCPA/CPRA).',
-    recommendation: 'Enable Global Privacy Control (GPC) in your browser settings (Brave, Firefox, DuckDuckGo) or via privacy extensions.',
+    recommendation: 'GPC support varies by browser. Use a native privacy control where supported, or a reputable extension that explicitly sends Sec-GPC: 1.',
     benefit: 'Automated opt-out signal recognized by participating websites and frameworks in regulated jurisdictions.',
     checkCondition: (headers) => Boolean(headers['sec-gpc'] && headers['sec-gpc'] === '1'),
   },

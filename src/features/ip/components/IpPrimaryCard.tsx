@@ -7,11 +7,12 @@ import {
   Badge,
   StatusBadge,
   CopyValue,
+  CountryFlag,
   RefreshButton,
 } from '../../../components/ui';
 import { useLanguage } from '../../../i18n/LanguageContext';
 import type { IpIntelligenceData } from '../types';
-import { getCountryFlag, getCountryName, getSafeNetworkText, getStatusLabel } from '../../home/utils/networkPresentation';
+import { getCountryName, getSafeNetworkText, getStatusLabel } from '../../home/utils/networkPresentation';
 
 export interface IpPrimaryCardProps {
   data: IpIntelligenceData;
@@ -31,7 +32,6 @@ export const IpPrimaryCard: React.FC<IpPrimaryCardProps> = ({
   const isPublic = data.check.observationScope === 'PUBLIC' || data.check.publicIpStatus === 'MEASURED';
   const countryCode = geo.countryCode && geo.countryCode !== 'XX' ? geo.countryCode : undefined;
   const countryName = getCountryName(geo.country, countryCode);
-  const flag = getCountryFlag(countryCode);
   const location = [geo.city, geo.region, countryName].filter((value) => value && !/^(unknown|unavailable|not measured)$/i.test(value)).join(', ') || 'Unavailable';
   const isp = getSafeNetworkText(network.isp);
   const organization = getSafeNetworkText(network.organization);
@@ -53,9 +53,12 @@ export const IpPrimaryCard: React.FC<IpPrimaryCardProps> = ({
         <div className="grid grid-cols-1 lg:grid-cols-[1.35fr_1fr_1fr] gap-4">
           <div className="bg-slate-950/80 border border-slate-800 p-4 sm:p-5 rounded-xl">
             <div className="text-[10px] font-mono tracking-widest text-slate-500 uppercase mb-2">ACTIVE ADDRESS</div>
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-xl sm:text-2xl md:text-3xl font-mono font-bold text-cyan-300 break-all select-all">{displayIp || 'Unavailable'}</span>
-              {displayIp && <CopyValue value={displayIp} label={t.ip.copyIp} />}
+            <div className="min-w-0 w-full">
+              {displayIp ? (
+                <CopyValue value={displayIp} />
+              ) : (
+                <span className="text-xl sm:text-2xl md:text-3xl font-mono font-bold text-slate-500">Unavailable</span>
+              )}
             </div>
             <div className="text-[11px] text-slate-500 font-mono mt-2">{isPublic ? 'Public routable address' : 'Address scope could not be verified as public'}</div>
           </div>
@@ -63,7 +66,7 @@ export const IpPrimaryCard: React.FC<IpPrimaryCardProps> = ({
           <div className="bg-slate-900/60 border border-slate-800/80 p-4 rounded-xl">
             <div className="text-[10px] font-mono tracking-widest text-slate-500 uppercase mb-2">LOCATION</div>
             <div className="flex items-center gap-3">
-              <span className="text-3xl" role="img" aria-label={countryName}>{flag}</span>
+              <CountryFlag countryCode={countryCode} countryName={countryName} className="h-8 w-12 shrink-0 rounded-md overflow-hidden border border-slate-700/70" />
               <div className="min-w-0">
                 <div className="text-sm font-semibold text-slate-100 truncate">{countryName}</div>
                 <div className="text-xs text-slate-400 flex items-center gap-1 truncate"><MapPin className="w-3.5 h-3.5 shrink-0" />{location}</div>

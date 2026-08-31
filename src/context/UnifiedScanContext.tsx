@@ -298,10 +298,10 @@ export const UnifiedScanProvider: React.FC<{ children: React.ReactNode }> = ({ c
               : 'completed',
           durationMs: networkDuration,
           summary: ipCheckRes
-            ? `${ipCheckRes.ip} (${ipCheckRes.observationScope}, ${ipCheckRes.observationSource})`
+            ? `${ipCheckRes.ip} (${ipCheckRes.observationScope || ipCheckRes.classification || 'UNKNOWN'}, ${ipCheckRes.observationSource || ipCheckRes.ipSource || 'SERVER_OBSERVED'})`
             : 'Network endpoint unreachable',
           details: [
-            ipCheckRes ? (ipCheckRes.observationScope === 'PUBLIC' ? 'Public address observed by the server' : `${ipCheckRes.observationScope} address observed`) : 'Address unavailable',
+            ipCheckRes ? ((ipCheckRes.observationScope || ipCheckRes.classification) === 'PUBLIC' ? 'Public address observed by the server' : `${ipCheckRes.observationScope || ipCheckRes.classification || 'UNKNOWN'} address observed`) : 'Address unavailable',
             ipDetailsRes?.network?.isp ? `ISP: ${ipDetailsRes.network.isp}` : 'Network provider intelligence unavailable',
             ipDetailsRes?.network?.isProxy ? 'Proxy / Intermediary active' : ipDetailsRes?.network?.isProxy === null ? 'Proxy status unavailable' : 'No transparent proxy confirmed',
           ],

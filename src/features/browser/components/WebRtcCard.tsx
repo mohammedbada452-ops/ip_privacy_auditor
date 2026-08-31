@@ -62,10 +62,10 @@ export const WebRtcCard: React.FC<WebRtcCardProps> = ({ group }) => {
             )}
             <div>
               <span className="font-semibold block mb-0.5">
-                {leakDetected ? t.browser.webrtcLeakDetected : hasPublicCandidate ? `${t.ui.publicIceCandidates}: ${t.common.detected} — ${t.ui.candidateUnknown}` : t.browser.webrtcProtected}
+                {leakDetected ? t.browser.webrtcLeakDetected : hasPublicCandidate ? `${t.ui.publicIceCandidates}: ${t.common.detected} — ${t.ui.candidateUnknown}` : t.browser.webrtcNoLeak}
               </span>
               <p className="text-[11px] opacity-90 leading-relaxed">
-                {leakDetected ? t.browser.webrtcRemediation : hasPublicCandidate ? `${t.ui.publicIceCandidates} ${t.common.detected}. ${t.ui.candidateUnknown}; public-IP leakage requires server-egress correlation.` : t.browser.webrtcNoLeak}
+                {leakDetected ? t.browser.webrtcRemediation : hasPublicCandidate ? `${t.ui.publicIceCandidates} ${t.common.detected}. ${t.ui.candidateUnknown}; public-IP leakage requires server-egress correlation.` : mdnsCandidates.length > 0 ? t.browser.webrtcMdns : t.browser.webrtcNoLeak}
               </p>
             </div>
           </div>

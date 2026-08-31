@@ -51,15 +51,17 @@ export const BrowserOverviewCard: React.FC<BrowserOverviewCardProps> = ({
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
-  const canvasData = profile.groups.GRAPHICS?.data as { canvas?: { hash?: string }; hash?: string } | null;
-  const webglData = profile.groups.GRAPHICS?.data as { webgl?: { hardwareHash?: string }; hardwareHash?: string } | null;
+  const canvasData = profile.groups.GRAPHICS?.data as { canvas?: { hash?: string; status?: string }; hash?: string; canvasHash?: string } | null;
+  const webglData = profile.groups.GRAPHICS?.data as { webgl?: { hardwareHash?: string; status?: string }; hardwareHash?: string; webglStatus?: string } | null;
   const audioData = profile.groups.AUDIO?.data as { hash?: string } | null;
   const payload = profile.fingerprintPayload;
-  const webRtcData = profile.groups.WEBRTC?.data as { status?: string; leakDetected?: boolean } | null;
+  const webRtcData = profile.groups.WEBRTC?.data as { status?: string; leakDetected?: boolean; mdnsCandidates?: string[] } | null;
+  const canvasHash = canvasData?.canvas?.hash || canvasData?.canvasHash || canvasData?.hash || null;
+  const webglHardwareHash = webglData?.webgl?.hardwareHash || webglData?.hardwareHash || null;
 
   const compositeHashParts = [
-    payload?.canvasHash || canvasData?.canvas?.hash || canvasData?.hash,
-    webglData?.webgl?.hardwareHash || webglData?.hardwareHash || payload?.webgl?.renderer,
+    payload?.canvasHash || canvasHash,
+    webglHardwareHash || payload?.webgl?.renderer,
     payload?.audioHash || audioData?.hash,
   ].map((value) => value ? value.slice(0, 8) : undefined);
   const compositeHash = compositeHashParts.every(Boolean)
@@ -226,12 +228,18 @@ export const BrowserOverviewCard: React.FC<BrowserOverviewCardProps> = ({
               </div>
               <div className="mt-3">
                 <StatusBadge
-                  status={webRtcData?.leakDetected ? 'danger' : 'success'}
-                  label={webRtcData?.leakDetected ? t.common.danger : t.common.safe}
+                  status={webRtcData?.leakDetected ? 'danger' : webRtcData?.status === 'PUBLIC_CANDIDATE_REVIEW' ? 'warning' : 'success'}
+                  label={webRtcData?.leakDetected ? t.common.danger : webRtcData?.status === 'PUBLIC_CANDIDATE_REVIEW' ? t.ui.candidateUnknown : t.browser.webrtcNoLeak}
                   size="sm"
                 />
                 <div className="text-[11px] text-slate-400 mt-1">
-                  {webRtcData?.leakDetected ? 'Local IP leak' : 'mDNS / Protected'}
+                  {webRtcData?.leakDetected
+                    ? t.browser.webrtcLeakDetected
+                    : webRtcData?.status === 'PROTECTED' && (webRtcData?.mdnsCandidates?.length || 0) > 0
+                      ? t.browser.webrtcMdns
+                      : webRtcData?.status === 'PUBLIC_CANDIDATE_REVIEW'
+                        ? t.ui.publicIceCandidates
+                        : t.browser.webrtcNoLeak}
                 </div>
               </div>
             </button>
@@ -273,7 +281,7 @@ export const BrowserOverviewCard: React.FC<BrowserOverviewCardProps> = ({
             <div className="flex items-center justify-between p-2 bg-slate-900/50 border border-slate-800/80 rounded-lg font-mono">
               <span className="text-slate-400 text-[11px]">{t.browser.canvasSignature}:</span>
               <span className="text-slate-200 font-medium">
-                {canvasData?.hash ? `${canvasData.hash.slice(0, 10)}...` : t.common.na}
+                {canvasHash ? `${canvasHash.slice(0, 10)}...` : t.common.na}
               </span>
             </div>
 
@@ -281,7 +289,7 @@ export const BrowserOverviewCard: React.FC<BrowserOverviewCardProps> = ({
             <div className="flex items-center justify-between p-2 bg-slate-900/50 border border-slate-800/80 rounded-lg font-mono">
               <span className="text-slate-400 text-[11px]">{t.browser.webglHardware}:</span>
               <span className="text-slate-200 font-medium">
-                {webglData?.hardwareHash ? `${webglData.hardwareHash.slice(0, 10)}...` : t.common.na}
+                {webglHardwareHash ? `${webglHardwareHash.slice(0, 10)}...` : t.common.na}
               </span>
             </div>
 

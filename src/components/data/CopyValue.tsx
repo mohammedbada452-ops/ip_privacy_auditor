@@ -31,10 +31,10 @@ export const CopyValue: React.FC<CopyValueProps> = ({
   };
 
   return (
-    <div className={`inline-flex items-center gap-1.5 max-w-full ${className}`}>
-      {label && <span className="text-xs text-slate-400 font-medium">{label}:</span>}
+    <div className={`flex w-full min-w-0 items-center gap-2 ${className}`} dir="ltr">
+      {label && <span className="shrink-0 text-xs text-slate-400 font-medium">{label}:</span>}
       <span
-        className={`px-2 py-1 bg-slate-950 border border-slate-800 rounded text-xs text-slate-200 truncate ${
+        className={`technical-value min-w-0 flex-1 px-2 py-2 bg-slate-950 border border-slate-800 rounded text-xs sm:text-sm text-slate-200 whitespace-nowrap overflow-x-auto overflow-y-hidden select-all ${
           isMono ? 'font-mono text-cyan-300' : 'font-sans'
         }`}
         title={value}
@@ -45,7 +45,7 @@ export const CopyValue: React.FC<CopyValueProps> = ({
         onClick={handleCopy}
         aria-label={t.common.copyToClipboard}
         title={copied ? t.common.copied : t.common.copyToClipboard}
-        className="p-1 rounded bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-cyan-400 border border-slate-700/60 transition-colors shrink-0 cursor-pointer"
+        className="min-w-10 min-h-10 p-2 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-cyan-400 border border-slate-700/60 transition-colors shrink-0 cursor-pointer inline-flex items-center justify-center"
       >
         {copied ? (
           <Check className="w-3.5 h-3.5 text-emerald-400" />

@@ -92,6 +92,8 @@ export const PrivacyRemediationCenter: React.FC<PrivacyRemediationCenterProps> =
     return matchesCat && matchesStatus;
   });
 
+  const scoreAffectingCount = findings.filter((f) => f.status !== 'RESOLVED' && f.scoreImpact < 0).length;
+
   const getCategoryIcon = (cat: FindingCategory) => {
     switch (cat) {
       case 'NETWORK':
@@ -297,10 +299,10 @@ export const PrivacyRemediationCenter: React.FC<PrivacyRemediationCenterProps> =
 
           <div className="p-3.5 rounded-xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-900/30">
             <div className="text-xs font-medium text-amber-700 dark:text-amber-400">
-              {t.home.remediationCenter.actionableCount}
+              {t.home.remediationCenter.scoreAffectingCount}
             </div>
             <div className="text-2xl font-bold text-amber-900 dark:text-amber-300 mt-1">
-              {summary.actionable}
+              {scoreAffectingCount}
             </div>
           </div>
 

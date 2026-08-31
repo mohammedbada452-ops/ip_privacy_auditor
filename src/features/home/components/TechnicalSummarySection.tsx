@@ -2,11 +2,11 @@ import React from 'react';
 import { ArrowRight, Cpu, FileCode2, Globe, MapPin, Network, ShieldCheck } from 'lucide-react';
 import { Link } from '../../../router/Router';
 import { useLanguage } from '../../../i18n/LanguageContext';
-import { Card, CardBody, CardHeader, CopyValue, RefreshButton, StatusBadge } from '../../../components/ui';
+import { Card, CardBody, CardHeader, CopyValue, CountryFlag, RefreshButton, StatusBadge } from '../../../components/ui';
 import type { IpCheckResponse, IpDetailsResponse, IpNetworkIntelligenceResponse } from '@packages/api-contract';
 import type { BrowserProfile, IdentityData } from '../../browser/types';
 import type { HeadersAnalysisResponse } from '../../headers/types';
-import { getCountryFlag, getCountryName, getLanguageCountryConsistency, getSafeNetworkText, getStatusLabel } from '../utils/networkPresentation';
+import { getCountryName, getLanguageCountryConsistency, getSafeNetworkText, getStatusLabel } from '../utils/networkPresentation';
 
 interface TechnicalSummarySectionProps {
   ipCheck: IpCheckResponse | null;
@@ -36,8 +36,7 @@ export const TechnicalSummarySection: React.FC<TechnicalSummarySectionProps> = (
     ? ipDetails.geo.countryCode
     : undefined;
   const countryName = getCountryName(ipDetails?.geo?.country, countryCode);
-  const countryFlag = getCountryFlag(countryCode);
-  const locationParts = [ipDetails?.geo?.city, ipDetails?.geo?.region, countryName]
+    const locationParts = [ipDetails?.geo?.city, ipDetails?.geo?.region, countryName]
     .map((value) => String(value || '').trim())
     .filter((value) => value && !/^(unknown|unavailable|not measured)$/i.test(value));
   const location = locationParts.length ? locationParts.join(', ') : 'Unavailable';
@@ -143,11 +142,12 @@ export const TechnicalSummarySection: React.FC<TechnicalSummarySectionProps> = (
                 <span>ACTIVE ADDRESS</span>
                 <span className="rounded bg-slate-800 px-1.5 py-0.5 text-slate-400">{ipCheck?.ipVersion || 'IP'}</span>
               </div>
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-2xl sm:text-3xl font-mono font-bold text-cyan-300 break-all select-all">
-                  {observedIp || 'Unavailable'}
-                </span>
-                {observedIp && <CopyValue value={observedIp} label={t.ip.copyIp} />}
+              <div className="min-w-0 w-full">
+                {observedIp ? (
+                  <CopyValue value={observedIp} />
+                ) : (
+                  <span className="text-xl sm:text-2xl font-mono font-bold text-slate-500">Unavailable</span>
+                )}
               </div>
               <div className="text-[11px] text-slate-500 font-mono mt-2">
                 Source: {ipCheck?.observationSource || ipCheck?.ipSource || 'server observed'}
@@ -157,7 +157,7 @@ export const TechnicalSummarySection: React.FC<TechnicalSummarySectionProps> = (
             <div className="rounded-xl border border-slate-800 bg-slate-900/65 p-4 sm:p-5">
               <div className="text-[10px] uppercase tracking-[0.18em] text-slate-500 font-mono mb-2">LOCATION</div>
               <div className="flex items-center gap-3">
-                <span className="text-3xl" role="img" aria-label={countryName}>{countryFlag}</span>
+                <CountryFlag countryCode={countryCode} countryName={countryName} className="h-8 w-12 shrink-0 rounded-md overflow-hidden border border-slate-700/70" />
                 <div className="min-w-0">
                   <div className="font-semibold text-slate-100 truncate">{countryName}</div>
                   <div className="text-xs text-slate-400 truncate flex items-center gap-1">

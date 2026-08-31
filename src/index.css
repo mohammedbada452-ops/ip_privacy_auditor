@@ -64,3 +64,48 @@
   clip: auto;
   z-index: 9999;
 }
+
+
+/* Stable technical-value rendering across RTL/LTR and narrow mobile layouts. */
+.technical-value {
+  direction: ltr;
+  unicode-bidi: plaintext;
+  white-space: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overflow-wrap: normal;
+  word-break: normal;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.technical-value::-webkit-scrollbar { display: none; }
+.country-flag {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 3 / 2;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #cbd5e1;
+  background: #0f172a;
+}
+.country-flag svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+@media (max-width: 640px) {
+  .country-flag { min-width: 44px; min-height: 29px; }
+}
+
+
+/* Stage 1 responsive safeguards: technical values never wrap into unreadable fragments. */
+@media (max-width: 640px) {
+  .technical-value {
+    font-size: 0.78rem;
+    letter-spacing: -0.01em;
+  }
+}

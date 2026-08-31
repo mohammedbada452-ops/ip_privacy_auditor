@@ -269,6 +269,7 @@ export interface Translations {
       summaryTitle: string;
       totalFindings: string;
       actionableCount: string;
+      scoreAffectingCount: string;
       infraControlledCount: string;
       educationalCount: string;
       unavailableCount: string;
