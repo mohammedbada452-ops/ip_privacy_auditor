@@ -1,6 +1,6 @@
 import React from 'react';
 import { CountryFlag } from '../../ip/components/CountryFlag';
-import { ArrowRight, Cpu, FileCode2, Globe, MapPin, Network, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Cpu, FileCode2, Globe, MapPin, Network, ShieldCheck, ChevronDown } from 'lucide-react';
 import { Link } from '../../../router/Router';
 import { useLanguage } from '../../../i18n/LanguageContext';
 import { Card, CardBody, CardHeader, CopyValue, RefreshButton, StatusBadge } from '../../../components/ui';
@@ -107,6 +107,7 @@ export const TechnicalSummarySection: React.FC<TechnicalSummarySectionProps> = (
   const gpuUnmasked = Boolean(graphicsSignals?.gpuUnmasked);
   const webrtcStatus = String(webrtcSignals?.webrtcStatus || 'UNAVAILABLE');
   const leakDetected = Boolean(webrtcSignals?.leakDetected) && webrtcStatus === 'LEAK_DETECTED';
+  const [showSecondaryDetails, setShowSecondaryDetails] = React.useState(true);
 
   return (
     <section className="mb-8" aria-labelledby="technical-summary-heading">
@@ -196,13 +197,13 @@ export const TechnicalSummarySection: React.FC<TechnicalSummarySectionProps> = (
             <div className="rounded-xl border border-slate-800 bg-slate-900/65 p-4 sm:p-5">
               <div className="text-[10px] uppercase tracking-[0.18em] text-slate-500 font-mono mb-2">NETWORK</div>
               <div className="grid grid-cols-1 sm:grid-cols-[minmax(7.5rem,0.8fr)_minmax(0,1.6fr)] gap-1.5 text-xs font-mono">
-                <div className="rounded-md bg-slate-950/30 px-2 py-1.5 text-slate-500">ISP</div>
+                <div className="rounded-md bg-slate-950/30 px-2 py-1.5 text-slate-500 whitespace-nowrap">ISP</div>
                 <div className="rounded-md bg-slate-950/30 px-2 py-1.5 text-slate-200 min-w-0 break-words">{isp}</div>
-                <div className="rounded-md bg-slate-950/30 px-2 py-1.5 text-slate-500">Organization</div>
+                <div className="rounded-md bg-slate-950/30 px-2 py-1.5 text-slate-500 whitespace-nowrap">Organization</div>
                 <div className="rounded-md bg-slate-950/30 px-2 py-1.5 text-slate-200 min-w-0 break-words">{organization}</div>
-                <div className="rounded-md bg-slate-950/30 px-2 py-1.5 text-slate-500">AS Organization</div>
+                <div className="rounded-md bg-slate-950/30 px-2 py-1.5 text-slate-500 whitespace-nowrap">AS Organization</div>
                 <div className="rounded-md bg-slate-950/30 px-2 py-1.5 text-slate-200 min-w-0 break-words">{asOrganization}</div>
-                <div className="rounded-md bg-slate-950/30 px-2 py-1.5 text-slate-500">ASN</div>
+                <div className="rounded-md bg-slate-950/30 px-2 py-1.5 text-slate-500 whitespace-nowrap">ASN</div>
                 <div className="rounded-md bg-slate-950/30 px-2 py-1.5 text-cyan-300 min-w-0 break-words">{asn}</div>
               </div>
             </div>
@@ -228,7 +229,25 @@ export const TechnicalSummarySection: React.FC<TechnicalSummarySectionProps> = (
             </div>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/40 px-3 py-2">
+            <div>
+              <div className="text-[10px] uppercase tracking-[0.18em] text-slate-500 font-mono">{t.common.details}</div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowSecondaryDetails((open) => !open)}
+              className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-700 bg-slate-900/70 px-3 text-xs font-semibold text-slate-200 hover:border-cyan-500/40 hover:text-cyan-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50"
+              aria-expanded={showSecondaryDetails}
+              aria-controls="technical-secondary-details"
+            >
+              <span>{t.common.details}</span>
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showSecondaryDetails ? 'rotate-180' : ''}`} aria-hidden="true" />
+            </button>
+          </div>
+
+          {showSecondaryDetails && (
+            <div id="technical-secondary-details" className="space-y-5 animate-fadeIn">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
             <div className="rounded-lg border border-slate-800 bg-slate-900/50 px-4 py-3 flex items-center justify-between gap-3">
               <span className="text-xs text-slate-400">VPN</span>
               <StatusBadge status={ipDetails?.network?.isVpn == null ? 'neutral' : ipDetails.network.isVpn ? 'warning' : 'success'} label={vpnLabel} />
@@ -253,7 +272,8 @@ export const TechnicalSummarySection: React.FC<TechnicalSummarySectionProps> = (
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="p-4 rounded-xl bg-slate-900/50 border border-slate-800">
               <div className="flex items-center gap-2.5 mb-3"><Cpu className="w-4 h-4 text-purple-400" /><span className="text-xs font-mono font-bold text-slate-200">{t.home.quickSummary.browserCardTitle}</span></div>
               <div className="space-y-1.5 text-xs font-mono">
@@ -287,7 +307,9 @@ export const TechnicalSummarySection: React.FC<TechnicalSummarySectionProps> = (
                 <div className="text-[11px] leading-5 text-slate-500">Location is approximate. VPN/proxy/Tor status and provider privacy score are shown only when an explicit source signal is available.</div>
               </div>
             </div>
-          </div>
+              </div>
+            </div>
+          )}
         </CardBody>
       </Card>
     </section>

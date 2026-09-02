@@ -33,9 +33,9 @@ export const DataRow: React.FC<DataRowProps> = ({
         )}
       </div>
 
-      <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+      <div className="flex items-start gap-2 min-w-0 max-w-full sm:max-w-[62%] self-start sm:self-auto">
         <span
-          className={`text-slate-100 font-medium ${
+          className={`min-w-0 break-words [overflow-wrap:anywhere] text-start text-slate-100 font-medium ${
             isMono ? 'font-mono text-cyan-300 bg-slate-900 px-2 py-0.5 rounded border border-slate-800' : ''
           }`}
         >

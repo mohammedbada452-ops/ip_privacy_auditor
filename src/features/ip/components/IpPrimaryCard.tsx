@@ -74,10 +74,19 @@ export const IpPrimaryCard: React.FC<IpPrimaryCardProps> = ({
 
           <div className="bg-slate-900/60 border border-slate-800/80 p-4 rounded-xl">
             <div className="text-[10px] font-mono tracking-widest text-slate-500 uppercase mb-2 flex items-center gap-1.5"><Network className="w-3.5 h-3.5" /> NETWORK</div>
-            <div className="space-y-1.5 text-xs font-mono">
-              <div className="flex justify-between gap-3"><span className="text-slate-500">ISP</span><span className="text-slate-200 truncate max-w-[180px]">{isp}</span></div>
-              <div className="flex justify-between gap-3"><span className="text-slate-500">Organization</span><span className="text-slate-200 truncate max-w-[180px]">{organization}</span></div>
-              <div className="flex justify-between gap-3"><span className="text-slate-500">ASN</span><span className="text-cyan-300 truncate max-w-[180px]">{asn}</span></div>
+            <div className="space-y-1.5 text-xs font-mono" role="list" aria-label="Network details">
+              <div className="grid grid-cols-[max-content_minmax(0,1fr)] items-start gap-x-3 gap-y-1" role="listitem">
+                <span className="text-slate-500 whitespace-nowrap">ISP</span>
+                <span className="min-w-0 text-slate-200 break-words text-start" title={isp}>{isp}</span>
+              </div>
+              <div className="grid grid-cols-[max-content_minmax(0,1fr)] items-start gap-x-3 gap-y-1" role="listitem">
+                <span className="text-slate-500 whitespace-nowrap">Organization</span>
+                <span className="min-w-0 text-slate-200 break-words text-start" title={organization}>{organization}</span>
+              </div>
+              <div className="grid grid-cols-[max-content_minmax(0,1fr)] items-start gap-x-3 gap-y-1" role="listitem">
+                <span className="text-slate-500 whitespace-nowrap">ASN</span>
+                <span className="min-w-0 text-cyan-300 break-words text-start" title={asn}>{asn}</span>
+              </div>
             </div>
           </div>
         </div>

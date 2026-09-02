@@ -38,7 +38,7 @@ export const WebRtcCard: React.FC<WebRtcCardProps> = ({ group }) => {
           status={badgeStatus}
           label={badgeLabel}
           size="sm"
-          className="max-w-full shrink-0"
+          className="max-w-[48%] sm:max-w-[55%] shrink-0 text-center whitespace-normal break-words"
         />
       </div>
 
@@ -62,10 +62,10 @@ export const WebRtcCard: React.FC<WebRtcCardProps> = ({ group }) => {
               <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
             )}
             <div className="min-w-0 break-words overflow-wrap-anywhere">
-              <span className="font-semibold block mb-0.5 break-words">
+              <span className="font-semibold block mb-0.5 break-words overflow-wrap-anywhere">
                 {leakDetected ? t.browser.webrtcLeakDetected : hasPublicCandidate ? `${t.ui.publicIceCandidates}: ${t.common.detected} — ${t.ui.candidateUnknown}` : t.browser.webrtcNoLeak}
               </span>
-              <p className="text-[11px] opacity-90 leading-relaxed break-words overflow-wrap-anywhere">
+              <p className="text-[11px] opacity-90 leading-relaxed break-words overflow-wrap-anywhere max-w-full">
                 {leakDetected ? t.browser.webrtcRemediation : hasPublicCandidate ? `${t.ui.publicIceCandidates} ${t.common.detected}. ${t.ui.candidateUnknown}; public-IP leakage requires server-egress correlation.` : mdnsCandidates.length > 0 ? t.browser.webrtcMdns : t.browser.webrtcNoLeak}
               </p>
             </div>
@@ -80,13 +80,13 @@ export const WebRtcCard: React.FC<WebRtcCardProps> = ({ group }) => {
 
       {/* Candidate IP Tables */}
       {!isUnavailable && (
-        <div className="p-3 bg-slate-950 rounded-lg border border-slate-800/80 space-y-2 text-xs">
+        <div className="w-full min-w-0 p-3 bg-slate-950 rounded-lg border border-slate-800/80 space-y-2 text-xs">
           <div>
             <span className="text-slate-400 block text-[11px] mb-1">{t.browser.webrtcLocalIps}:</span>
             {localIps.length > 0 ? (
               <div className="flex flex-wrap gap-1.5">
                 {localIps.map((ip, i) => (
-                  <span key={i} className="font-mono text-rose-400 bg-rose-950/50 px-2 py-0.5 rounded border border-rose-900/50">
+                  <span key={i} className="font-mono text-rose-400 bg-rose-950/50 px-2 py-0.5 rounded border border-rose-900/50 break-all max-w-full">
                     {ip}
                   </span>
                 ))}
@@ -101,7 +101,7 @@ export const WebRtcCard: React.FC<WebRtcCardProps> = ({ group }) => {
             {publicIps.length > 0 ? (
               <div className="flex flex-wrap gap-1.5">
                 {publicIps.map((ip, i) => (
-                  <span key={i} className="font-mono text-slate-200 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
+                  <span key={i} className="font-mono text-slate-200 bg-slate-900 px-2 py-0.5 rounded border border-slate-800 break-all max-w-full">
                     {ip}
                   </span>
                 ))}
@@ -116,7 +116,7 @@ export const WebRtcCard: React.FC<WebRtcCardProps> = ({ group }) => {
               <span className="text-slate-400 block text-[11px] mb-1">{t.browser.webrtcMdns}:</span>
               <div className="flex flex-wrap gap-1.5">
                 {mdnsCandidates.map((c, i) => (
-                  <span key={i} className="font-mono text-cyan-400 bg-cyan-950/30 px-2 py-0.5 rounded border border-cyan-900/30 text-[10px] truncate max-w-full">
+                  <span key={i} className="font-mono text-cyan-400 bg-cyan-950/30 px-2 py-0.5 rounded border border-cyan-900/30 text-[10px] break-all max-w-full">
                     {c}
                   </span>
                 ))}
@@ -127,9 +127,9 @@ export const WebRtcCard: React.FC<WebRtcCardProps> = ({ group }) => {
       )}
 
       {/* Footer Info */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-slate-400 pt-1 border-t border-slate-800/60 min-w-0">
+      <div className="flex flex-col gap-2 text-xs text-slate-400 pt-1 border-t border-slate-800/60 min-w-0">
         <span className="font-mono text-[11px]">RTCPeerConnection STUN</span>
-        <Badge variant={isUnavailable ? 'neutral' : leakDetected ? 'danger' : 'success'} size="sm">
+        <Badge variant={isUnavailable ? 'neutral' : leakDetected ? 'danger' : 'success'} size="sm" className="self-start whitespace-normal break-words">
           {isUnavailable ? t.ui.notEvaluated : leakDetected ? t.ui.webRtcLeak : hasPublicCandidate ? t.ui.candidateUnknown : t.ui.noPrivateIpLeak}
         </Badge>
       </div>

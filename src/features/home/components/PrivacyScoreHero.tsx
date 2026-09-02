@@ -9,6 +9,8 @@ import {
   TrendingDown,
   Minus,
   Sliders,
+  ChevronDown,
+  Info,
 } from 'lucide-react';
 import { ScoreGauge } from '../../../components/privacy/ScoreGauge';
 import { useLanguage } from '../../../i18n/LanguageContext';
@@ -83,6 +85,9 @@ export const PrivacyScoreHero: React.FC<PrivacyScoreHeroProps> = ({
   };
 
   const isBusy = isScanning || isRechecking;
+  const coverage = typeof analysis.verificationCoveragePct === 'number'
+    ? Math.max(0, Math.min(100, analysis.verificationCoveragePct))
+    : null;
 
   return (
     <div
@@ -177,6 +182,30 @@ export const PrivacyScoreHero: React.FC<PrivacyScoreHeroProps> = ({
                 </p>
               </div>
             )}
+          </div>
+
+          {/* Evidence / score context: explain the result without implying that protections add points. */}
+          <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-4 space-y-3" aria-label="Score evidence coverage">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <Info className="w-4 h-4 text-sky-400 shrink-0" />
+                <span className="text-xs font-semibold text-slate-200">Evidence coverage</span>
+              </div>
+              <span className="text-xs font-mono font-bold text-sky-300 shrink-0">
+                {coverage !== null ? `${coverage}%` : t.ui.notMeasured}
+              </span>
+            </div>
+            <div className="h-2 rounded-full bg-slate-800 overflow-hidden" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={coverage ?? 0} aria-label="Evidence coverage">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-sky-500 via-cyan-400 to-emerald-400 transition-[width] duration-500"
+                style={{ width: `${coverage ?? 0}%` }}
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-slate-500">
+              <span>{t.home.scoreContext.issuesCount.replace('{count}', String(deductionFactors.length))}</span>
+              <span>{t.home.scoreContext.protectionsCount.replace('{count}', String(protectionFactors.length))}</span>
+              <span>{t.home.scoreContext.unavailableCount.replace('{count}', String(unavailableFactors.length))}</span>
+            </div>
           </div>
 
           {/* 3 Metric Context Counters */}

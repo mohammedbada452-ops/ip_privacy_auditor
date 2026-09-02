@@ -19,7 +19,7 @@ export const NetworkIntelligenceCard: React.FC<{ data: IpNetworkIntelligenceResp
         <div className="space-y-1">
           <DataRow label={t.ip.intelligenceConfidence} value={<StatusBadge status={confidenceStatus} label={confidenceLabel} />} />
           <DataRow label={t.ip.rdapNetwork} value={data.rdap.name || data.rdap.handle || '—'} />
-          <DataRow label={ar ? 'النطاق' : 'CIDR'} value={data.rdap.cidr || '—'} />
+          <DataRow label="CIDR" value={data.rdap.cidr || '—'} />
           <DataRow label={t.ip.reverseDns} value={data.reverseDns.names[0] || (data.reverseDns.status === 'UNAVAILABLE' ? (t.ip.noPtrRecord) : '—')} />
           <DataRow label={t.ip.dnssec} value={data.reverseDns.dnssecValidated === null ? '—' : data.reverseDns.dnssecValidated ? 'VALIDATED' : 'NOT VALIDATED'} />
           <DataRow label={t.ip.sources} value={String(data.providers.length)} />
