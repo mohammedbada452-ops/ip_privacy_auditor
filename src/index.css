@@ -125,3 +125,6 @@ a[role=button] {
   background: rgba(6, 182, 212, 0.25);
   color: #f8fafc;
 }
+
+/* Used by compact diagnostic cards to prevent long localized values from escaping their containers. */
+.overflow-wrap-anywhere { overflow-wrap: anywhere; }

@@ -18,9 +18,12 @@ expect(!selector.includes('getCountryFlag'), 'Language selector must not depend 
 
 expect(ipCard.includes("import { CountryFlag } from './CountryFlag';"), 'IP card does not import CountryFlag.');
 expect(ipCard.includes('<CountryFlag countryCode={countryCode} countryName={countryName} />'), 'IP card does not render CountryFlag next to the country.');
+expect(technical.includes("import { CountryFlag } from '../../ip/components/CountryFlag';"), 'Technical Summary does not import CountryFlag.');
+expect(technical.includes('<CountryFlag countryCode={countryCode} countryName={countryName} />'), 'Technical Summary does not render CountryFlag next to the country.');
 expect(!ipCard.includes('getCountryFlag'), 'IP card still depends on the removed emoji flag helper.');
 
-expect(flag.includes('hampusborgos/country-flags@main/png100px/'), 'CountryFlag does not use the approved Hampus Borgos PNG source.');
+expect(flag.includes('flagcdn.com/w80/'), 'CountryFlag does not use the approved FlagCDN PNG source.');
+expect(!flag.includes('svg'), 'CountryFlag must not introduce SVG flag assets.');
 expect(flag.includes('code.toLowerCase()'), 'CountryFlag is not driven by the normalized provider ISO country code.');
 expect(flag.includes('onError'), 'CountryFlag has no broken-image fallback.');
 
@@ -35,6 +38,6 @@ if (failures.length) {
 
 console.log('Country flag release verification PASSED');
 console.log('✓ Language selector has no flags');
-console.log('✓ Flag is rendered only in the IP primary location box');
-console.log('✓ Flag source is Hampus Borgos country-flags PNG');
+console.log('✓ Flag is rendered in the IP location presentation');
+console.log('✓ Flag source is FlagCDN PNG');
 console.log('✓ Flag is driven by ISO country code with graceful failure handling');

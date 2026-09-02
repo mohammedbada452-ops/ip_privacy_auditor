@@ -1,4 +1,5 @@
 import React from 'react';
+import { CountryFlag } from '../../ip/components/CountryFlag';
 import { ArrowRight, Cpu, FileCode2, Globe, MapPin, Network, ShieldCheck } from 'lucide-react';
 import { Link } from '../../../router/Router';
 import { useLanguage } from '../../../i18n/LanguageContext';
@@ -162,12 +163,12 @@ export const TechnicalSummarySection: React.FC<TechnicalSummarySectionProps> = (
 
             <div className="rounded-xl border border-slate-800 bg-slate-900/65 p-4 sm:p-5">
               <div className="text-[10px] uppercase tracking-[0.18em] text-slate-500 font-mono mb-2">LOCATION</div>
-              <div className="flex items-center gap-3">
-                
+              <div className="flex items-center gap-3 min-w-0">
+                <CountryFlag countryCode={countryCode} countryName={countryName} />
                 <div className="min-w-0">
                   <div className="font-semibold text-slate-100 truncate">{countryName}</div>
                   <div className="text-xs text-slate-400 truncate flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5" /> {location}
+                    <MapPin className="w-3.5 h-3.5 shrink-0" /> {location}
                   </div>
                 </div>
               </div>
@@ -194,11 +195,15 @@ export const TechnicalSummarySection: React.FC<TechnicalSummarySectionProps> = (
 
             <div className="rounded-xl border border-slate-800 bg-slate-900/65 p-4 sm:p-5">
               <div className="text-[10px] uppercase tracking-[0.18em] text-slate-500 font-mono mb-2">NETWORK</div>
-              <div className="space-y-1.5 text-xs font-mono">
-                <div className="flex justify-between gap-3"><span className="text-slate-500">ISP</span><span className="text-slate-200 truncate max-w-[220px]">{isp}</span></div>
-                <div className="flex justify-between gap-3"><span className="text-slate-500">Organization</span><span className="text-slate-200 truncate max-w-[220px]">{organization}</span></div>
-                <div className="flex justify-between gap-3"><span className="text-slate-500">AS Organization</span><span className="text-slate-200 truncate max-w-[220px]">{asOrganization}</span></div>
-                <div className="flex justify-between gap-3"><span className="text-slate-500">ASN</span><span className="text-cyan-300 truncate max-w-[220px]">{asn}</span></div>
+              <div className="grid grid-cols-1 sm:grid-cols-[minmax(7.5rem,0.8fr)_minmax(0,1.6fr)] gap-1.5 text-xs font-mono">
+                <div className="rounded-md bg-slate-950/30 px-2 py-1.5 text-slate-500">ISP</div>
+                <div className="rounded-md bg-slate-950/30 px-2 py-1.5 text-slate-200 min-w-0 break-words">{isp}</div>
+                <div className="rounded-md bg-slate-950/30 px-2 py-1.5 text-slate-500">Organization</div>
+                <div className="rounded-md bg-slate-950/30 px-2 py-1.5 text-slate-200 min-w-0 break-words">{organization}</div>
+                <div className="rounded-md bg-slate-950/30 px-2 py-1.5 text-slate-500">AS Organization</div>
+                <div className="rounded-md bg-slate-950/30 px-2 py-1.5 text-slate-200 min-w-0 break-words">{asOrganization}</div>
+                <div className="rounded-md bg-slate-950/30 px-2 py-1.5 text-slate-500">ASN</div>
+                <div className="rounded-md bg-slate-950/30 px-2 py-1.5 text-cyan-300 min-w-0 break-words">{asn}</div>
               </div>
             </div>
           </div>

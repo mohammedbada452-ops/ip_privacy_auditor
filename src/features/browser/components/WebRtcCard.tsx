@@ -22,22 +22,23 @@ export const WebRtcCard: React.FC<WebRtcCardProps> = ({ group }) => {
   const badgeLabel = isUnavailable ? 'Unavailable' : leakDetected ? 'Private IP Leak' : hasPublicCandidate ? 'Public Candidate — Review' : 'No Private Leak Detected';
 
   return (
-    <Card id="webrtc" variant="standard" className="p-5 flex flex-col justify-between space-y-4 scroll-mt-24">
+    <Card id="webrtc" variant="standard" className="p-5 min-w-0 overflow-hidden flex flex-col justify-between space-y-4 scroll-mt-24">
       {/* Header */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
+      <div className="flex items-start justify-between gap-3 min-w-0">
+        <div className="flex items-center gap-3 min-w-0">
           <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-400">
             <Radio className="w-5 h-5" />
           </div>
-          <div>
-            <h3 className="text-sm font-semibold text-slate-100">{t.browser.webrtcTitle}</h3>
-            <p className="text-xs text-slate-400">{t.browser.webrtcSubtitle}</p>
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold text-slate-100 break-words">{t.browser.webrtcTitle}</h3>
+            <p className="text-xs text-slate-400 break-words">{t.browser.webrtcSubtitle}</p>
           </div>
         </div>
         <StatusBadge
           status={badgeStatus}
           label={badgeLabel}
           size="sm"
+          className="max-w-full shrink-0"
         />
       </div>
 
@@ -60,11 +61,11 @@ export const WebRtcCard: React.FC<WebRtcCardProps> = ({ group }) => {
             ) : (
               <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
             )}
-            <div>
-              <span className="font-semibold block mb-0.5">
+            <div className="min-w-0 break-words overflow-wrap-anywhere">
+              <span className="font-semibold block mb-0.5 break-words">
                 {leakDetected ? t.browser.webrtcLeakDetected : hasPublicCandidate ? `${t.ui.publicIceCandidates}: ${t.common.detected} — ${t.ui.candidateUnknown}` : t.browser.webrtcNoLeak}
               </span>
-              <p className="text-[11px] opacity-90 leading-relaxed">
+              <p className="text-[11px] opacity-90 leading-relaxed break-words overflow-wrap-anywhere">
                 {leakDetected ? t.browser.webrtcRemediation : hasPublicCandidate ? `${t.ui.publicIceCandidates} ${t.common.detected}. ${t.ui.candidateUnknown}; public-IP leakage requires server-egress correlation.` : mdnsCandidates.length > 0 ? t.browser.webrtcMdns : t.browser.webrtcNoLeak}
               </p>
             </div>
@@ -73,7 +74,7 @@ export const WebRtcCard: React.FC<WebRtcCardProps> = ({ group }) => {
       ) : (
         <div className="p-4 bg-slate-950/60 rounded-lg border border-slate-800/80 text-xs text-slate-400 flex items-center gap-2">
           <HelpCircle className="w-4 h-4 text-slate-500 shrink-0" />
-          <span>{t.ui.webrtcUnavailable}</span>
+          <span className="min-w-0 break-words">{t.ui.webrtcUnavailable}</span>
         </div>
       )}
 
@@ -126,7 +127,7 @@ export const WebRtcCard: React.FC<WebRtcCardProps> = ({ group }) => {
       )}
 
       {/* Footer Info */}
-      <div className="flex items-center justify-between text-xs text-slate-400 pt-1 border-t border-slate-800/60">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-slate-400 pt-1 border-t border-slate-800/60 min-w-0">
         <span className="font-mono text-[11px]">RTCPeerConnection STUN</span>
         <Badge variant={isUnavailable ? 'neutral' : leakDetected ? 'danger' : 'success'} size="sm">
           {isUnavailable ? t.ui.notEvaluated : leakDetected ? t.ui.webRtcLeak : hasPublicCandidate ? t.ui.candidateUnknown : t.ui.noPrivateIpLeak}
