@@ -94,7 +94,7 @@ export const AdminLogin: React.FC = () => {
           )}
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+            <label htmlFor="admin-username" className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
               {t.admin.usernameLabel}
             </label>
             <div className="relative">
@@ -102,6 +102,7 @@ export const AdminLogin: React.FC = () => {
                 <User className="w-4 h-4" />
               </div>
               <input
+                id="admin-username"
                 type="text"
                 required
                 value={username}
@@ -114,7 +115,7 @@ export const AdminLogin: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+            <label htmlFor="admin-password" className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
               {t.admin.passwordLabel}
             </label>
             <div className="relative">
@@ -122,6 +123,7 @@ export const AdminLogin: React.FC = () => {
                 <Lock className="w-4 h-4" />
               </div>
               <input
+                id="admin-password"
                 type="password"
                 required
                 value={password}
@@ -137,7 +139,7 @@ export const AdminLogin: React.FC = () => {
             <button
               type="button"
               onClick={() => setShowSecretKey(!showSecretKey)}
-              className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1.5 transition-colors focus:outline-none"
+              className="min-h-10 text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 rounded-lg px-2 -mx-2"
             >
               <Key className="w-3.5 h-3.5" />
               <span>{showSecretKey ? t.admin.hideSecretKeyInput : t.admin.useAdminMasterSecretKey}</span>
@@ -146,10 +148,12 @@ export const AdminLogin: React.FC = () => {
             {showSecretKey && (
               <div className="mt-2.5">
                 <input
+                  id="admin-secret-key"
                   type="password"
                   value={secretKey}
                   onChange={(e) => setSecretKey(e.target.value)}
                   placeholder={t.admin.secretKeyPlaceholder}
+                  aria-label={t.admin.secretKeyPlaceholder}
                   className="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-colors"
                 />
               </div>

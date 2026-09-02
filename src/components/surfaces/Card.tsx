@@ -44,7 +44,7 @@ export const Card: React.FC<CardProps> = ({
   };
 
   const hoverClasses = hoverable || onClick
-    ? 'hover:border-slate-700 hover:shadow-md cursor-pointer transform-gpu hover:-translate-y-0.5'
+    ? 'hover:border-slate-700 hover:shadow-md cursor-pointer transform-gpu hover:-translate-y-0.5 focus-within:ring-1 focus-within:ring-cyan-500/30'
     : '';
 
   return (

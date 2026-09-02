@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { useRouter } from '../router/Router';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -60,6 +60,11 @@ export const AdminDashboard: React.FC = () => {
   const { t, formatNumber, formatDate, direction } = useLanguage();
 
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
+  const adminPanelHeadingRef = useRef<HTMLHeadingElement | null>(null);
+
+  useEffect(() => {
+    adminPanelHeadingRef.current?.focus();
+  }, [activeTab]);
   
   // Data states
   const [stats, setStats] = useState<any>(null);
@@ -249,7 +254,8 @@ export const AdminDashboard: React.FC = () => {
   }
 
   return (
-    <div className="py-8 space-y-6">
+    <main className="py-8 space-y-6" aria-labelledby="admin-portal-title">
+      <div className="sr-only" aria-live="polite">{isRefreshing ? 'Refreshing administrative data.' : `Active administrative section: ${activeTab}.`}</div>
       {/* Top Header Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-800">
         <div>
@@ -263,7 +269,7 @@ export const AdminDashboard: React.FC = () => {
               LIVE
             </span>
           </div>
-          <h1 className="text-2xl font-bold text-slate-100">{t.admin.portalTitle}</h1>
+          <h1 id="admin-portal-title" tabIndex={-1} ref={adminPanelHeadingRef} className="text-2xl font-bold text-slate-100 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 rounded">{t.admin.portalTitle}</h1>
           <p className="text-xs text-slate-400 mt-0.5">{t.admin.portalSubtitle}</p>
         </div>
 
@@ -306,7 +312,7 @@ export const AdminDashboard: React.FC = () => {
       )}
 
       {/* Navigation Tabs */}
-      <div className="flex overflow-x-auto no-scrollbar gap-2 p-1 bg-slate-900/90 border border-slate-800 rounded-xl">
+      <div role="tablist" aria-label={t.admin.portalTitle} aria-orientation="horizontal" className="flex overflow-x-auto no-scrollbar gap-2 p-1 bg-slate-900/90 border border-slate-800 rounded-xl">
         {ADMIN_TABS.map(({ id }) => {
           const tab: AdminTabConfig = (() => {
             switch (id) {
@@ -337,10 +343,32 @@ export const AdminDashboard: React.FC = () => {
           return (
             <button
               key={tab.id}
+              id={`admin-tab-${tab.id}`}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              aria-controls={`admin-panel-${tab.id}`}
+              tabIndex={isActive ? 0 : -1}
               onClick={() => {
                 setActiveTab(tab.id === 'securityLogs' ? 'logs' : tab.id);
               }}
-              className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg whitespace-nowrap transition-all ${
+              onKeyDown={(event) => {
+                const tabs = Array.from(event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]') ?? []);
+                const currentIndex = tabs.indexOf(event.currentTarget);
+                if (!tabs.length) return;
+                let nextIndex = currentIndex;
+                if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % tabs.length;
+                if (event.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+                if (event.key === 'Home') nextIndex = 0;
+                if (event.key === 'End') nextIndex = tabs.length - 1;
+                if (nextIndex !== currentIndex) {
+                  event.preventDefault();
+                  const nextTab = tabs[nextIndex];
+                  nextTab.focus();
+                  nextTab.click();
+                }
+              }}
+              className={`flex items-center gap-2 min-h-10 px-4 py-2 text-xs font-semibold rounded-lg whitespace-nowrap transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 ${
                 isActive
                   ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
@@ -355,6 +383,7 @@ export const AdminDashboard: React.FC = () => {
 
       {/* TAB 1: OVERVIEW */}
       {activeTab === 'overview' && stats && (
+        <section id="admin-panel-overview" role="tabpanel" tabIndex={0} aria-labelledby="admin-tab-overview" className="outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 rounded-xl">
         <div className="space-y-6">
           {/* Top KPI Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -597,10 +626,12 @@ export const AdminDashboard: React.FC = () => {
             </Card>
           </div>
         </div>
+        </section>
       )}
 
       {/* TAB 2: SCANS */}
       {activeTab === 'scans' && (
+        <section id="admin-panel-scans" role="tabpanel" tabIndex={0} aria-labelledby="admin-tab-scans">
         <Card className="p-6 border-slate-800 bg-slate-900/70 space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
@@ -642,7 +673,7 @@ export const AdminDashboard: React.FC = () => {
           </div>
 
           {/* Table */}
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-lg border border-slate-800/70" role="region" tabIndex={0} aria-label="Scrollable scans table">
             <table className="w-full text-xs text-left">
               <thead className="text-slate-400 uppercase bg-slate-950/60 border-b border-slate-800 font-semibold tracking-wider">
                 <tr>
@@ -753,10 +784,12 @@ export const AdminDashboard: React.FC = () => {
             </div>
           </div>
         </Card>
+        </section>
       )}
 
       {/* TAB 3: SECURITY LOGS */}
       {activeTab === 'logs' && (
+        <section id="admin-panel-securityLogs" role="tabpanel" tabIndex={0} aria-labelledby="admin-tab-securityLogs">
         <Card className="p-6 border-slate-800 bg-slate-900/70 space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
@@ -780,7 +813,7 @@ export const AdminDashboard: React.FC = () => {
             </select>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-lg border border-slate-800/70" role="region" tabIndex={0} aria-label="Scrollable security logs table">
             <table className="w-full text-xs text-left">
               <thead className="text-slate-400 uppercase bg-slate-950/60 border-b border-slate-800 font-semibold tracking-wider">
                 <tr>
@@ -856,10 +889,12 @@ export const AdminDashboard: React.FC = () => {
             </div>
           </div>
         </Card>
+        </section>
       )}
 
       {/* TAB 4: TRAFFIC & PAGE VIEWS */}
       {activeTab === 'traffic' && trafficData && (
+        <section id="admin-panel-traffic" role="tabpanel" tabIndex={0} aria-labelledby="admin-tab-traffic">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card className="p-6 border-slate-800 bg-slate-900/70">
             <h3 className="text-sm font-bold text-slate-200 mb-4">{t.admin.traffic.routesTitle}</h3>
@@ -909,10 +944,12 @@ export const AdminDashboard: React.FC = () => {
             </div>
           </Card>
         </div>
+        </section>
       )}
 
       {/* TAB 5: PERFORMANCE */}
       {activeTab === 'performance' && perfData && (
+        <section id="admin-panel-performance" role="tabpanel" tabIndex={0} aria-labelledby="admin-tab-performance">
         <div className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Card className="p-5 border-slate-800 bg-slate-900/70">
@@ -931,7 +968,7 @@ export const AdminDashboard: React.FC = () => {
 
           <Card className="p-6 border-slate-800 bg-slate-900/70">
             <h3 className="text-sm font-bold text-slate-200 mb-4">{t.ui.apiPerformanceBenchmarks}</h3>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto rounded-lg border border-slate-800/70" role="region" tabIndex={0} aria-label="Scrollable performance table">
               <table className="w-full text-xs text-left">
                 <thead className="text-slate-400 uppercase bg-slate-950/60 border-b border-slate-800 font-semibold">
                   <tr>
@@ -961,17 +998,19 @@ export const AdminDashboard: React.FC = () => {
             </div>
           </Card>
         </div>
+        </section>
       )}
 
       {/* TAB 6: AUDIT TRAIL */}
       {activeTab === 'audit' && (
+        <section id="admin-panel-audit" role="tabpanel" tabIndex={0} aria-labelledby="admin-tab-audit">
         <Card className="p-6 border-slate-800 bg-slate-900/70 space-y-5">
           <div>
             <h2 className="text-base font-bold text-slate-100">{t.admin.auditTrail.title}</h2>
             <p className="text-xs text-slate-400">{t.admin.auditTrail.subtitle}</p>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-lg border border-slate-800/70" role="region" tabIndex={0} aria-label="Scrollable audit trail table">
             <table className="w-full text-xs text-left">
               <thead className="text-slate-400 uppercase bg-slate-950/60 border-b border-slate-800 font-semibold tracking-wider">
                 <tr>
@@ -1043,7 +1082,8 @@ export const AdminDashboard: React.FC = () => {
             </div>
           </div>
         </Card>
+        </section>
       )}
-    </div>
+    </main>
   );
 };

@@ -3,8 +3,9 @@
  * Full-fidelity diagnostic review modal for individual browser signal problems.
  */
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useLanguage } from '../../../i18n/LanguageContext';
+import { useFocusTrap } from '../../../lib/a11y/useFocusTrap';
 import type { BrowserProblem, RemediationType, SignalStatus } from '../utils/problemExtractor';
 import {
   X,
@@ -38,16 +39,11 @@ export const ProblemDetailModal: React.FC<ProblemDetailModalProps> = ({
 }) => {
   const { t } = useLanguage();
 
-  // Escape key handler
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  const modalRef = useFocusTrap<HTMLDivElement>({
+    active: isOpen,
+    onEscape: onClose,
+    initialFocusSelector: 'button[aria-label]',
+  });
 
   if (!isOpen || !problem) return null;
 
@@ -140,6 +136,8 @@ export const ProblemDetailModal: React.FC<ProblemDetailModalProps> = ({
   return (
     <div
       id="problem-detail-modal"
+      ref={modalRef}
+      tabIndex={-1}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm overflow-y-auto"
       role="dialog"
       aria-modal="true"
@@ -181,7 +179,7 @@ export const ProblemDetailModal: React.FC<ProblemDetailModalProps> = ({
             id="modal-close-btn"
             onClick={onClose}
             aria-label="Close dialog"
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+            className="min-w-10 min-h-10 p-2.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
           >
             <X className="w-5 h-5" />
           </button>

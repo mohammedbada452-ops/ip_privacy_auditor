@@ -40,6 +40,14 @@ export const ROUTES: Record<string, RouteConfig> = {
     description: 'HTTP Header Privacy & Security Inspector',
     category: 'public',
   },
+  LEARN: {
+    id: 'learn',
+    path: '/learn',
+    title: 'Learning Center',
+    titleAr: 'مركز التعلم',
+    description: 'Practical guides to privacy, browser signals, WebRTC, security headers and IP reputation',
+    category: 'public',
+  },
   PRIVACY_POLICY: {
     id: 'privacy-policy',
     path: '/privacy',
@@ -86,6 +94,7 @@ export const PRIMARY_NAV_ROUTES: RouteConfig[] = [
   ROUTES.HOME,
   ROUTES.BROWSER,
   ROUTES.HEADERS,
+  ROUTES.LEARN,
 ];
 
 /**
@@ -121,6 +130,17 @@ export function getRouteTitle(route: RouteConfig, lang: Language): string {
       return dict.nav.browser;
     case 'headers':
       return dict.nav.headers;
+    case 'learn': {
+      const labels: Record<Language, string> = {
+        en: 'Learn',
+        ar: 'التعلم',
+        es: 'Aprender',
+        fr: 'Apprendre',
+        pt: 'Aprender',
+        tr: 'Öğren',
+      };
+      return labels[lang];
+    }
     case 'privacy-policy':
       return dict.nav.privacyPolicy;
     case 'admin':
@@ -145,15 +165,6 @@ export function updateDocumentTitle(path: string, lang: Language = 'en'): void {
   if (route) {
     const pageTitle = getRouteTitle(route, lang);
     document.title = `${pageTitle} | ${baseTitle}`;
-    return;
-  }
-  if (path === '/learn') {
-    const labels: Record<Language, string> = {
-      en: 'Privacy & Security Learning Center', ar: 'مركز التعلم في الخصوصية والأمان',
-      es: 'Centro de aprendizaje de privacidad y seguridad', fr: 'Centre d’apprentissage confidentialité et sécurité',
-      pt: 'Centro de aprendizado de privacidade e segurança', tr: 'Gizlilik ve Güvenlik Öğrenme Merkezi',
-    };
-    document.title = `${labels[lang]} | PrivaSec`;
     return;
   }
   const notFoundTitle = dict.notFound.title;

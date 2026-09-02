@@ -26,7 +26,7 @@ export const LearnRoute: React.FC = () => {
     </header>
     <section className="grid sm:grid-cols-2 gap-4" aria-labelledby="learn-guides">
       <h2 id="learn-guides" className="sr-only">Guides</h2>
-      {cards.map(([id, title, desc, href, Icon]) => <article key={id} className="rounded-2xl border border-slate-800 bg-slate-900/55 p-5"><Icon className="w-5 h-5 text-cyan-400" aria-hidden="true"/><h2 className="mt-4 text-lg font-semibold text-slate-100">{title}</h2><p className="mt-2 text-sm leading-6 text-slate-400">{desc}</p><Link to={href} className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-cyan-400">{c.read}<ArrowUpRight className="w-4 h-4" aria-hidden="true"/></Link></article>)}
+      {cards.map(([id, title, desc, href, Icon]) => <article key={id} className="rounded-2xl border border-slate-800 bg-slate-900/55 p-5"><Icon className="w-5 h-5 text-cyan-400" aria-hidden="true"/><h2 className="mt-4 text-lg font-semibold text-slate-100">{title}</h2><p className="mt-2 text-sm leading-6 text-slate-400">{desc}</p><Link to={href} className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-md px-2 -mx-2 text-sm font-semibold text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 transition-colors">{c.read}<ArrowUpRight className="w-4 h-4" aria-hidden="true"/></Link></article>)}
     </section>
   </div>;
 };

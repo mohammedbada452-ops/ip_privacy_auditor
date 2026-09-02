@@ -21,7 +21,7 @@ export const NavItem: React.FC<NavItemProps> = ({
   return (
     <Link
       to={to}
-      className={`px-3 py-2 rounded-lg text-xs font-mono font-medium flex items-center justify-between gap-2 transition-all duration-150 ${
+      className={`px-3 py-2.5 min-h-10 rounded-lg text-sm font-sans font-medium flex items-center justify-between gap-2 transition-all duration-150 ${
         isActive
           ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 font-semibold shadow-sm'
           : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 border border-transparent'

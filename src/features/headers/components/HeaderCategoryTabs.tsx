@@ -67,14 +67,17 @@ export const HeaderCategoryTabs: React.FC<HeaderCategoryTabsProps> = ({
   ];
 
   return (
-    <div className="flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-800">
+    <div className="flex items-center gap-1.5 overflow-x-auto overscroll-x-contain pb-2 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-950 px-0.5 -mx-0.5 [scrollbar-gutter:stable]" role="tablist" aria-label="Header categories">
       {tabs.map((tab) => {
         const isActive = selectedCategory === tab.id;
         return (
           <button
             key={tab.id}
+            type="button"
             onClick={() => onSelectCategory(tab.id)}
-            className={`px-3.5 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-2 cursor-pointer ${
+            role="tab"
+            aria-selected={isActive}
+            className={`min-h-10 px-3 sm:px-3.5 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-2 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 focus-visible:ring-offset-1 focus-visible:ring-offset-slate-950 ${
               isActive
                 ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 shadow-sm shadow-cyan-950/40'
                 : 'bg-slate-900/60 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 border border-slate-800/50'

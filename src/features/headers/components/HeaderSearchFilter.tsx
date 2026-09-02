@@ -34,11 +34,13 @@ export const HeaderSearchFilter: React.FC<HeaderSearchFilterProps> = ({
     <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
       {/* Search Input */}
       <div className="relative flex-1">
+        <label htmlFor="headers-search" className="sr-only">{t.headers.searchPlaceholder}</label>
         <div className="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none text-slate-500">
           <Search className="w-4 h-4" />
         </div>
         <input
-          type="text"
+          id="headers-search"
+          type="search"
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder={t.headers.searchPlaceholder}
@@ -47,7 +49,9 @@ export const HeaderSearchFilter: React.FC<HeaderSearchFilterProps> = ({
         {searchQuery.length > 0 && (
           <button
             onClick={() => onSearchChange('')}
-            className="absolute inset-y-0 end-0 flex items-center pe-3 text-slate-500 hover:text-slate-300"
+            aria-label={t.common.clear}
+            title={t.common.clear}
+            className="absolute inset-y-0 end-0 w-10 flex items-center justify-center text-slate-500 hover:text-slate-300 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -90,7 +94,8 @@ export const HeaderSearchFilter: React.FC<HeaderSearchFilterProps> = ({
 
           <button
             onClick={onSortOrderToggle}
-            className="p-1 text-slate-400 hover:text-slate-200 font-mono text-[10px] font-bold uppercase transition-colors"
+            type="button"
+            className="min-h-10 min-w-10 px-2 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-200 font-mono text-[10px] font-bold uppercase transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
             title={t.common.sortBy}
           >
             {sortOrder === 'asc' ? '▲ ASC' : '▼ DESC'}

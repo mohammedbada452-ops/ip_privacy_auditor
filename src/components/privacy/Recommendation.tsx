@@ -51,7 +51,7 @@ export const Recommendation: React.FC<RecommendationProps> = ({
       {onApplyAction && (
         <button
           onClick={onApplyAction}
-          className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 hover:text-cyan-200 border border-slate-700 text-xs font-mono font-medium flex items-center gap-1.5 shrink-0 self-start sm:self-auto cursor-pointer transition-colors"
+          className="min-h-10 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 hover:text-cyan-200 border border-slate-700 text-xs font-mono font-medium flex items-center gap-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 shrink-0 self-start sm:self-auto cursor-pointer transition-colors"
         >
           <span>{t.common.remediate}</span>
           <ArrowRight className="w-3.5 h-3.5" />

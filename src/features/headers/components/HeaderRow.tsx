@@ -61,7 +61,18 @@ export const HeaderRow: React.FC<HeaderRowProps> = ({ item }) => {
       {/* Primary Row Grid */}
       <div
         onClick={() => setIsExpanded(!isExpanded)}
-        className="p-4 cursor-pointer grid grid-cols-1 lg:grid-cols-12 gap-3 items-center"
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setIsExpanded((prev) => !prev);
+          }
+        }}
+        role="button"
+        tabIndex={0}
+        aria-expanded={isExpanded}
+        aria-controls={`header-details-${item.category}-${item.canonicalName.replace(/[^a-zA-Z0-9_-]/g, '-')}`}
+        aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${item.canonicalName}`}
+        className="p-4 cursor-pointer grid grid-cols-1 lg:grid-cols-12 gap-3 items-center focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 focus-visible:ring-inset"
       >
         {/* Header Name (Col 1-4) */}
         <div className="lg:col-span-4 flex items-center gap-2.5">
@@ -70,7 +81,7 @@ export const HeaderRow: React.FC<HeaderRowProps> = ({ item }) => {
               e.stopPropagation();
               setIsExpanded(!isExpanded);
             }}
-            className="p-1 rounded text-slate-500 hover:text-slate-300 transition-colors shrink-0"
+            className="w-10 h-10 inline-flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-300 hover:bg-slate-800/70 transition-colors shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60" aria-label={isExpanded ? t.common.collapse : t.common.expand}
           >
             {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
@@ -120,7 +131,7 @@ export const HeaderRow: React.FC<HeaderRowProps> = ({ item }) => {
             <button
               onClick={handleCopy}
               title={t.common.copy}
-              className="p-1.5 bg-slate-800/60 hover:bg-slate-700/60 rounded-lg text-slate-400 hover:text-slate-200 transition-colors shrink-0 cursor-pointer"
+              className="w-10 h-10 inline-flex items-center justify-center bg-slate-800/60 hover:bg-slate-700/60 rounded-lg text-slate-400 hover:text-slate-200 transition-colors shrink-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
             >
               {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
             </button>
@@ -155,7 +166,7 @@ export const HeaderRow: React.FC<HeaderRowProps> = ({ item }) => {
 
       {/* Expanded Deep Inspection Drawer */}
       {isExpanded && (
-        <div className="px-6 py-4 bg-slate-950/70 border-t border-slate-800/60 text-xs space-y-3">
+        <div id={`header-details-${item.category}-${item.canonicalName.replace(/[^a-zA-Z0-9_-]/g, '-')}`} className="px-6 py-4 bg-slate-950/70 border-t border-slate-800/60 text-xs space-y-3">
           {/* Header Description */}
           <div>
             <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">

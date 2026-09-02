@@ -48,10 +48,17 @@ export const colors = {
       border: 'rgba(239, 68, 68, 0.25)',
     },
     info: {
-      main: '#06B6D4',
-      light: '#38BDF8',
-      bg: 'rgba(6, 182, 212, 0.1)',
-      border: 'rgba(6, 182, 212, 0.25)',
+      // Keep informational messaging visually distinct from brand/interactive cyan.
+      main: '#60A5FA',
+      light: '#93C5FD',
+      bg: 'rgba(96, 165, 250, 0.10)',
+      border: 'rgba(96, 165, 250, 0.25)',
+    },
+    critical: {
+      main: '#F87171',
+      light: '#FCA5A5',
+      bg: 'rgba(248, 113, 113, 0.12)',
+      border: 'rgba(248, 113, 113, 0.40)',
     },
     neutral: {
       main: '#64748B',

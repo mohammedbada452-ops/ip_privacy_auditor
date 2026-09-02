@@ -25,12 +25,6 @@ export function getCountryName(country?: string | null, countryCode?: string | n
   return raw;
 }
 
-export function getCountryFlag(countryCode?: string | null): string {
-  const code = normalizeCountryCode(countryCode);
-  if (!code) return '🌐';
-  return String.fromCodePoint(...[...code].map((char) => 127397 + char.charCodeAt(0)));
-}
-
 export function getSafeNetworkText(value?: string | null, fallback = 'Unavailable'): string {
   const raw = String(value || '').trim();
   return raw && !/^(unknown|unavailable|not assigned|not measured|none)$/i.test(raw) ? raw : fallback;

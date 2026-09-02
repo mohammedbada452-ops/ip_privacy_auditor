@@ -21,9 +21,11 @@ export const BrowserSearchFilter: React.FC<BrowserSearchFilterProps> = ({
     <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
       {/* Search Input */}
       <div className="relative flex-1">
+        <label htmlFor="browser-signal-search" className="sr-only">{t.browser.searchPlaceholder}</label>
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
         <input
-          type="text"
+          id="browser-signal-search"
+          type="search"
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder={t.browser.searchPlaceholder}
@@ -32,7 +34,9 @@ export const BrowserSearchFilter: React.FC<BrowserSearchFilterProps> = ({
         {searchQuery && (
           <button
             onClick={() => onSearchChange('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+            aria-label={t.common.clear}
+            title={t.common.clear}
+            className="absolute right-1 top-1/2 -translate-y-1/2 w-10 h-10 inline-flex items-center justify-center text-slate-400 hover:text-slate-200 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -42,7 +46,9 @@ export const BrowserSearchFilter: React.FC<BrowserSearchFilterProps> = ({
       {/* Warnings / Exposures Only Toggle */}
       <button
         onClick={onWarningsOnlyToggle}
-        className={`flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg text-xs font-medium border transition-colors shrink-0 ${
+        type="button"
+        aria-pressed={warningsOnly}
+        className={`flex min-h-10 items-center justify-center gap-2 px-3.5 py-2 rounded-lg text-xs font-medium border transition-colors shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 ${
           warningsOnly
             ? 'bg-amber-500/15 border-amber-500/30 text-amber-300'
             : 'bg-slate-900/80 border-slate-800 text-slate-400 hover:text-slate-200'

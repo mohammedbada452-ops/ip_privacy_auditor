@@ -75,28 +75,14 @@ export const HomepagePrivacyAuditor: React.FC = () => {
 
   return (
     <div className="w-full py-4 sm:py-6 space-y-8 animate-fadeIn">
-      {/* Primary visitor-first connection identity: IP, location, provider, VPN/proxy/Tor and network privacy signals. */}
-      <TechnicalSummarySection
-        ipCheck={ipCheck}
-        ipDetails={ipDetails}
-        networkIntelligence={networkIntelligence}
-        browserProfile={browserProfile}
-        headersData={headersData}
-        onRefresh={privacyAnalysis ? recheck : undefined}
-        isRefreshing={isRechecking}
-      />
-
-      <FreeToolsSection />
-
-      {/* Dynamic Scan Progress Indicator */}
+      {/* Visitor-first hero: during the initial scan, show progress immediately; once available, lead with the score. */}
       <ScanProgressBar steps={steps} isScanning={isScanning || isRechecking} />
 
-      {/* If initial scan is in progress and we have no analysis yet */}
       {isScanning && !privacyAnalysis ? (
         <InitialScanningHero steps={steps} />
       ) : privacyAnalysis ? (
         <>
-          {/* Hero Section with ScoreGauge & Primary Action */}
+          {/* Primary product value: make the privacy result the first substantive content. */}
           <PrivacyScoreHero
             analysis={privacyAnalysis}
             isScanning={isScanning}
@@ -108,7 +94,7 @@ export const HomepagePrivacyAuditor: React.FC = () => {
             onRecheck={recheck}
           />
 
-          {/* Unified Risk Overview ("Your Privacy Exposure") */}
+          {/* The highest-priority findings should follow the score immediately. */}
           <UnifiedRiskOverview
             summary={riskSummary}
             activeFilter={activeSeverityFilter}
@@ -119,16 +105,30 @@ export const HomepagePrivacyAuditor: React.FC = () => {
             onViewAllClick={scrollToProblemCenter}
           />
 
-          {/* Security Analysis Timeline (Multi-stage pipeline telemetry) */}
+          {/* Technical evidence that explains the score and risk summary. */}
+          <TechnicalSummarySection
+            ipCheck={ipCheck}
+            ipDetails={ipDetails}
+            networkIntelligence={networkIntelligence}
+            browserProfile={browserProfile}
+            headersData={headersData}
+            onRefresh={recheck}
+            isRefreshing={isRechecking}
+          />
+
           <SecurityAnalysisTimeline
             stages={timelineStages}
             totalDurationMs={timingMetrics.totalDurationMs}
           />
 
-          {/* Smart Recommendations Engine */}
+          <UnifiedProblemCenter
+            risks={unifiedRisks}
+            activeSeverityFilter={activeSeverityFilter}
+            onSeverityFilterChange={setActiveSeverityFilter}
+          />
+
           <SmartRecommendationsSection recommendations={recommendations} />
 
-          {/* Privacy Remediation Center (FIX 6 Actionable Guidance Engine) */}
           <PrivacyRemediationCenter
             findings={remediationFindings}
             summary={remediationSummary}
@@ -140,28 +140,35 @@ export const HomepagePrivacyAuditor: React.FC = () => {
             onRecheck={recheck}
           />
 
-          {/* Unified Problem Center (Cross-vector consolidated issues) */}
-          <UnifiedProblemCenter
-            risks={unifiedRisks}
-            activeSeverityFilter={activeSeverityFilter}
-            onSeverityFilterChange={setActiveSeverityFilter}
-          />
-
-          {/* Score Evolution History (localStorage-backed) */}
-          <ScoreEvolutionCard history={history} onClearHistory={clearHistory} latestAnalysis={privacyAnalysis} risks={unifiedRisks} />
-
-          {/* Deductions Breakdown */}
           <WhyNotHigherSection
             factors={privacyAnalysis.factors}
             privacyScore={privacyAnalysis.privacyScore}
             onSelectFactorForRemediation={(factor) => setSelectedFactorForRemediation(factor)}
           />
 
-          {/* Active Protections */}
           <ActiveProtectionsSection factors={privacyAnalysis.factors} />
 
+          <ScoreEvolutionCard
+            history={history}
+            onClearHistory={clearHistory}
+            latestAnalysis={privacyAnalysis}
+            risks={unifiedRisks}
+          />
+
+          {/* Secondary discovery: specialist views remain available without competing with the score. */}
+          <FreeToolsSection />
         </>
-      ) : null}
+      ) : (
+        <TechnicalSummarySection
+          ipCheck={ipCheck}
+          ipDetails={ipDetails}
+          networkIntelligence={networkIntelligence}
+          browserProfile={browserProfile}
+          headersData={headersData}
+          onRefresh={recheck}
+          isRefreshing={isRechecking}
+        />
+      )}
 
       {/* Remediation Guidance Modal */}
       <RemediationModal

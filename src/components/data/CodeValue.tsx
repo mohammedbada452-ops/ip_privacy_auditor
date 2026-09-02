@@ -19,7 +19,7 @@ export const CodeValue: React.FC<CodeValueProps> = ({
 
   return (
     <code
-      className={`font-mono bg-slate-950 border border-slate-800 text-cyan-300 rounded-md inline-block max-w-full overflow-x-auto whitespace-pre-wrap break-all ${sizeClasses[size]} ${className}`}
+      className={`font-mono bg-slate-950 border border-slate-800 text-cyan-300 rounded-md inline-block min-w-0 max-w-full overflow-x-auto whitespace-pre-wrap break-words [overflow-wrap:anywhere] align-top ${sizeClasses[size]} ${className}`}
     >
       {children}
     </code>

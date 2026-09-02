@@ -8,6 +8,7 @@
   body {
     background-color: #0b0f17;
     color: #f8fafc;
+    min-height: 100%;
     font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -63,4 +64,64 @@
   overflow: visible;
   clip: auto;
   z-index: 9999;
+}
+
+
+/* Stage 5 responsive hardening: keep the viewport stable on narrow screens. */
+html,
+body,
+#root {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  touch-action: manipulation;
+}
+
+/* Allow long technical/security values to wrap rather than widen the page. */
+code,
+pre,
+.font-mono {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 639px) {
+  pre {
+    max-width: 100%;
+  }
+}
+
+/* Stage 1 UI foundation: clearer focus treatment and motion restraint. */
+button,
+a[role=button] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+::selection {
+  background: rgba(6, 182, 212, 0.25);
+  color: #f8fafc;
 }

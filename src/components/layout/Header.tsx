@@ -47,7 +47,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileNav }) => {
               <Link
                 key={route.path}
                 to={route.path}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-mono font-medium transition-all duration-150 ${
+                className={`px-3.5 py-2 min-h-10 rounded-lg text-sm font-sans font-medium transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
                   isActive
                     ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 font-semibold shadow-sm'
                     : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50 border border-transparent'
@@ -62,7 +62,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileNav }) => {
         {/* Header Actions (Right Area) */}
         <div className="flex items-center gap-2.5">
           {/* Live System Status Pill */}
-          <div className="hidden sm:inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-950/80 border border-slate-800/80 text-xs font-mono text-slate-400">
+          <div className="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 min-h-8 rounded-full bg-slate-950/80 border border-slate-800/80 text-xs font-mono text-slate-400">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
@@ -85,7 +85,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileNav }) => {
             type="button"
             onClick={onOpenMobileNav}
             aria-label={t.menuOpen}
-            className="md:hidden p-2 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800/80 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 border border-slate-800"
+            className="md:hidden min-w-11 min-h-11 p-2.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800/80 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 border border-slate-800"
           >
             <Menu className="w-5 h-5" />
           </button>

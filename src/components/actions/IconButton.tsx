@@ -20,7 +20,7 @@ export const IconButton: React.FC<IconButtonProps> = ({
   ...props
 }) => {
   const baseClasses =
-    'inline-flex items-center justify-center rounded-lg transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shrink-0';
+    'inline-flex items-center justify-center rounded-lg transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shrink-0';
 
   const variantClasses: Record<ButtonVariant, string> = {
     primary: 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-sm',
@@ -31,7 +31,7 @@ export const IconButton: React.FC<IconButtonProps> = ({
   };
 
   const sizeClasses: Record<ButtonSize, string> = {
-    sm: 'w-8 h-8 text-xs',
+    sm: 'w-10 h-10 text-xs',
     md: 'w-10 h-10 text-sm',
     lg: 'w-12 h-12 text-base',
   };

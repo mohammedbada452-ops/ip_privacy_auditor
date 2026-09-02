@@ -20,14 +20,14 @@ export const Badge: React.FC<BadgeProps> = ({
 }) => {
   const variantClasses: Record<SemanticStatus, string> = {
     neutral: 'bg-slate-800/80 text-slate-300 border-slate-700/60',
-    success: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-    warning: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-    danger: 'bg-red-500/10 text-red-400 border-red-500/20',
-    info: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
-    unknown: 'bg-slate-800/60 text-slate-400 border-slate-700/40',
-    unavailable: 'bg-slate-800/40 text-slate-500 border-slate-800',
-    detected: 'bg-red-500/10 text-red-400 border-red-500/20',
-    'not-detected': 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+    success: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25',
+    warning: 'bg-amber-500/10 text-amber-400 border-amber-500/25',
+    danger: 'bg-red-500/10 text-red-400 border-red-500/25',
+    info: 'bg-blue-500/10 text-blue-300 border-blue-400/25',
+    unknown: 'bg-slate-800/75 text-slate-300 border-slate-600/70 border-dashed',
+    unavailable: 'bg-slate-900/80 text-slate-400 border-slate-700 border-dotted',
+    detected: 'bg-red-500/10 text-red-400 border-red-500/25',
+    'not-detected': 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25',
   };
 
   const dotClasses: Record<SemanticStatus, string> = {
@@ -35,8 +35,8 @@ export const Badge: React.FC<BadgeProps> = ({
     success: 'bg-emerald-400',
     warning: 'bg-amber-400',
     danger: 'bg-red-400',
-    info: 'bg-cyan-400',
-    unknown: 'bg-slate-400',
+    info: 'bg-blue-400',
+    unknown: 'bg-slate-300',
     unavailable: 'bg-slate-500',
     detected: 'bg-red-400',
     'not-detected': 'bg-emerald-400',
@@ -56,10 +56,11 @@ export const Badge: React.FC<BadgeProps> = ({
     >
       {dot && (
         <span
+          aria-hidden="true"
           className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotClasses[variant]}`}
         />
       )}
-      {icon && <span className="shrink-0">{icon}</span>}
+      {icon && <span aria-hidden="true" className="shrink-0">{icon}</span>}
       <span>{children}</span>
     </span>
   );

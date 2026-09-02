@@ -18,10 +18,10 @@ export const Section: React.FC<SectionProps> = ({
   return (
     <section className={`mb-8 ${className}`}>
       {(title || subtitle || action) && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-5">
           <div>
             {title && (
-              <h2 className="text-lg sm:text-xl font-bold text-slate-100 tracking-tight flex items-center gap-2">
+              <h2 className="text-lg sm:text-xl font-semibold text-slate-100 tracking-tight flex items-center gap-2">
                 {title}
               </h2>
             )}

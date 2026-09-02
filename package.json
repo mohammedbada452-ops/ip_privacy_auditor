@@ -26,11 +26,12 @@
     "deploy:cloudflare:auto": "npm run build:cloudflare:auto && wrangler deploy",
     "test:cloudflare-guard": "node scripts/verify-cloudflare-deployment.mjs",
     "deploy": "npm run build:cloudflare && npx --yes wrangler@4.125.0 deploy",
-    "test:release": "npm run test:cloudflare-guard && npm run test:production-truth && npm run test:accuracy",
+    "test:release": "npm run test:cloudflare-guard && npm run test:production-truth && npm run test:accuracy && npm run test:country-flag",
     "build:cloudflare:verify": "npm run build:cloudflare && node scripts/verify-cloudflare-deployment.mjs",
     "test:production-truth": "node scripts/verify-production-truth.mjs",
     "test:worker-native": "node scripts/verify-cloudflare-deployment.mjs",
-    "build:server": "esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs"
+    "build:server": "esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
+    "test:country-flag": "node scripts/verify-country-flag-release.mjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.14",

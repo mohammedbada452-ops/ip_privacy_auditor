@@ -6,7 +6,7 @@ import { Card, CardBody, CardHeader, CopyValue, RefreshButton, StatusBadge } fro
 import type { IpCheckResponse, IpDetailsResponse, IpNetworkIntelligenceResponse } from '@packages/api-contract';
 import type { BrowserProfile, IdentityData } from '../../browser/types';
 import type { HeadersAnalysisResponse } from '../../headers/types';
-import { getCountryFlag, getCountryName, getLanguageCountryConsistency, getSafeNetworkText, getStatusLabel } from '../utils/networkPresentation';
+import { getCountryName, getLanguageCountryConsistency, getSafeNetworkText, getStatusLabel } from '../utils/networkPresentation';
 
 interface TechnicalSummarySectionProps {
   ipCheck: IpCheckResponse | null;
@@ -36,7 +36,6 @@ export const TechnicalSummarySection: React.FC<TechnicalSummarySectionProps> = (
     ? ipDetails.geo.countryCode
     : undefined;
   const countryName = getCountryName(ipDetails?.geo?.country, countryCode);
-  const countryFlag = getCountryFlag(countryCode);
   const locationParts = [ipDetails?.geo?.city, ipDetails?.geo?.region, countryName]
     .map((value) => String(value || '').trim())
     .filter((value) => value && !/^(unknown|unavailable|not measured)$/i.test(value));
@@ -164,7 +163,7 @@ export const TechnicalSummarySection: React.FC<TechnicalSummarySectionProps> = (
             <div className="rounded-xl border border-slate-800 bg-slate-900/65 p-4 sm:p-5">
               <div className="text-[10px] uppercase tracking-[0.18em] text-slate-500 font-mono mb-2">LOCATION</div>
               <div className="flex items-center gap-3">
-                <span className="text-3xl" role="img" aria-label={countryName}>{countryFlag}</span>
+                
                 <div className="min-w-0">
                   <div className="font-semibold text-slate-100 truncate">{countryName}</div>
                   <div className="text-xs text-slate-400 truncate flex items-center gap-1">

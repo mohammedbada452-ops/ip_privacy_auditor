@@ -175,7 +175,16 @@ export const ProblemCenterSection: React.FC<ProblemCenterSectionProps> = ({
                 key={problem.id}
                 id={`problem-card-${problem.id}`}
                 onClick={() => onOpenProblem(problem)}
-                className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-slate-700 transition-all cursor-pointer group flex flex-col md:flex-row md:items-center justify-between gap-4"
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    onOpenProblem(problem);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-label={problem.signalName}
+                className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-slate-700 transition-all cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 flex flex-col md:flex-row md:items-center justify-between gap-4"
               >
                 <div className="space-y-1.5 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">

@@ -1,8 +1,9 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { X, ShieldAlert, CheckCircle2, RotateCcw, ExternalLink } from 'lucide-react';
 import { SeverityBadge } from '../../../components/status/SeverityBadge';
 import { Link } from '../../../router/Router';
 import { useLanguage } from '../../../i18n/LanguageContext';
+import { useFocusTrap } from '../../../lib/a11y/useFocusTrap';
 import type { PrivacyFactor } from '@packages/api-contract';
 
 interface RemediationModalProps {
@@ -20,16 +21,11 @@ export const RemediationModal: React.FC<RemediationModalProps> = ({
 }) => {
   const { t } = useLanguage();
 
-  // Handle escape key to close modal
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  const modalRef = useFocusTrap<HTMLDivElement>({
+    active: isOpen,
+    onEscape: onClose,
+    initialFocusSelector: 'button[aria-label]',
+  });
 
   if (!isOpen || !factor) return null;
 
@@ -105,6 +101,8 @@ export const RemediationModal: React.FC<RemediationModalProps> = ({
 
   return (
     <div
+      ref={modalRef}
+      tabIndex={-1}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn"
       role="dialog"
       aria-modal="true"
@@ -130,7 +128,7 @@ export const RemediationModal: React.FC<RemediationModalProps> = ({
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-all"
+            className="min-w-10 min-h-10 p-2.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
             aria-label={t.home.remediationModal.close}
           >
             <X className="w-5 h-5" />
@@ -183,7 +181,7 @@ export const RemediationModal: React.FC<RemediationModalProps> = ({
               <Link
                 to={guidance.deepDiveRoute}
                 onClick={onClose}
-                className="inline-flex items-center gap-1.5 text-xs font-mono text-cyan-400 hover:text-cyan-300 hover:underline"
+                className="inline-flex items-center gap-1.5 min-h-10 py-2 text-xs font-mono text-cyan-400 hover:text-cyan-300 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 rounded-lg"
               >
                 <span>{guidance.deepDiveLabel}</span>
                 <ExternalLink className="w-3.5 h-3.5" />
@@ -196,7 +194,7 @@ export const RemediationModal: React.FC<RemediationModalProps> = ({
         <div className="pt-4 border-t border-slate-800 flex items-center justify-between gap-3">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono transition-all"
+            className="min-h-10 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono transition-all"
           >
             {t.home.remediationModal.close}
           </button>
@@ -206,7 +204,7 @@ export const RemediationModal: React.FC<RemediationModalProps> = ({
               onClose();
               onRecheck();
             }}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-mono font-semibold transition-all shadow-md shadow-cyan-900/20"
+            className="inline-flex items-center justify-center min-h-10 gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-mono font-semibold transition-all shadow-md shadow-cyan-900/20"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span>{t.home.remediationModal.recheckNow}</span>

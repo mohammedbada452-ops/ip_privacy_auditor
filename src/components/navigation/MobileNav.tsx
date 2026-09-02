@@ -1,9 +1,10 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Link, useRouter } from '../../router/Router';
 import { PRIMARY_NAV_ROUTES, isRouteActive, getRouteTitle } from '../../lib/navigation/routes';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { LanguageSelector } from '../i18n/LanguageSelector';
 import { X, Shield, ChevronRight } from 'lucide-react';
+import { useFocusTrap } from '../../lib/a11y/useFocusTrap';
 
 export interface MobileNavProps {
   isOpen: boolean;
@@ -14,24 +15,21 @@ export const MobileNav: React.FC<MobileNavProps> = ({ isOpen, onClose }) => {
   const { currentPath } = useRouter();
   const { t, language } = useLanguage();
 
-  // Escape key listener & Body scroll lock
-  useEffect(() => {
+  const dialogRef = useFocusTrap<HTMLDivElement>({
+    active: isOpen,
+    onEscape: onClose,
+    initialFocusSelector: 'button[aria-label]',
+  });
+
+  // Keep the page stationary while the mobile navigation dialog is open.
+  React.useEffect(() => {
     if (!isOpen) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
+    const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = '';
+      document.body.style.overflow = previousOverflow;
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -39,6 +37,8 @@ export const MobileNav: React.FC<MobileNavProps> = ({ isOpen, onClose }) => {
 
   return (
     <div
+      ref={dialogRef}
+      tabIndex={-1}
       className="fixed inset-0 z-50 md:hidden flex flex-col bg-slate-950/95 backdrop-blur-xl transition-all duration-200"
       role="dialog"
       aria-modal="true"
@@ -64,7 +64,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({ isOpen, onClose }) => {
           type="button"
           onClick={onClose}
           aria-label={t.menuClose}
-          className="p-2 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+          className="min-w-11 min-h-11 p-2.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
         >
           <X className="w-5 h-5" />
         </button>
@@ -85,7 +85,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({ isOpen, onClose }) => {
               key={route.path}
               to={route.path}
               onClick={onClose}
-              className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-mono font-medium transition-all duration-150 ${
+              className={`w-full flex items-center justify-between px-4 py-3 min-h-12 rounded-xl text-sm font-sans font-medium transition-all duration-150 ${
                 isActive
                   ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 font-semibold shadow-sm'
                   : 'text-slate-300 hover:text-slate-100 hover:bg-slate-900 border border-slate-800/60'
