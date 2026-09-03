@@ -14,11 +14,16 @@ import { reverseDnsService } from '../services/reverseDns';
 import type { IpNetworkIntelligenceResponse } from '@packages/api-contract';
 import type { GeoIPResult } from '../providers/geoip/IGeoIPProvider';
 import { CloudflareRequestCfProvider } from '../providers/geoip/CloudflareRequestCfProvider';
+import { calculateGeoFieldAgreement } from '../providers/geoip/accuracy';
 
 const router = Router();
 
 function getRequestHeaderMap(req: Request): Record<string, string | string[] | undefined> {
-  return Object.fromEntries(Object.entries(req.headers).map(([key, value]) => [key.toLowerCase(), value]));
+  const result: Record<string, string | string[] | undefined> = {};
+  for (const [key, value] of Object.entries(req.headers)) {
+    result[key.toLowerCase()] = typeof value === 'string' || Array.isArray(value) ? value : undefined;
+  }
+  return result;
 }
 
 async function getCurrentClientGeoDetails(req: Request, ip: string): Promise<IpDetailsResponse | null> {
@@ -31,7 +36,7 @@ async function getCurrentClientGeoDetails(req: Request, ip: string): Promise<IpD
     return {
       ip,
       measurementStatus: details.network.providerStatus === 'VERIFIED' ? 'MEASURED' : 'UNKNOWN',
-      geo: details.geo,
+      geo: { ...details.geo, evidenceConfidence: { ...geoFieldAgreement } },
       network: details.network,
     };
   } catch {
@@ -180,6 +185,7 @@ router.get('/ip/network-intelligence', async (req: Request, res: Response) => {
         providers: ['RDAP', reverseDns.resolver || 'Cloudflare DNS over HTTPS', reputation.provider || 'Reputation unavailable'],
         providerObservations: [],
         consensus: { countryCode: null, asn: null, agreement: 'NONE' },
+      conflicts: { country: false, asn: false, region: false, city: false, postalCode: false, timezone: false },
         note: 'Primary GeoIP data is unavailable; auxiliary intelligence remains separately reported and does not alter the canonical privacy score.',
       },
       meta: { timestamp: new Date().toISOString(), requestId: req.requestId || `req_${Date.now()}`, version: '1.0.0' },
@@ -197,6 +203,18 @@ router.get('/ip/network-intelligence', async (req: Request, res: Response) => {
   if (reputation.provider) providers.push(reputation.provider);
   if (rdap.source) providers.push(rdap.source);
   if (reverseDns.resolver) providers.push(reverseDns.resolver);
+  const geoObservations = [
+    ...multiSource.observations.filter(o => o.status === 'VERIFIED').map(o => ({ countryCode: o.countryCode, asn: o.asn, region: o.region, city: o.city, postalCode: o.postalCode, timezone: o.timezone })),
+    ...(cfDetails?.network.providerStatus === 'VERIFIED' ? [{ countryCode: cfDetails.geo.countryCode || null, asn: /^AS\d+$/i.test(cfDetails.network.asn || '') ? cfDetails.network.asn.toUpperCase() : null, region: cfDetails.geo.region || null, city: cfDetails.geo.city || null, postalCode: cfDetails.geo.postalCode || null, timezone: cfDetails.geo.timezone || null }] : []),
+  ];
+  const geoFieldAgreement = calculateGeoFieldAgreement(geoObservations, geoObservations.length);
+  const uniqueNonEmpty = (values: Array<unknown>) => new Set(values.map(v => String(v ?? '').trim().toUpperCase()).filter(Boolean)).size;
+  const countryConflict = uniqueNonEmpty(geoObservations.map(o => o.countryCode)) > 1;
+  const asnConflict = uniqueNonEmpty(geoObservations.map(o => o.asn)) > 1;
+  const regionConflict = uniqueNonEmpty(geoObservations.map(o => o.region)) > 1;
+  const cityConflict = uniqueNonEmpty(geoObservations.map(o => o.city)) > 1;
+  const postalConflict = uniqueNonEmpty(geoObservations.map(o => o.postalCode)) > 1;
+  const timezoneConflict = uniqueNonEmpty(geoObservations.map(o => o.timezone)) > 1;
   const measuredSignals = [details.network.providerStatus === 'VERIFIED', reputation.status === 'MEASURED', rdap.status === 'MEASURED', reverseDns.status === 'MEASURED'].filter(Boolean).length;
   const intelligenceConfidence: IpNetworkIntelligenceResponse['intelligenceConfidence'] = measuredSignals >= 3 ? 'HIGH' : measuredSignals >= 2 ? 'MEDIUM' : measuredSignals >= 1 ? 'LOW' : 'UNKNOWN';
 
@@ -212,10 +230,11 @@ router.get('/ip/network-intelligence', async (req: Request, res: Response) => {
       intelligenceConfidence,
       providers: [...new Set(providers)],
       providerObservations: [
-        ...(cfDetails?.network.providerStatus === 'VERIFIED' ? [{ provider: 'Cloudflare Edge', status: 'VERIFIED' as const, countryCode: cfDetails.geo.countryCode || null, country: cfDetails.geo.country || null, asn: /^AS\d+$/i.test(cfDetails.network.asn || '') ? cfDetails.network.asn.toUpperCase() : null }] : []),
+        ...(cfDetails?.network.providerStatus === 'VERIFIED' ? [{ provider: 'Cloudflare Edge', status: 'VERIFIED' as const, countryCode: cfDetails.geo.countryCode || null, country: cfDetails.geo.country || null, asn: /^AS\d+$/i.test(cfDetails.network.asn || '') ? cfDetails.network.asn.toUpperCase() : null, region: cfDetails.geo.region || null, city: cfDetails.geo.city || null, postalCode: cfDetails.geo.postalCode || null, timezone: cfDetails.geo.timezone || null }] : []),
         ...multiSource.observations,
       ],
-      consensus: multiSource.consensus,
+      consensus: { ...multiSource.consensus, countryAgreement: geoFieldAgreement.country, asnAgreement: geoFieldAgreement.asn },
+      conflicts: { country: countryConflict, asn: asnConflict, region: regionConflict, city: cityConflict, postalCode: postalConflict, timezone: timezoneConflict },
       note: 'Auxiliary network intelligence is independently sourced and does not change the canonical privacy score.',
     },
     meta: { timestamp: new Date().toISOString(), requestId: req.requestId || `req_${Date.now()}`, version: '1.0.0' },

@@ -12,6 +12,10 @@ export interface GeoNetworkCardProps {
 export const GeoNetworkCard: React.FC<GeoNetworkCardProps> = ({ details, networkIntelligence }) => {
   const { t } = useLanguage();
   const { geo } = details;
+  const countryEvidence = geo.evidenceConfidence?.country || 'UNKNOWN';
+  const evidenceLabel = countryEvidence === 'HIGH' ? t.common.high : countryEvidence === 'MEDIUM' ? t.common.medium : countryEvidence === 'LOW' ? t.common.low : t.common.unknown;
+  const agreement = networkIntelligence?.consensus?.countryAgreement;
+  const agreementLabel = agreement === 'HIGH' ? t.common.high : agreement === 'MEDIUM' ? t.common.medium : agreement === 'LOW' ? t.common.low : agreement === 'UNKNOWN' ? t.common.unknown : null;
 
   return (
     <Card variant="standard" className="h-full">
@@ -21,6 +25,12 @@ export const GeoNetworkCard: React.FC<GeoNetworkCardProps> = ({ details, network
         subtitle={t.ip.geoSubtitle}
       />
       <CardBody>
+        <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-slate-800/70 bg-slate-950/25 px-3 py-2 text-[10px]">
+          <span className="text-slate-500">{t.ip.geoEvidenceQuality}</span>
+          <span className={countryEvidence === 'HIGH' ? 'text-emerald-400' : countryEvidence === 'LOW' ? 'text-amber-400' : 'text-slate-400'}>
+            {evidenceLabel}{agreementLabel ? ` · ${agreementLabel}` : ''}
+          </span>
+        </div>
         <div className="space-y-1">
           <DataRow
             label={t.ip.country}

@@ -32,7 +32,7 @@ export const IpPrimaryCard: React.FC<IpPrimaryCardProps> = ({
   const isPublic = data.check.observationScope === 'PUBLIC' || data.check.publicIpStatus === 'MEASURED';
   const countryCode = geo.countryCode && geo.countryCode !== 'XX' ? geo.countryCode : undefined;
   const countryName = getCountryName(geo.country, countryCode);
-  const location = [geo.city, geo.region, countryName].filter((value) => value && !/^(unknown|unavailable|not measured)$/i.test(value)).join(', ') || 'Unavailable';
+  const location = [geo.city, geo.region, countryName].filter((value) => value && !/^(unknown|unavailable|not measured)$/i.test(value)).join(', ') || t.ui.unavailable;
   const isp = getSafeNetworkText(network.isp);
   const organization = getSafeNetworkText(network.organization);
   const asn = getSafeNetworkText(network.asn, 'Not assigned');
@@ -44,7 +44,7 @@ export const IpPrimaryCard: React.FC<IpPrimaryCardProps> = ({
       <CardHeader
         icon={<Globe className="w-5 h-5 text-cyan-400" />}
         title={t.ip.detectedPublicIp}
-        subtitle={data.details.measurementStatus === 'MEASURED' ? 'Verified network intelligence' : 'Network intelligence'}
+        subtitle={data.details.measurementStatus === 'MEASURED' ? t.ui.verifiedServerNetwork : t.ui.networkIntelligence}
         statusBadge={<Badge variant={ipVersion === 'IPv6' ? 'info' : 'neutral'}>{ipVersion}</Badge>}
         action={<RefreshButton onRefresh={onRefresh} isRefreshing={isRefreshing} size="sm" label={t.common.recheck} />}
       />
@@ -52,16 +52,16 @@ export const IpPrimaryCard: React.FC<IpPrimaryCardProps> = ({
       <CardBody className="space-y-5">
         <div className="grid grid-cols-1 lg:grid-cols-[1.35fr_1fr_1fr] gap-4">
           <div className="bg-slate-950/80 border border-slate-800 p-4 sm:p-5 rounded-xl">
-            <div className="text-[10px] font-mono tracking-widest text-slate-500 uppercase mb-2">ACTIVE ADDRESS</div>
+            <div className="text-[10px] font-mono tracking-widest text-slate-500 uppercase mb-2">{t.ip.activeAddress}</div>
             <div className="flex items-center justify-between gap-3">
-              <span className="text-xl sm:text-2xl md:text-3xl font-mono font-bold text-cyan-300 break-all select-all">{displayIp || 'Unavailable'}</span>
+              <span className="text-xl sm:text-2xl md:text-3xl font-mono font-bold text-cyan-300 break-all select-all">{displayIp || t.ui.unavailable}</span>
               {displayIp && <CopyValue value={displayIp} label={t.ip.copyIp} />}
             </div>
-            <div className="text-[11px] text-slate-500 font-mono mt-2">{isPublic ? 'Public routable address' : 'Address scope could not be verified as public'}</div>
+            <div className="text-[11px] text-slate-500 font-mono mt-2">{isPublic ? t.ui.publicRoutableAddress : t.ui.publicScopeUnverified}</div>
           </div>
 
           <div className="bg-slate-900/60 border border-slate-800/80 p-4 rounded-xl">
-            <div className="text-[10px] font-mono tracking-widest text-slate-500 uppercase mb-2">LOCATION</div>
+            <div className="text-[10px] font-mono tracking-widest text-slate-500 uppercase mb-2">{t.ip.location}</div>
             <div className="flex items-center gap-3">
               <CountryFlag countryCode={countryCode} countryName={countryName} />
               <div className="min-w-0">
@@ -69,22 +69,22 @@ export const IpPrimaryCard: React.FC<IpPrimaryCardProps> = ({
                 <div className="text-xs text-slate-400 flex items-center gap-1 truncate"><MapPin className="w-3.5 h-3.5 shrink-0" />{location}</div>
               </div>
             </div>
-            <div className="text-[11px] text-slate-500 font-mono mt-3 truncate">{geo.timezone || 'Timezone unavailable'}</div>
+            <div className="text-[11px] text-slate-500 font-mono mt-3 truncate">{geo.timezone || t.ui.timezoneUnavailable}</div>
           </div>
 
           <div className="bg-slate-900/60 border border-slate-800/80 p-4 rounded-xl">
             <div className="text-[10px] font-mono tracking-widest text-slate-500 uppercase mb-2 flex items-center gap-1.5"><Network className="w-3.5 h-3.5" /> NETWORK</div>
-            <div className="space-y-1.5 text-xs font-mono" role="list" aria-label="Network details">
+            <div className="space-y-1.5 text-xs font-mono" role="list" aria-label={t.ui.networkDetails}>
               <div className="grid grid-cols-[max-content_minmax(0,1fr)] items-start gap-x-3 gap-y-1" role="listitem">
-                <span className="text-slate-500 whitespace-nowrap">ISP</span>
+                <span className="text-slate-500 whitespace-nowrap">{t.ip.isp}</span>
                 <span className="min-w-0 text-slate-200 break-words text-start" title={isp}>{isp}</span>
               </div>
               <div className="grid grid-cols-[max-content_minmax(0,1fr)] items-start gap-x-3 gap-y-1" role="listitem">
-                <span className="text-slate-500 whitespace-nowrap">Organization</span>
+                <span className="text-slate-500 whitespace-nowrap">{t.ip.organization}</span>
                 <span className="min-w-0 text-slate-200 break-words text-start" title={organization}>{organization}</span>
               </div>
               <div className="grid grid-cols-[max-content_minmax(0,1fr)] items-start gap-x-3 gap-y-1" role="listitem">
-                <span className="text-slate-500 whitespace-nowrap">ASN</span>
+                <span className="text-slate-500 whitespace-nowrap">{t.ip.asnIdentifier}</span>
                 <span className="min-w-0 text-cyan-300 break-words text-start" title={asn}>{asn}</span>
               </div>
             </div>
@@ -108,7 +108,7 @@ export const IpPrimaryCard: React.FC<IpPrimaryCardProps> = ({
 
         <div className="flex items-center gap-2 text-[11px] text-slate-500 font-mono">
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-          <span>Source: {network.provider || 'network intelligence'} · Status: {data.details.measurementStatus || 'UNKNOWN'} · Results are provider-observed and may be approximate.</span>
+          <span>{t.ui.sourcePrefix}: {network.provider || t.ui.networkProviderFallback} · {t.common.status}: {data.details.measurementStatus || t.common.unknown} · {t.ui.providerObservedApproximate}</span>
         </div>
       </CardBody>
     </Card>

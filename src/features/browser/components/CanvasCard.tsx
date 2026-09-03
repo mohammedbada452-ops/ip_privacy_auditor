@@ -3,6 +3,7 @@ import { Card, Badge, StatusBadge } from '../../../components/ui';
 import { Palette, Copy, Check, ShieldCheck, ShieldAlert, Sparkles, HelpCircle } from 'lucide-react';
 import { useLanguage } from '../../../i18n/LanguageContext';
 import type { CanvasData, ProfileGroup } from '../types';
+import { canonicalStateToBadgeStatus, canonicalizeSignalState, getCanonicalSignalLabel } from '../../../lib/signalState';
 
 export interface CanvasCardProps {
   group: ProfileGroup<CanvasData>;
@@ -73,11 +74,16 @@ export const CanvasCard: React.FC<CanvasCardProps> = ({ group }) => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const badgeStatus = isUnavailable ? 'neutral' : isRandomized ? 'success' : 'warning';
-  const badgeLabel = isUnavailable ? 'Unavailable' : isRandomized ? 'Protected' : 'Detected';
+  const canonicalState = canonicalizeSignalState({
+    available: !isUnavailable,
+    status: isUnavailable ? 'UNAVAILABLE' : isRandomized ? 'SAFE' : 'DETECTED',
+    observed: !isUnavailable,
+  });
+  const badgeStatus = canonicalStateToBadgeStatus(canonicalState);
+  const badgeLabel = getCanonicalSignalLabel(canonicalState, t);
 
   return (
-    <Card id="canvas" variant="standard" className="p-5 flex flex-col justify-between space-y-4 scroll-mt-24">
+    <Card id="canvas" variant="standard" className="p-5 flex flex-col justify-between space-y-4 scroll-mt-24" data-canonical-state={canonicalState}>
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
@@ -152,7 +158,7 @@ export const CanvasCard: React.FC<CanvasCardProps> = ({ group }) => {
       <div className="flex items-center justify-between text-xs text-slate-400 pt-1 border-t border-slate-800/60">
         <span className="font-mono text-[11px]">2D Context Digest</span>
         <Badge variant={isUnavailable ? 'neutral' : isRandomized ? 'success' : 'warning'} size="sm">
-          {isUnavailable ? 'Not Evaluated' : isRandomized ? 'Randomized' : 'Stable observed'}
+          {getCanonicalSignalLabel(canonicalState, t)}
         </Badge>
       </div>
     </Card>

@@ -6,7 +6,7 @@ export interface ScoreGaugeProps {
   label?: string;
   tierLabel?: string;
   subtext?: string;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
   showDeductions?: boolean;
 }
@@ -71,6 +71,7 @@ export const ScoreGauge: React.FC<ScoreGaugeProps> = ({
     sm: { size: 140, strokeWidth: 10, fontSize: 'text-2xl' },
     md: { size: 180, strokeWidth: 12, fontSize: 'text-4xl' },
     lg: { size: 240, strokeWidth: 16, fontSize: 'text-5xl' },
+    xl: { size: 260, strokeWidth: 17, fontSize: 'text-6xl' },
   }[size] ?? { size: 180, strokeWidth: 12, fontSize: 'text-4xl' };
 
   const center = dimensions.size / 2;

@@ -1,4 +1,6 @@
 User-agent: *
 Allow: /
 Disallow: /admin
+Disallow: /design-system
 Disallow: /api/
+Sitemap: https://ip-privacy-auditor.mohammedbad452.workers.dev/sitemap.xml

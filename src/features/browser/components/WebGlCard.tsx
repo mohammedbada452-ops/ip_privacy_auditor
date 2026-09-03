@@ -3,6 +3,7 @@ import { Card, StatusBadge, Badge } from '../../../components/ui';
 import { Cpu, Copy, Check, Eye, EyeOff, HelpCircle } from 'lucide-react';
 import { useLanguage } from '../../../i18n/LanguageContext';
 import type { WebGlData, ProfileGroup } from '../types';
+import { canonicalStateToBadgeStatus, canonicalizeSignalState, getCanonicalSignalLabel } from '../../../lib/signalState';
 
 export interface WebGlCardProps {
   group: ProfileGroup<WebGlData>;
@@ -30,11 +31,17 @@ export const WebGlCard: React.FC<WebGlCardProps> = ({ group }) => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const badgeStatus = isUnavailable ? 'neutral' : isMasked ? 'success' : 'warning';
-  const badgeLabel = isUnavailable ? t.ui.unavailable : isMasked ? t.common.safe : t.common.detected;
+  const canonicalState = canonicalizeSignalState({
+    available: !isUnavailable,
+    evidenceState: isUnavailable ? 'UNAVAILABLE' : isExposed ? 'CONFIRMED' : 'NOT_DETECTED',
+    observed: !isUnavailable,
+  });
+
+  const badgeStatus = canonicalStateToBadgeStatus(canonicalState);
+  const badgeLabel = getCanonicalSignalLabel(canonicalState, t);
 
   return (
-    <Card id="webgl" variant="standard" className="p-5 flex flex-col justify-between space-y-4 scroll-mt-24">
+    <Card id="webgl" data-canonical-state={canonicalState} variant="standard" className="p-5 flex flex-col justify-between space-y-4 scroll-mt-24">
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
@@ -109,7 +116,7 @@ export const WebGlCard: React.FC<WebGlCardProps> = ({ group }) => {
       <div className="flex items-center justify-between text-xs text-slate-400 pt-1 border-t border-slate-800/60">
         <span className="font-mono text-[11px]">WEBGL_debug_renderer_info</span>
         <Badge variant={isUnavailable ? 'neutral' : isMasked ? 'success' : 'warning'} size="sm">
-          {isUnavailable ? t.ui.notEvaluated : isMasked ? t.browser.webglMasked : isExposed ? t.browser.webglExposed : t.common.detected}
+          {getCanonicalSignalLabel(canonicalState, t)}
         </Badge>
       </div>
     </Card>

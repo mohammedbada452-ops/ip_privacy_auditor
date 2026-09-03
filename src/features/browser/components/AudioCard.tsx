@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Card, StatusBadge, Badge } from '../../../components/ui';
 import { Volume2, Copy, Check, Activity, HelpCircle } from 'lucide-react';
+import { canonicalStateToBadgeStatus, canonicalizeSignalState, getCanonicalSignalLabel } from '../../../lib/signalState';
 import { useLanguage } from '../../../i18n/LanguageContext';
 import type { AudioData, ProfileGroup } from '../types';
 
@@ -27,8 +28,13 @@ export const AudioCard: React.FC<AudioCardProps> = ({ group }) => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const badgeStatus = isUnavailable ? 'neutral' : isProtected ? 'success' : 'warning';
-  const badgeLabel = isUnavailable ? 'Not measured' : isProtected ? 'Blocked' : 'Signature observed';
+  const canonicalState = canonicalizeSignalState({
+    available: !isUnavailable,
+    evidenceState: isUnavailable ? 'UNAVAILABLE' : isProtected ? 'NOT_DETECTED' : 'DETECTED',
+    observed: !isUnavailable,
+  });
+  const badgeStatus = canonicalStateToBadgeStatus(canonicalState);
+  const badgeLabel = getCanonicalSignalLabel(canonicalState, t);
 
   return (
     <Card id="audio" variant="standard" className="p-5 flex flex-col justify-between space-y-4 scroll-mt-24">
@@ -95,8 +101,8 @@ export const AudioCard: React.FC<AudioCardProps> = ({ group }) => {
       {/* Footer Info */}
       <div className="flex items-center justify-between text-xs text-slate-400 pt-1 border-t border-slate-800/60">
         <span className="font-mono text-[11px]">AudioContext DSP</span>
-        <Badge variant={isUnavailable ? 'neutral' : isProtected ? 'success' : 'warning'} size="sm">
-          {isUnavailable ? t.ui.notEvaluated : isProtected ? t.common.safe : t.ui.fingerprintingSurface}
+        <Badge variant={badgeStatus === 'info' ? 'info' : badgeStatus === 'warning' ? 'warning' : badgeStatus === 'success' ? 'success' : 'neutral'} size="sm">
+          {getCanonicalSignalLabel(canonicalState, t)}
         </Badge>
       </div>
     </Card>

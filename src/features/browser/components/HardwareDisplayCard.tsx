@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, StatusBadge } from '../../../components/ui';
 import { Monitor, Cpu, Maximize2, Smartphone } from 'lucide-react';
+import { canonicalStateToBadgeStatus, canonicalizeSignalState, getCanonicalSignalLabel } from '../../../lib/signalState';
 import { useLanguage } from '../../../i18n/LanguageContext';
 import type { DisplayData, HardwareData, ProfileGroup } from '../types';
 
@@ -24,6 +25,8 @@ export const HardwareDisplayCard: React.FC<HardwareDisplayCardProps> = ({
   const dpr = disp?.devicePixelRatio ? `${disp.devicePixelRatio}x` : '2x';
   const colorDepth = disp?.colorDepth ? `${disp.colorDepth}-bit` : '24-bit';
   const touchPoints = hw?.maxTouchPoints ?? 0;
+  const isUnavailable = [hardwareGroup.status, displayGroup.status].some((status) => ['UNAVAILABLE', 'ERROR', 'TIMEOUT', 'BLOCKED'].includes(status));
+  const canonicalState = canonicalizeSignalState({ available: !isUnavailable, evidenceState: isUnavailable ? 'UNAVAILABLE' : 'CONFIRMED', observed: !isUnavailable });
 
   return (
     <Card id="hardware" variant="standard" className="p-5 flex flex-col justify-between space-y-4 scroll-mt-24">
@@ -38,7 +41,7 @@ export const HardwareDisplayCard: React.FC<HardwareDisplayCardProps> = ({
             <p className="text-xs text-slate-400">{t.browser.hardwareSubtitle}</p>
           </div>
         </div>
-        <StatusBadge status="warning" label="Exposed" size="sm" />
+        <StatusBadge status={canonicalStateToBadgeStatus(canonicalState)} label={getCanonicalSignalLabel(canonicalState, t)} size="sm" />
       </div>
 
       {/* Hardware Specifications Grid */}

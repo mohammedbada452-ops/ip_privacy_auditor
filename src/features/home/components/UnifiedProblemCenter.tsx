@@ -190,7 +190,7 @@ export const UnifiedProblemCenter: React.FC<UnifiedProblemCenterProps> = ({
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/80 border border-slate-700 text-xs font-semibold text-slate-300 hover:text-white cursor-pointer"
           >
             <Filter className="w-3.5 h-3.5" />
-            <span>Clear severity: {activeSeverityFilter}</span>
+            <span>{t.ui.clearSeverity.replace('{severity}', String(activeSeverityFilter))}</span>
           </button>
         )}
 
@@ -225,6 +225,8 @@ export const UnifiedProblemCenter: React.FC<UnifiedProblemCenterProps> = ({
             return (
               <div
                 key={risk.id}
+                data-finding-id={risk.id}
+                data-single-source-of-truth="true"
                 className={`rounded-2xl border transition-all ${
                   isExpanded
                     ? 'bg-slate-950/90 border-slate-700 shadow-lg'
@@ -232,17 +234,12 @@ export const UnifiedProblemCenter: React.FC<UnifiedProblemCenterProps> = ({
                 }`}
               >
                 {/* Header item */}
-                <div
-                  role="button"
-                  tabIndex={0}
+                <button
+                  type="button"
                   onClick={() => toggleRisk(risk.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      toggleRisk(risk.id);
-                    }
-                  }}
-                  className="p-4 sm:p-5 flex items-center justify-between gap-4 cursor-pointer select-none"
+                  aria-expanded={isExpanded}
+                  aria-controls={`risk-details-${risk.id}`}
+                  className="w-full text-left p-4 sm:p-5 flex items-center justify-between gap-4 cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/70 focus-visible:ring-inset rounded-2xl"
                 >
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     <div className="flex items-center gap-2 shrink-0">
@@ -264,11 +261,11 @@ export const UnifiedProblemCenter: React.FC<UnifiedProblemCenterProps> = ({
                       <ChevronDown className="w-4 h-4 text-slate-400" />
                     )}
                   </div>
-                </div>
+                </button>
 
                 {/* Expanded Details */}
                 {isExpanded && (
-                  <div className="px-5 pb-5 pt-2 border-t border-slate-800/80 space-y-4 animate-fadeIn">
+                  <div id={`risk-details-${risk.id}`} className="px-5 pb-5 pt-2 border-t border-slate-800/80 space-y-4 animate-fadeIn">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {/* Evidence */}
                       <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800/80">

@@ -1,0 +1,52 @@
+name: PrivaSec CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CI: true
+      NODE_ENV: test
+      ADMIN_MASTER_KEY: ci-test-admin-master-key-0123456789
+      ADMIN_MASTER_PASSWORD: CI-Only-Strong-Password-0123456789!
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Canonical unit/integration suite
+        run: npm test
+
+      - name: Phase 11 hardening guard
+        run: npm run test:phase11
+
+      - name: Static release guards
+        run: npm run test:release
+
+      - name: Cloudflare production build
+        run: npm run build:cloudflare
+
+      - name: Performance budget
+        run: npm run test:performance-budget
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Browser E2E suite
+        run: npm run test:e2e

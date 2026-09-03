@@ -38,7 +38,7 @@ export const BrowserCategoryTabs: React.FC<BrowserCategoryTabsProps> = ({
   ];
 
   return (
-    <div role="tablist" aria-label="Browser signal categories" className="flex items-center gap-1.5 overflow-x-auto overscroll-x-contain pb-2 px-0.5 -mx-0.5 scrollbar-none border-b border-slate-800/80">
+    <div role="tablist" aria-label={t.ui.browserSignal} className="flex items-center gap-1.5 overflow-x-auto overscroll-x-contain pb-2 px-0.5 -mx-0.5 scrollbar-none border-b border-slate-800/80">
       {tabs.map((tab) => {
         const isActive = activeTab === tab.id;
         return (

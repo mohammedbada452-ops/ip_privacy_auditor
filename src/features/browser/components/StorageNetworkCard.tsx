@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, StatusBadge } from '../../../components/ui';
 import { HardDrive, Wifi, Database } from 'lucide-react';
+import { canonicalStateToBadgeStatus, canonicalizeSignalState, getCanonicalSignalLabel } from '../../../lib/signalState';
 import { useLanguage } from '../../../i18n/LanguageContext';
 import type { StorageData, NetworkData, ProfileGroup } from '../types';
 
@@ -25,6 +26,8 @@ export const StorageNetworkCard: React.FC<StorageNetworkCardProps> = ({
   const effectiveType = net?.effectiveType || '4g';
   const rtt = net?.rtt ? `${net.rtt}ms` : '50ms';
   const downlink = net?.downlink ? `${net.downlink} Mbps` : '10 Mbps';
+  const isUnavailable = [storageGroup.status, networkGroup.status].some((status) => ['UNAVAILABLE', 'ERROR', 'TIMEOUT', 'BLOCKED'].includes(status));
+  const canonicalState = canonicalizeSignalState({ available: !isUnavailable, evidenceState: isUnavailable ? 'UNAVAILABLE' : 'CONFIRMED', observed: !isUnavailable });
 
   return (
     <Card id="storage" variant="standard" className="p-5 flex flex-col justify-between space-y-4 scroll-mt-24">
@@ -39,7 +42,7 @@ export const StorageNetworkCard: React.FC<StorageNetworkCardProps> = ({
             <p className="text-xs text-slate-400">{t.browser.storageNetworkSubtitle}</p>
           </div>
         </div>
-        <StatusBadge status="neutral" label="Available" size="sm" />
+        <StatusBadge status={canonicalStateToBadgeStatus(canonicalState)} label={getCanonicalSignalLabel(canonicalState, t)} size="sm" />
       </div>
 
       {/* Storage & Network Details */}
@@ -48,25 +51,25 @@ export const StorageNetworkCard: React.FC<StorageNetworkCardProps> = ({
           <div>
             <span className="text-slate-400 block text-[11px]">{t.browser.cookiesStatus}</span>
             <span className="font-mono text-slate-200">
-              {cookies ? 'Enabled (Persistent)' : 'Disabled'}
+              {cookies ? t.browser.cookiesEnabledPersistent : t.browser.cookiesDisabled}
             </span>
           </div>
 
           <div>
             <span className="text-slate-400 block text-[11px]">{t.browser.localStorageStatus}</span>
-            <span className="font-mono text-slate-200">{localStorage ? 'Available' : 'Restricted'}</span>
+            <span className="font-mono text-slate-200">{localStorage ? t.browser.storageAvailable : t.browser.storageRestricted}</span>
           </div>
         </div>
 
         <div className="pt-2 border-t border-slate-900 grid grid-cols-2 gap-2">
           <div>
             <span className="text-slate-400 block text-[11px]">{t.browser.sessionStorageStatus}</span>
-            <span className="font-mono text-slate-200">{sessionStorage ? 'Available' : 'Restricted'}</span>
+            <span className="font-mono text-slate-200">{sessionStorage ? t.browser.storageAvailable : t.browser.storageRestricted}</span>
           </div>
 
           <div>
             <span className="text-slate-400 block text-[11px]">{t.browser.indexedDbStatus}</span>
-            <span className="font-mono text-slate-200">{indexedDb ? 'Available' : 'Restricted'}</span>
+            <span className="font-mono text-slate-200">{indexedDb ? t.browser.storageAvailable : t.browser.storageRestricted}</span>
           </div>
         </div>
 

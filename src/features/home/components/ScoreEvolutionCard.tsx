@@ -162,10 +162,10 @@ export const ScoreEvolutionCard: React.FC<ScoreEvolutionCardProps> = ({
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <div className="text-xs font-bold uppercase tracking-wide text-cyan-300">{t.ui.anonymousPopulationComparison}</div>
-              <div className="text-[11px] text-slate-400 mt-1">Based on {population.sampleSize.toLocaleString()} complete audits from the last {population.comparisonWindowDays} days.</div>
+              <div className="text-[11px] text-slate-400 mt-1">{t.ui.populationComparisonNote.replace('{sample}', population.sampleSize.toLocaleString()).replace('{days}', String(population.comparisonWindowDays))}</div>
             </div>
             <div className="text-right">
-              <div className="text-2xl font-black font-mono text-cyan-300">Outscores {population.scorePercentile.toFixed(1)}%</div>
+              <div className="text-2xl font-black font-mono text-cyan-300">{t.ui.outscoresPercentile.replace('{percent}', population.scorePercentile.toFixed(1))}</div>
               <div className="text-[10px] text-slate-500">{t.ui.higherScoreIsBetter}</div>
             </div>
           </div>

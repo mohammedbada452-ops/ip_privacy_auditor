@@ -3,6 +3,7 @@ import { Card, StatusBadge, Badge } from '../../../components/ui';
 import { Radio, ShieldAlert, ShieldCheck, HelpCircle } from 'lucide-react';
 import { useLanguage } from '../../../i18n/LanguageContext';
 import type { WebRtcData, ProfileGroup } from '../types';
+import { canonicalStateToBadgeStatus, canonicalizeSignalState, getCanonicalSignalLabel } from '../../../lib/signalState';
 
 export interface WebRtcCardProps {
   group: ProfileGroup<WebRtcData>;
@@ -18,8 +19,13 @@ export const WebRtcCard: React.FC<WebRtcCardProps> = ({ group }) => {
   const publicIps = data?.publicIps || [];
   const mdnsCandidates = data?.mdnsCandidates || [];
 
-  const badgeStatus = isUnavailable ? 'neutral' : leakDetected ? 'danger' : hasPublicCandidate ? 'warning' : 'success';
-  const badgeLabel = isUnavailable ? 'Unavailable' : leakDetected ? 'Private IP Leak' : hasPublicCandidate ? 'Public Candidate — Review' : 'No Private Leak Detected';
+  const canonicalState = canonicalizeSignalState({
+    available: !isUnavailable,
+    evidenceState: isUnavailable ? 'UNAVAILABLE' : leakDetected ? 'CONFIRMED' : hasPublicCandidate ? 'UNKNOWN' : 'NOT_DETECTED',
+    observed: !isUnavailable,
+  });
+  const badgeStatus = leakDetected ? 'danger' : canonicalStateToBadgeStatus(canonicalState);
+  const badgeLabel = getCanonicalSignalLabel(canonicalState, t);
 
   return (
     <Card id="webrtc" variant="standard" className="p-5 min-w-0 overflow-hidden flex flex-col justify-between space-y-4 scroll-mt-24">
@@ -129,8 +135,8 @@ export const WebRtcCard: React.FC<WebRtcCardProps> = ({ group }) => {
       {/* Footer Info */}
       <div className="flex flex-col gap-2 text-xs text-slate-400 pt-1 border-t border-slate-800/60 min-w-0">
         <span className="font-mono text-[11px]">RTCPeerConnection STUN</span>
-        <Badge variant={isUnavailable ? 'neutral' : leakDetected ? 'danger' : 'success'} size="sm" className="self-start whitespace-normal break-words">
-          {isUnavailable ? t.ui.notEvaluated : leakDetected ? t.ui.webRtcLeak : hasPublicCandidate ? t.ui.candidateUnknown : t.ui.noPrivateIpLeak}
+        <Badge variant={badgeStatus === 'danger' ? 'danger' : badgeStatus === 'warning' ? 'warning' : badgeStatus === 'success' ? 'success' : badgeStatus === 'info' ? 'info' : 'neutral'} size="sm" className="self-start whitespace-normal break-words">
+          {getCanonicalSignalLabel(canonicalState, t)}
         </Badge>
       </div>
     </Card>

@@ -48,7 +48,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({ isOpen, onClose }) => {
       <div className="flex items-center justify-between px-4 sm:px-6 h-16 border-b border-slate-800/80 bg-slate-900/80">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
-            <Shield className="w-4 h-4" />
+            <Shield className="w-4 h-4" aria-hidden="true" />
           </div>
           <div>
             <h2 className="text-sm font-bold text-slate-100 tracking-tight">
@@ -66,7 +66,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({ isOpen, onClose }) => {
           aria-label={t.menuClose}
           className="min-w-11 min-h-11 p-2.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
         >
-          <X className="w-5 h-5" />
+          <X className="w-5 h-5" aria-hidden="true" />
         </button>
       </div>
 
@@ -90,9 +90,10 @@ export const MobileNav: React.FC<MobileNavProps> = ({ isOpen, onClose }) => {
                   ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 font-semibold shadow-sm'
                   : 'text-slate-300 hover:text-slate-100 hover:bg-slate-900 border border-slate-800/60'
               }`}
-            >
+              aria-current={isActive ? 'page' : undefined}            >
               <span>{label}</span>
               <ChevronRight
+                aria-hidden="true"
                 className={`w-4 h-4 shrink-0 transition-transform ${
                   isActive ? 'text-cyan-400 translate-x-0.5' : 'text-slate-600'
                 } ${language === 'ar' ? 'rotate-180' : ''}`}

@@ -67,7 +67,7 @@ export const HeaderCategoryTabs: React.FC<HeaderCategoryTabsProps> = ({
   ];
 
   return (
-    <div className="flex items-center gap-1.5 overflow-x-auto overscroll-x-contain pb-2 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-950 px-0.5 -mx-0.5 [scrollbar-gutter:stable]" role="tablist" aria-label="Header categories">
+    <div className="flex items-center gap-1.5 overflow-x-auto overscroll-x-contain pb-2 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-950 px-0.5 -mx-0.5 [scrollbar-gutter:stable]" role="tablist" aria-label={t.headers.tableHeaderNameCategory}>
       {tabs.map((tab) => {
         const isActive = selectedCategory === tab.id;
         return (

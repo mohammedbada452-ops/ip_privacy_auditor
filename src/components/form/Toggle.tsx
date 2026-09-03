@@ -33,13 +33,14 @@ export const Toggle: React.FC<ToggleProps> = ({
   };
 
   const currentSize = sizeClasses[size];
+  const labelId = React.useId();
   const accessibleLabel = typeof label === 'string' ? label : undefined;
 
   return (
     <div className={`flex items-center justify-between gap-3 ${className}`}>
       {(label || description) && (
         <div>
-          {label && <div className="text-xs font-medium text-slate-200">{label}</div>}
+          {label && <div id={labelId} className="text-xs font-medium text-slate-200">{label}</div>}
           {description && <div className="text-[11px] text-slate-500">{description}</div>}
         </div>
       )}
@@ -48,6 +49,7 @@ export const Toggle: React.FC<ToggleProps> = ({
         role="switch"
         aria-checked={checked}
         aria-label={accessibleLabel}
+        aria-labelledby={accessibleLabel || !label ? undefined : labelId}
         disabled={disabled}
         onClick={() => !disabled && onChange(!checked)}
         className={`relative inline-flex min-w-10 min-h-10 shrink-0 items-center justify-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${

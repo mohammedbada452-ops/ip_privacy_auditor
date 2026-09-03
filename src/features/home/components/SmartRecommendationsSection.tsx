@@ -84,11 +84,20 @@ export const SmartRecommendationsSection: React.FC<SmartRecommendationsSectionPr
                 <p className="text-xs text-slate-400 leading-relaxed">
                   {rec.description}
                 </p>
+                {rec.id === 'rec_fingerprint' && (
+                  <Link
+                    to="#problem-center-section"
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-sky-400 hover:text-sky-300"
+                  >
+                    <span>{t.ui.viewCanonicalFinding}</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </Link>
+                )}
 
                 {rec.fixes && rec.fixes.length > 0 && (
                   <div className="space-y-1.5 pt-1">
                     <span className="text-[11px] font-mono text-slate-400 font-semibold block">
-                      Targeted Actions:
+                      {t.ui.targetedActions}
                     </span>
                     {rec.fixes.map((fix) => (
                       <div key={fix.id} className="p-2 rounded-lg bg-slate-900/80 border border-slate-800 text-[11px] space-y-1">

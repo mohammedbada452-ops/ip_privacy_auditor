@@ -107,7 +107,7 @@ const AdminScrollableTable: React.FC<AdminScrollableTableProps> = ({ ariaLabel, 
           className="pointer-events-none absolute right-2 top-2 z-20 hidden rounded-full border border-slate-700/80 bg-slate-950/90 px-2 py-1 text-[10px] font-medium text-slate-400 shadow-sm sm:block"
           aria-hidden="true"
         >
-          Horizontal scroll
+          Scroll horizontally
         </div>
       )}
       <div

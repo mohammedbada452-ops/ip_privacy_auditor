@@ -1,6 +1,7 @@
 import React from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { Button } from '../actions/Button';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 export interface ErrorStateProps {
   title?: string;
@@ -11,12 +12,14 @@ export interface ErrorStateProps {
 }
 
 export const ErrorState: React.FC<ErrorStateProps> = ({
-  title = 'Signal Analysis Error',
+  title, 
   message,
   onRetry,
   compact = false,
   className = '',
 }) => {
+  const { t } = useLanguage();
+  const displayTitle = title || t.ui.signalAnalysisError;
   if (compact) {
     return (
       <div
@@ -31,7 +34,7 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
             onClick={onRetry}
             className="text-[11px] font-mono text-red-300 hover:text-white underline shrink-0 cursor-pointer"
           >
-            Retry
+            {t.ui.retryAction}
           </button>
         )}
       </div>
@@ -45,7 +48,7 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
       <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400 mx-auto mb-4">
         <AlertTriangle className="w-6 h-6" />
       </div>
-      <h3 className="text-base font-bold text-slate-100 mb-2">{title}</h3>
+      <h3 className="text-base font-bold text-slate-100 mb-2">{displayTitle}</h3>
       <p className="text-xs sm:text-sm text-slate-400 mb-6 font-mono leading-relaxed bg-slate-950 p-3 rounded-lg border border-slate-800 text-left overflow-x-auto">
         {message}
       </p>
@@ -56,7 +59,7 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
           onClick={onRetry}
           leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
         >
-          Re-Analyze Request
+          {t.ui.reanalyzeRequest}
         </Button>
       )}
     </div>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, StatusBadge } from '../../../components/ui';
 import { Globe, Clock, Languages } from 'lucide-react';
+import { canonicalStateToBadgeStatus, canonicalizeSignalState, getCanonicalSignalLabel } from '../../../lib/signalState';
 import { useLanguage } from '../../../i18n/LanguageContext';
 import type { LocaleData, TimezoneData, ProfileGroup } from '../types';
 
@@ -22,6 +23,8 @@ export const LocaleTimezoneCard: React.FC<LocaleTimezoneCardProps> = ({
   const timezoneName = tz?.timezone || 'UTC';
   const utcOffset = tz?.formattedOffset || '+00:00';
   const isDst = tz?.dstActive ?? false;
+  const isUnavailable = [localeGroup.status, timezoneGroup.status].some((status) => ['UNAVAILABLE', 'ERROR', 'TIMEOUT', 'BLOCKED'].includes(status));
+  const canonicalState = canonicalizeSignalState({ available: !isUnavailable, evidenceState: isUnavailable ? 'UNAVAILABLE' : 'CONFIRMED', observed: !isUnavailable });
 
   return (
     <Card id="locale" variant="standard" className="p-5 flex flex-col justify-between space-y-4 scroll-mt-24">
@@ -36,7 +39,7 @@ export const LocaleTimezoneCard: React.FC<LocaleTimezoneCardProps> = ({
             <p className="text-xs text-slate-400">{t.browser.localeTimezoneSubtitle}</p>
           </div>
         </div>
-        <StatusBadge status="neutral" label="Browser-reported" size="sm" />
+        <StatusBadge status={canonicalStateToBadgeStatus(canonicalState)} label={getCanonicalSignalLabel(canonicalState, t)} size="sm" />
       </div>
 
       {/* Regional & Timezone Grid */}

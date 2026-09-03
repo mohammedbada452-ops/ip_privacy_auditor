@@ -64,7 +64,7 @@ export const ActiveProtectionsSection: React.FC<ActiveProtectionsSectionProps> =
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-emerald-400">
-                  Verified Protections ({verifiedProtections.length})
+                  {t.ui.verifiedProtections} ({verifiedProtections.length})
                 </span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -100,7 +100,7 @@ export const ActiveProtectionsSection: React.FC<ActiveProtectionsSectionProps> =
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-400">
-                  Clean Security Baselines ({noRiskFactors.length})
+                  {t.ui.cleanSecurityBaselines} ({noRiskFactors.length})
                 </span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">

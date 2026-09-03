@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   RotateCcw,
   AlertTriangle,
@@ -85,9 +85,32 @@ export const PrivacyScoreHero: React.FC<PrivacyScoreHeroProps> = ({
   };
 
   const isBusy = isScanning || isRechecking;
+  const [showEvidenceDetails, setShowEvidenceDetails] = useState(false);
   const coverage = typeof analysis.verificationCoveragePct === 'number'
     ? Math.max(0, Math.min(100, analysis.verificationCoveragePct))
     : null;
+  const weightedCoverage = typeof analysis.evidenceSummary?.weightedCoveragePct === 'number'
+    ? Math.max(0, Math.min(100, analysis.evidenceSummary.weightedCoveragePct))
+    : coverage;
+
+  const confidence = analysis.overallConfidence || 'UNKNOWN';
+  const verificationLabel = analysis.verificationStatus === 'PARTIAL' ? t.ui.evidenceStatusPartial : t.ui.evidenceStatusComplete;
+  const evidenceBreakdown = useMemo(() => {
+    const factors = analysis.factors || [];
+    return {
+      confirmed: factors.filter((f) => f.evidenceState === 'CONFIRMED').length,
+      notDetected: factors.filter((f) => f.evidenceState === 'NOT_DETECTED').length,
+      unknown: factors.filter((f) => f.evidenceState === 'UNKNOWN' || (!f.evidenceState && f.available !== false)).length,
+      unavailable: factors.filter((f) => f.evidenceState === 'UNAVAILABLE' || f.available === false || f.status === 'UNAVAILABLE').length,
+    };
+  }, [analysis.factors]);
+  const scoreContext = 'Privacy Score reflects score-eligible evidence only. Evidence coverage shows how much could be measured; confidence reflects certainty in the available measurements.';
+  const topDeductions = useMemo(() => {
+    return [...deductionFactors]
+      .filter((factor) => (factor.scoreImpact ?? factor.points ?? 0) < 0)
+      .sort((a, b) => Math.abs(b.scoreImpact ?? b.points ?? 0) - Math.abs(a.scoreImpact ?? a.points ?? 0))
+      .slice(0, 3);
+  }, [deductionFactors]);
 
   return (
     <div
@@ -111,15 +134,15 @@ export const PrivacyScoreHero: React.FC<PrivacyScoreHeroProps> = ({
         </div>
       )}
 
-      <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
+      <div className="flex flex-col lg:flex-row items-stretch gap-8 lg:gap-10">
         {/* Left: Score Gauge */}
-        <div className="flex flex-col items-center justify-center shrink-0">
+        <div className="flex w-full lg:basis-[42%] lg:min-w-[280px] flex-col items-center justify-center lg:self-stretch lg:py-2">
           <ScoreGauge
             score={analysis.privacyScore}
-            size="lg"
+            size="xl"
             label={t.privacy.scoreTitle}
             tierLabel={getLocalizedTier(analysis.tier)}
-            subtext={`Verified score based only on score-eligible evidence. Evidence coverage: ${analysis.verificationCoveragePct != null ? `${analysis.verificationCoveragePct}%` : t.ui.notMeasured}. Confidence: ${analysis.overallConfidence ?? t.ui.notMeasured}.`}
+            subtext={t.ui.scoreBasedOnEvidence}
           />
 
           {/* Real Score Delta Badge */}
@@ -146,21 +169,19 @@ export const PrivacyScoreHero: React.FC<PrivacyScoreHeroProps> = ({
         </div>
 
         {/* Right: Summary & Diagnostic Context */}
-        <div className="flex-1 max-w-2xl w-full space-y-5">
+        <div className="flex-1 min-w-0 w-full lg:basis-[58%] space-y-5 lg:pt-1">
           <div>
             <div className="flex flex-wrap items-center gap-2 mb-2">
               <span className={analysis.verificationStatus === 'PARTIAL' ? 'text-[10px] font-bold tracking-wide uppercase px-2 py-1 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-300' : 'text-[10px] font-bold tracking-wide uppercase px-2 py-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-300'} role="status">
-                {analysis.verificationStatus === 'PARTIAL' ? 'Verification incomplete' : 'Verification complete'}
+                {verificationLabel}
               </span>
 
               <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-100 font-sans">
                 {t.home.title}
               </h1>
-              {analysis.verificationCoveragePct !== undefined && (
-                <span className="text-[10px] font-bold tracking-wide uppercase px-2 py-1 rounded-full border border-sky-500/20 bg-sky-500/10 text-sky-300" role="status">
-                  Evidence coverage {analysis.verificationCoveragePct}% · {analysis.overallConfidence || 'MEDIUM'} confidence
-                </span>
-              )}
+              <span className="text-[10px] font-bold tracking-wide uppercase px-2 py-1 rounded-full border border-sky-500/20 bg-sky-500/10 text-sky-300" role="status">
+                {coverage !== null ? `${t.ui.evidenceCoverageShort} ${coverage}%` : t.ui.evidenceNotMeasured} · {t.ui.confidenceLabel.replace('{confidence}', confidence.toLowerCase())}
+              </span>
               {totalDurationMs !== undefined && totalDurationMs > 0 && (
                 <span className="text-[11px] font-mono text-sky-400 bg-sky-500/10 border border-sky-500/20 px-2.5 py-0.5 rounded-full">
                   {totalDurationMs}ms latency
@@ -173,6 +194,7 @@ export const PrivacyScoreHero: React.FC<PrivacyScoreHeroProps> = ({
             {analysis.scoreDisclaimer && (
               <p className="mt-2 text-[11px] text-amber-300/90" role="note">{analysis.scoreDisclaimer}</p>
             )}
+            <p className="mt-2 text-[11px] text-slate-500 leading-relaxed" role="note">{scoreContext}</p>
             {unavailableFactors.length > 0 && (
               <div className="mt-3 p-3 rounded-xl bg-slate-950/60 border border-slate-800" role="note">
                 <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">{t.ui.knownLimitations}</div>
@@ -185,28 +207,87 @@ export const PrivacyScoreHero: React.FC<PrivacyScoreHeroProps> = ({
           </div>
 
           {/* Evidence / score context: explain the result without implying that protections add points. */}
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-4 space-y-3" aria-label="Score evidence coverage">
+          <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-4 space-y-3" aria-label={t.ui.scoreEvidenceCoverage}>
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2 min-w-0">
                 <Info className="w-4 h-4 text-sky-400 shrink-0" />
-                <span className="text-xs font-semibold text-slate-200">Evidence coverage</span>
+                <span className="text-xs font-semibold text-slate-200">{t.ui.evidenceCoverageShort}</span>
               </div>
               <span className="text-xs font-mono font-bold text-sky-300 shrink-0">
-                {coverage !== null ? `${coverage}%` : t.ui.notMeasured}
+                {weightedCoverage !== null ? `${weightedCoverage}%` : t.ui.notMeasured}
               </span>
             </div>
-            <div className="h-2 rounded-full bg-slate-800 overflow-hidden" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={coverage ?? 0} aria-label="Evidence coverage">
+            <div className="h-2 rounded-full bg-slate-800 overflow-hidden" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={coverage ?? 0} aria-label={t.ui.evidenceCoverageShort}>
               <div
                 className="h-full rounded-full bg-gradient-to-r from-sky-500 via-cyan-400 to-emerald-400 transition-[width] duration-500"
-                style={{ width: `${coverage ?? 0}%` }}
+                style={{ width: `${weightedCoverage ?? 0}%` }}
               />
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-slate-500">
               <span>{t.home.scoreContext.issuesCount.replace('{count}', String(deductionFactors.length))}</span>
               <span>{t.home.scoreContext.protectionsCount.replace('{count}', String(protectionFactors.length))}</span>
               <span>{t.home.scoreContext.unavailableCount.replace('{count}', String(unavailableFactors.length))}</span>
+              {analysis.evidenceSummary?.excludedUnsupported ? (
+                <span>{t.ui.unsupported}: {analysis.evidenceSummary.excludedUnsupported}</span>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => setShowEvidenceDetails((value) => !value)}
+                aria-expanded={showEvidenceDetails}
+                aria-controls="score-evidence-breakdown"
+                className="font-semibold text-sky-300 hover:text-sky-200 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/50 rounded px-1"
+              >
+                {showEvidenceDetails ? 'Hide evidence details' : 'Why is coverage incomplete?'}
+              </button>
             </div>
+            {showEvidenceDetails && (
+              <div id="score-evidence-breakdown" className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1" role="region" aria-label={t.ui.evidenceBreakdown}>
+                <div className="rounded-lg border border-emerald-500/15 bg-emerald-500/5 px-3 py-2">
+                  <div className="text-[10px] uppercase tracking-wide text-emerald-300">{t.ui.confirmed}</div>
+                  <div className="text-sm font-mono font-bold text-emerald-200">{evidenceBreakdown.confirmed}</div>
+                </div>
+                <div className="rounded-lg border border-sky-500/15 bg-sky-500/5 px-3 py-2">
+                  <div className="text-[10px] uppercase tracking-wide text-sky-300">{t.common.notDetected}</div>
+                  <div className="text-sm font-mono font-bold text-sky-200">{evidenceBreakdown.notDetected}</div>
+                </div>
+                <div className="rounded-lg border border-violet-500/15 bg-violet-500/5 px-3 py-2">
+                  <div className="text-[10px] uppercase tracking-wide text-violet-300">{t.common.signalState.reviewNeeded}</div>
+                  <div className="text-sm font-mono font-bold text-violet-200">{evidenceBreakdown.unknown}</div>
+                </div>
+                <div className="rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2">
+                  <div className="text-[10px] uppercase tracking-wide text-slate-400">{t.ui.unavailable}</div>
+                  <div className="text-sm font-mono font-bold text-slate-200">{evidenceBreakdown.unavailable}</div>
+                </div>
+              </div>
+            )}
           </div>
+
+          {/* Score explainability: surface the most important deductions before deeper details. */}
+          {topDeductions.length > 0 && (
+            <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-4 space-y-3" aria-labelledby="score-top-factors-heading">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h2 id="score-top-factors-heading" className="text-xs font-semibold text-slate-200">{t.ui.whyScoreNotHigher}</h2>
+                  <p className="mt-1 text-[11px] text-slate-500 leading-relaxed">{t.ui.topScoreDeductions}</p>
+                </div>
+                <span className="shrink-0 text-[10px] font-mono font-semibold uppercase tracking-wide text-amber-300">{topDeductions.length} factor{topDeductions.length === 1 ? '' : 's'}</span>
+              </div>
+              <div className="grid gap-2">
+                {topDeductions.map((factor) => {
+                  const deduction = Math.abs(factor.scoreImpact ?? factor.points ?? 0);
+                  return (
+                    <div key={`top-${factor.id}`} className="flex items-center justify-between gap-3 rounded-xl border border-slate-800/90 bg-slate-900/60 px-3 py-2.5">
+                      <div className="min-w-0">
+                        <div className="text-xs font-semibold text-slate-200 break-words">{factor.name}</div>
+                        <div className="mt-0.5 text-[10px] text-slate-500">{factor.evidenceState === 'CONFIRMED' ? t.ui.confirmedEvidence : t.ui.scoreEligibleFinding}</div>
+                      </div>
+                      <span className="shrink-0 text-sm font-mono font-bold text-rose-400">−{deduction} {t.privacy.pointsDeduction}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* 3 Metric Context Counters */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

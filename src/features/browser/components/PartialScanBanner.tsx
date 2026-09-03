@@ -26,8 +26,8 @@ export const PartialScanBanner: React.FC<PartialScanBannerProps> = ({ failedColl
       <div>
         <p className="font-semibold text-amber-200">{t.browser.partialScanWarning}</p>
         <p className="mt-1 text-amber-300/80">
-          Affected collectors: <span className="font-mono">{failedCollectors.join(', ')}</span>. Other diagnostic
-          signals remain verified.
+          {t.ui.affectedCollectors} <span className="font-mono">{failedCollectors.join(', ')}</span>. Other diagnostic
+          {t.ui.partialSignalsRemain}
         </p>
       </div>
     </div>

@@ -164,7 +164,7 @@ export const PrivacyRemediationCenter: React.FC<PrivacyRemediationCenterProps> =
     switch (status) {
       case 'RESOLVED':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
             <CheckCircle2 className="w-3.5 h-3.5" />
             {t.home.remediationCenter.statusResolved}
           </span>
@@ -178,21 +178,21 @@ export const PrivacyRemediationCenter: React.FC<PrivacyRemediationCenterProps> =
         );
       case 'WORSENED':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">
             <TrendingDown className="w-3.5 h-3.5" />
             {t.home.remediationCenter.statusWorsened}
           </span>
         );
       case 'IN_PROGRESS':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
             <RefreshCw className="w-3.5 h-3.5 animate-spin" />
             {t.home.remediationCenter.statusInProgress}
           </span>
         );
       case 'UNAVAILABLE':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full bg-slate-500/10 text-slate-500 dark:text-slate-400 border border-slate-500/20">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full bg-slate-500/10 text-slate-400 border border-slate-500/20">
             <Info className="w-3.5 h-3.5" />
             {t.home.remediationCenter.statusUnavailable}
           </span>
@@ -254,15 +254,15 @@ export const PrivacyRemediationCenter: React.FC<PrivacyRemediationCenterProps> =
       {/* Header Banner */}
       <div
         id="remediation-header-banner"
-        className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm"
+        className="p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-sm"
       >
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
+              <span className="p-2 rounded-xl bg-blue-500/10 text-blue-400">
                 <Sliders className="w-5 h-5" />
               </span>
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
+              <h2 className="text-xl font-bold text-slate-100 tracking-tight">
                 {t.home.remediationCenter.title}
               </h2>
             </div>
@@ -289,18 +289,18 @@ export const PrivacyRemediationCenter: React.FC<PrivacyRemediationCenterProps> =
         {/* Summary Metric Counters */}
         <div
           id="remediation-metrics-summary"
-          className="mt-6 grid grid-cols-2 sm:grid-cols-5 gap-3 pt-6 border-t border-slate-100 dark:border-slate-800"
+          className="mt-6 grid grid-cols-2 sm:grid-cols-5 gap-3 pt-6 border-t border-slate-800"
         >
-          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-            <div className="text-xs font-medium text-slate-500 dark:text-slate-400">
+          <div className="p-3.5 rounded-xl bg-slate-800/50 border border-slate-800">
+            <div className="text-xs font-medium text-slate-400">
               {t.home.remediationCenter.totalFindings}
             </div>
-            <div className="text-2xl font-bold text-slate-900 dark:text-white mt-1">
+            <div className="text-2xl font-bold text-slate-100 mt-1">
               {summary.total}
             </div>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-900/30">
+          <div className="p-3.5 rounded-xl bg-amber-950/20 border border-amber-900/30">
             <div className="text-xs font-medium text-amber-700 dark:text-amber-400">
               {t.home.remediationCenter.scoreAffectingCount}
             </div>
@@ -309,25 +309,25 @@ export const PrivacyRemediationCenter: React.FC<PrivacyRemediationCenterProps> =
             </div>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-            <div className="text-xs font-medium text-slate-500 dark:text-slate-400">
+          <div className="p-3.5 rounded-xl bg-slate-800/50 border border-slate-800">
+            <div className="text-xs font-medium text-slate-400">
               {t.home.remediationCenter.informationalCount}
             </div>
-            <div className="text-2xl font-bold text-slate-700 dark:text-slate-300 mt-1">
+            <div className="text-2xl font-bold text-slate-300 mt-1">
               {informationalCount}
             </div>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-            <div className="text-xs font-medium text-slate-500 dark:text-slate-400">
+          <div className="p-3.5 rounded-xl bg-slate-800/50 border border-slate-800">
+            <div className="text-xs font-medium text-slate-400">
               {t.home.remediationCenter.infraControlledCount}
             </div>
-            <div className="text-2xl font-bold text-slate-700 dark:text-slate-300 mt-1">
+            <div className="text-2xl font-bold text-slate-300 mt-1">
               {summary.infrastructureControlled}
             </div>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/50 dark:border-emerald-900/30">
+          <div className="p-3.5 rounded-xl bg-emerald-950/20 border border-emerald-900/30">
             <div className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
               {t.home.remediationCenter.statusResolved}
             </div>
@@ -360,30 +360,30 @@ export const PrivacyRemediationCenter: React.FC<PrivacyRemediationCenterProps> =
               </p>
             </div>
 
-            <div className="flex items-center gap-4 p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center gap-4 p-3 rounded-xl bg-slate-800 border border-slate-200 dark:border-slate-700">
               <div className="text-center">
                 <div className="text-[10px] font-medium text-slate-400">
                   {t.home.remediationCenter.beforeScore}
                 </div>
-                <div className="text-lg font-bold text-slate-600 dark:text-slate-300">
+                <div className="text-lg font-bold text-slate-300">
                   {previousScore}
                 </div>
               </div>
               <ArrowRight className="w-4 h-4 text-slate-400 rtl:rotate-180" />
               <div className="text-center">
-                <div className="text-[10px] font-medium text-blue-600 dark:text-blue-400 font-bold">
+                <div className="text-[10px] font-medium text-blue-400 font-bold">
                   {t.home.remediationCenter.afterScore}
                 </div>
-                <div className="text-xl font-extrabold text-blue-600 dark:text-blue-400">
+                <div className="text-xl font-extrabold text-blue-400">
                   {currentScore}
                 </div>
               </div>
               <div
                 className={`px-2 py-1 rounded-lg text-xs font-bold ${
                   scoreDelta > 0
-                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                    ? 'bg-emerald-500/10 text-emerald-400'
                     : scoreDelta < 0
-                      ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                      ? 'bg-rose-500/10 text-rose-400'
                       : 'bg-slate-500/10 text-slate-600 dark:text-slate-400'
                 }`}
               >
@@ -397,7 +397,7 @@ export const PrivacyRemediationCenter: React.FC<PrivacyRemediationCenterProps> =
       {/* Category Tabs & Filter Controls */}
       <div
         id="remediation-category-tabs"
-        className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3"
+        className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3"
       >
         <div className="flex flex-wrap items-center gap-1.5">
           <button
@@ -405,7 +405,7 @@ export const PrivacyRemediationCenter: React.FC<PrivacyRemediationCenterProps> =
             onClick={() => setSelectedCategory('ALL')}
             className={`px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all ${
               selectedCategory === 'ALL'
-                ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm'
+                ? 'bg-slate-800 text-slate-100 shadow-sm'
                 : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
           >
@@ -417,7 +417,7 @@ export const PrivacyRemediationCenter: React.FC<PrivacyRemediationCenterProps> =
             onClick={() => setSelectedCategory('NETWORK')}
             className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all ${
               selectedCategory === 'NETWORK'
-                ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm'
+                ? 'bg-slate-800 text-slate-100 shadow-sm'
                 : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
           >
@@ -430,7 +430,7 @@ export const PrivacyRemediationCenter: React.FC<PrivacyRemediationCenterProps> =
             onClick={() => setSelectedCategory('BROWSER')}
             className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all ${
               selectedCategory === 'BROWSER'
-                ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm'
+                ? 'bg-slate-800 text-slate-100 shadow-sm'
                 : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
           >
@@ -443,7 +443,7 @@ export const PrivacyRemediationCenter: React.FC<PrivacyRemediationCenterProps> =
             onClick={() => setSelectedCategory('HEADERS')}
             className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all ${
               selectedCategory === 'HEADERS'
-                ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm'
+                ? 'bg-slate-800 text-slate-100 shadow-sm'
                 : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
           >
@@ -456,7 +456,7 @@ export const PrivacyRemediationCenter: React.FC<PrivacyRemediationCenterProps> =
             onClick={() => setSelectedCategory('PRIVACY_CONTROLS')}
             className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all ${
               selectedCategory === 'PRIVACY_CONTROLS'
-                ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm'
+                ? 'bg-slate-800 text-slate-100 shadow-sm'
                 : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
           >
@@ -474,7 +474,7 @@ export const PrivacyRemediationCenter: React.FC<PrivacyRemediationCenterProps> =
             id="remediation-status-select"
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value as ResolutionState | 'ALL')}
-            className="text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-800 text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
           >
             <option value="ALL">{t.common.all}</option>
             <option value="OPEN">{t.home.remediationCenter.statusOpen}</option>
@@ -489,13 +489,13 @@ export const PrivacyRemediationCenter: React.FC<PrivacyRemediationCenterProps> =
       {filteredFindings.length === 0 ? (
         <div
           id="remediation-empty-state"
-          className="p-8 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center space-y-2"
+          className="p-8 rounded-2xl bg-slate-900 border border-slate-800 text-center space-y-2"
         >
           <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto" />
-          <h3 className="text-base font-bold text-slate-900 dark:text-white">
+          <h3 className="text-base font-bold text-slate-100">
             {t.home.remediationCenter.noIssuesTitle}
           </h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+          <p className="text-sm text-slate-400 max-w-md mx-auto">
             {t.home.remediationCenter.noIssuesDesc}
           </p>
         </div>
@@ -507,45 +507,38 @@ export const PrivacyRemediationCenter: React.FC<PrivacyRemediationCenterProps> =
               <div
                 key={finding.id}
                 id={`finding-card-${finding.id}`}
-                className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm transition-all"
+                className="rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden shadow-sm transition-all"
               >
                 {/* Finding Header Card */}
-                <div
+                <button
+                  type="button"
                   onClick={() => toggleExpand(finding.id)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault();
-                      toggleExpand(finding.id);
-                    }
-                  }}
-                  role="button"
-                  tabIndex={0}
                   aria-expanded={isExpanded}
                   aria-controls={`finding-details-${finding.id}`}
-                  className="p-5 cursor-pointer hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/70 focus-visible:ring-inset flex flex-col md:flex-row md:items-center justify-between gap-4"
+                  className="w-full text-left p-5 bg-transparent cursor-pointer hover:bg-slate-800/40 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/70 focus-visible:ring-inset flex flex-col md:flex-row md:items-center justify-between gap-4"
                 >
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                      <span className="p-1.5 rounded-lg bg-slate-800 text-slate-300">
                         {getCategoryIcon(finding.category)}
                       </span>
-                      <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                      <h3 className="text-base font-bold text-slate-100">
                         {finding.title}
                       </h3>
                       {getSeverityBadge(finding.severity)}
                       {getStatusBadge(finding.status)}
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-slate-500 dark:text-slate-400">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-slate-400">
                       <span className="inline-flex items-center gap-1">
-                        <span className="font-medium text-slate-700 dark:text-slate-300">
+                        <span className="font-medium text-slate-300">
                           {t.home.remediationCenter.actorLabel}:
                         </span>{' '}
                         {getActorLabel(finding.responsibleActor)}
                       </span>
                       <span>•</span>
                       <span className="inline-flex items-center gap-1">
-                        <span className="font-medium text-slate-700 dark:text-slate-300">
+                        <span className="font-medium text-slate-300">
                           {t.home.remediationCenter.actionabilityLabel}:
                         </span>{' '}
                         {getActionabilityLabel(finding.actionability)}
@@ -553,7 +546,7 @@ export const PrivacyRemediationCenter: React.FC<PrivacyRemediationCenterProps> =
                       {finding.platformAwareTag && (
                         <>
                           <span>•</span>
-                          <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 font-medium">
+                          <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 font-medium">
                             {finding.platformAwareTag}
                           </span>
                         </>
@@ -564,57 +557,48 @@ export const PrivacyRemediationCenter: React.FC<PrivacyRemediationCenterProps> =
                   <div className="flex items-center justify-between md:justify-end gap-3 shrink-0">
                     <div className="text-right">
                       {finding.scoreImpact > 0 ? (
-                        <div className="text-sm font-bold text-rose-600 dark:text-rose-400">
+                        <div className="text-sm font-bold text-rose-400">
                           -{finding.scoreImpact} pts deduction
                         </div>
                       ) : (
-                        <div className="text-sm font-bold text-slate-500 dark:text-slate-400">
+                        <div className="text-sm font-bold text-slate-400">
                           0 pts (Informational)
                         </div>
                       )}
                       {finding.potentialRecoveryPts > 0 && (
-                        <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                        <div className="text-xs font-semibold text-emerald-400">
                           +{finding.potentialRecoveryPts} pts recovery
                         </div>
                       )}
                     </div>
-
-                    <button
-                      type="button"
-                      aria-label={t.ui.toggleFindingDetails}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                    >
-                      {isExpanded ? (
-                        <ChevronUp className="w-5 h-5" />
-                      ) : (
-                        <ChevronDown className="w-5 h-5" />
-                      )}
-                    </button>
+                    <span aria-hidden="true" className="p-1.5 rounded-lg text-slate-400">
+                      {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                    </span>
                   </div>
-                </div>
+                </button>
 
                 {/* Expanded Details Body */}
                 {isExpanded && (
                   <div
                     id={`finding-details-${finding.id}`}
-                    className="p-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60 space-y-5"
+                    className="p-5 border-t border-slate-800 bg-slate-900/60 space-y-5"
                   >
                     {/* Evidence & Technical Impact */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="p-3.5 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/60">
-                        <div className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                      <div className="p-3.5 rounded-xl bg-slate-800/80 border border-slate-700/60">
+                        <div className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
                           {t.home.unifiedRisks.problemEvidence}
                         </div>
-                        <div className="text-xs font-mono text-slate-800 dark:text-slate-200 break-words dir-ltr text-left">
+                        <div className="text-xs font-mono text-slate-200 break-words dir-ltr text-left">
                           {finding.evidence}
                         </div>
                       </div>
 
-                      <div className="p-3.5 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/60">
-                        <div className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                      <div className="p-3.5 rounded-xl bg-slate-800/80 border border-slate-700/60">
+                        <div className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
                           {t.home.unifiedRisks.problemImpact}
                         </div>
-                        <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+                        <p className="text-xs text-slate-300 leading-relaxed">
                           {finding.impactExplanation}
                         </p>
                       </div>
@@ -622,13 +606,13 @@ export const PrivacyRemediationCenter: React.FC<PrivacyRemediationCenterProps> =
 
                     {/* Multi-Factor grouping indicator if applicable */}
                     {finding.isMultiFactor && (
-                      <div className="p-3 rounded-xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-900/30 flex items-start gap-2.5">
-                        <Layers className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                      <div className="p-3 rounded-xl bg-blue-950/20 border border-blue-900/30 flex items-start gap-2.5">
+                        <Layers className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
                         <div className="space-y-1">
                           <div className="text-xs font-bold text-blue-900 dark:text-blue-300">
                             {t.home.remediationCenter.multiFactorTitle}
                           </div>
-                          <div className="text-xs text-blue-700 dark:text-blue-400">
+                          <div className="text-xs text-blue-400">
                             {t.home.remediationCenter.affectedSignals}:{' '}
                             <span className="font-mono">{finding.affectedFactorIds.join(', ')}</span>
                           </div>
@@ -639,12 +623,12 @@ export const PrivacyRemediationCenter: React.FC<PrivacyRemediationCenterProps> =
                     {/* Step-by-Step Remediation Instructions */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">
                           {t.home.recommendations.actionSteps}
                         </h4>
                         <span className="text-xs text-slate-500">
                           {t.home.remediationCenter.remediationConfidenceLabel}:{' '}
-                          <strong className="text-slate-700 dark:text-slate-300">
+                          <strong className="text-slate-300">
                             {finding.remediationConfidence}
                           </strong>
                         </span>
@@ -657,17 +641,17 @@ export const PrivacyRemediationCenter: React.FC<PrivacyRemediationCenterProps> =
                           return (
                             <div
                               key={step.stepNumber}
-                              className="p-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 flex items-start gap-3"
+                              className="p-3.5 rounded-xl bg-slate-800 border border-slate-200/80 dark:border-slate-700 flex items-start gap-3"
                             >
-                              <div className="w-6 h-6 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
+                              <div className="w-6 h-6 rounded-full bg-blue-500/10 text-blue-400 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
                                 {step.stepNumber}
                               </div>
 
                               <div className="space-y-1.5 flex-1 min-w-0">
-                                <div className="text-xs font-bold text-slate-900 dark:text-white">
+                                <div className="text-xs font-bold text-slate-100">
                                   {step.title}
                                 </div>
-                                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                                <p className="text-xs text-slate-300 leading-relaxed">
                                   {step.instruction}
                                 </p>
 
@@ -696,7 +680,7 @@ export const PrivacyRemediationCenter: React.FC<PrivacyRemediationCenterProps> =
 
                     {/* Expected Outcome */}
                     <div className="p-3.5 rounded-xl bg-emerald-500/5 border border-emerald-500/20 flex items-start gap-2.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                       <div className="space-y-0.5">
                         <div className="text-xs font-bold text-emerald-900 dark:text-emerald-300">
                           {t.home.remediationCenter.expectedOutcomeLabel}
@@ -712,7 +696,7 @@ export const PrivacyRemediationCenter: React.FC<PrivacyRemediationCenterProps> =
                       {finding.anchorRoute ? (
                         <a
                           href={finding.anchorRoute}
-                          className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                          className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-400 hover:underline"
                         >
                           <span>{finding.deepDiveLabel || t.home.remediationCenter.deepDive}</span>
                           <ExternalLink className="w-3.5 h-3.5" />
@@ -724,7 +708,7 @@ export const PrivacyRemediationCenter: React.FC<PrivacyRemediationCenterProps> =
                       <button
                         onClick={onRecheck}
                         disabled={isRechecking}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100 active:scale-98 transition-all cursor-pointer"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-100 hover:bg-slate-800 dark:hover:bg-slate-100 active:scale-98 transition-all cursor-pointer"
                       >
                         <RefreshCw className={`w-3.5 h-3.5 ${isRechecking ? 'animate-spin' : ''}`} />
                         <span>
@@ -746,14 +730,14 @@ export const PrivacyRemediationCenter: React.FC<PrivacyRemediationCenterProps> =
       {consistencyObservations.length > 0 && (
         <div
           id="remediation-consistency-section"
-          className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4"
+          className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4"
         >
           <div className="space-y-1">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+            <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider">
               {t.home.remediationCenter.consistencyTitle}
             </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Cross-evaluates network geolocation against browser system locale and timezone.
+            <p className="text-xs text-slate-400">
+              {t.ui.crossEvaluates}
             </p>
           </div>
 
@@ -761,16 +745,16 @@ export const PrivacyRemediationCenter: React.FC<PrivacyRemediationCenterProps> =
             {consistencyObservations.map((obs) => (
               <div
                 key={obs.id}
-                className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700 space-y-2.5"
+                className="p-4 rounded-xl bg-slate-800/50 border border-slate-200/80 dark:border-slate-700 space-y-2.5"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-900 dark:text-white">
+                  <span className="text-xs font-bold text-slate-100">
                     {obs.type === 'TIMEZONE'
                       ? t.home.remediationCenter.timezoneConsistency
                       : t.home.remediationCenter.languageConsistency}
                   </span>
                   {obs.status === 'MATCH' ? (
-                    <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                    <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                       {t.home.remediationCenter.match}
                     </span>
                   ) : obs.status === 'MISMATCH' ? (
@@ -785,15 +769,15 @@ export const PrivacyRemediationCenter: React.FC<PrivacyRemediationCenterProps> =
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="p-2 rounded bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
+                  <div className="p-2 rounded bg-slate-800 border border-slate-100 dark:border-slate-700">
                     <div className="text-[10px] text-slate-400 font-medium">{t.ui.networkSignal}</div>
-                    <div className="font-mono text-slate-800 dark:text-slate-200 truncate mt-0.5">
+                    <div className="font-mono text-slate-200 truncate mt-0.5">
                       {obs.networkValue}
                     </div>
                   </div>
-                  <div className="p-2 rounded bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
+                  <div className="p-2 rounded bg-slate-800 border border-slate-100 dark:border-slate-700">
                     <div className="text-[10px] text-slate-400 font-medium">{t.ui.browserSignal}</div>
-                    <div className="font-mono text-slate-800 dark:text-slate-200 truncate mt-0.5">
+                    <div className="font-mono text-slate-200 truncate mt-0.5">
                       {obs.browserValue}
                     </div>
                   </div>

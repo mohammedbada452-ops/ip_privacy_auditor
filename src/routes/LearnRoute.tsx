@@ -16,16 +16,16 @@ const content = {
 type LearnCard = readonly [string, string, string, string, LucideIcon];
 
 export const LearnRoute: React.FC = () => {
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const c = content[language] as unknown as { title: string; desc: string; intro: string; read: string; cards: readonly LearnCard[] };
   const cards = c.cards;
   return <div className="max-w-5xl mx-auto py-8 sm:py-10 space-y-8">
     <SEOHead title={`${c.title} | PrivaSec`} description={c.desc} path="/learn" />
     <header className="rounded-3xl border border-slate-800 bg-slate-900/70 p-8 sm:p-10">
-      <div className="flex gap-4 items-start"><div className="w-12 h-12 rounded-2xl border border-cyan-500/30 bg-cyan-500/10 flex items-center justify-center text-cyan-400"><BookOpen className="w-6 h-6" /></div><div><div className="text-xs uppercase tracking-[0.2em] text-cyan-400/80">PrivaSec Learn</div><h1 className="mt-2 text-3xl sm:text-4xl font-bold text-slate-100">{c.title}</h1><p className="mt-4 max-w-3xl text-sm leading-7 text-slate-300">{c.intro}</p></div></div>
+      <div className="flex gap-4 items-start"><div className="w-12 h-12 rounded-2xl border border-cyan-500/30 bg-cyan-500/10 flex items-center justify-center text-cyan-400"><BookOpen className="w-6 h-6" /></div><div><div className="text-xs uppercase tracking-[0.2em] text-cyan-400/80">{t.appTitle}</div><h1 className="mt-2 text-3xl sm:text-4xl font-bold text-slate-100">{c.title}</h1><p className="mt-4 max-w-3xl text-sm leading-7 text-slate-300">{c.intro}</p></div></div>
     </header>
     <section className="grid sm:grid-cols-2 gap-4" aria-labelledby="learn-guides">
-      <h2 id="learn-guides" className="sr-only">Guides</h2>
+      <h2 id="learn-guides" className="sr-only">{t.ui.guides}</h2>
       {cards.map(([id, title, desc, href, Icon]) => <article key={id} className="rounded-2xl border border-slate-800 bg-slate-900/55 p-5"><Icon className="w-5 h-5 text-cyan-400" aria-hidden="true"/><h2 className="mt-4 text-lg font-semibold text-slate-100">{title}</h2><p className="mt-2 text-sm leading-6 text-slate-400">{desc}</p><Link to={href} className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-md px-2 -mx-2 text-sm font-semibold text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 transition-colors">{c.read}<ArrowUpRight className="w-4 h-4" aria-hidden="true"/></Link></article>)}
     </section>
   </div>;

@@ -7,7 +7,7 @@ import type {
   PrivacyScoreAnalysis,
 } from './types';
 import { FactorRegistry } from './factors/FactorRegistry';
-import { summarizeEvidence, type EvidenceItem } from './evidence';
+import { finalizeEvidenceSummary, getEvidenceWeight, summarizeEvidence, type EvidenceItem } from './evidence';
 import type { CanonicalCollectorResult, CanonicalCollectorStatus } from '@packages/api-contract';
 
 export class PrivacyEngine {
@@ -113,18 +113,25 @@ export class PrivacyEngine {
     }
 
     // 6. Canonical evidence inventory and verification completeness.
-    const evidenceItems: EvidenceItem[] = factors.map((factor) => ({
-      id: factor.id,
-      state: factor.evidenceState || (factor.available ? 'CONFIRMED' : 'UNAVAILABLE'),
-      provenance: factor.provenance || 'derived',
-      confidence: factor.confidence || 'LOW',
-      source: factor.source,
-      value: factor.currentValue,
-      explanation: factor.reason,
-    }));
-    const evidenceSummary = summarizeEvidence(evidenceItems);
-    const assessable = evidenceSummary.confirmed + evidenceSummary.notDetected;
-    const verificationCoveragePct = evidenceSummary.total > 0 ? Math.round((assessable / evidenceSummary.total) * 100) : 0;
+    const evidenceItems: EvidenceItem[] = factors.map((factor) => {
+      const metadata = factor.metadata || {};
+      const capabilityStatus = String(metadata.capabilityStatus || metadata.supportStatus || '').toUpperCase();
+      const excludedFromCoverage = capabilityStatus === 'UNSUPPORTED' || metadata.unsupported === true;
+      return {
+        id: factor.id,
+        state: factor.evidenceState || (factor.available ? 'CONFIRMED' : 'UNAVAILABLE'),
+        provenance: factor.provenance || 'derived',
+        confidence: factor.confidence || 'LOW',
+        source: factor.source,
+        value: factor.currentValue,
+        explanation: factor.reason,
+        weight: getEvidenceWeight({ source: factor.source, classification: factor.classification, metadata }),
+        excludedFromCoverage,
+        exclusionReason: excludedFromCoverage ? 'UNSUPPORTED' : undefined,
+      };
+    });
+    const evidenceSummary = finalizeEvidenceSummary(summarizeEvidence(evidenceItems));
+    const verificationCoveragePct = evidenceSummary.weightedCoveragePct;
     const verificationStatus: 'COMPLETE' | 'PARTIAL' = evidenceSummary.unknown === 0 && evidenceSummary.unavailable === 0 ? 'COMPLETE' : 'PARTIAL';
     // Confidence describes the quality of evidence that was actually assessable.
     // UNAVAILABLE / UNKNOWN checks affect coverage, not confidence, because their
@@ -174,7 +181,7 @@ export class PrivacyEngine {
       breakdown,
       factors,
       canonicalFindings,
-      evidenceSummary: summarizeEvidence(evidenceItems),
+      evidenceSummary,
     };
   }
 
@@ -189,7 +196,7 @@ export class PrivacyEngine {
 
     switch (tier) {
       case 'EXCELLENT':
-        return `Verified privacy score ${score}/100 with limited confirmed exposure. Primary observation: ${topDeduction.factor}.`;
+        return `Privacy score ${score}/100 based on score-eligible evidence. Primary observation: ${topDeduction.factor}.`;
       case 'GOOD':
         return `Solid privacy configuration (${score}/100) with minor disclosure factors. Key item: ${topDeduction.factor}.`;
       case 'MODERATE':
@@ -197,7 +204,7 @@ export class PrivacyEngine {
       case 'CRITICAL':
         return `Severe privacy risk (${score}/100) with critical disclosure factors. Immediate action recommended for: ${topDeduction.factor}.`;
       default:
-        return `Verified privacy score ${score}/100.`;
+        return `Privacy score ${score}/100 based on score-eligible evidence.`;
     }
   }
 }

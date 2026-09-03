@@ -28,7 +28,7 @@ export const NetworkIntelligenceCard: React.FC<{ data: IpNetworkIntelligenceResp
         <div className="mt-4 grid grid-cols-3 gap-2 text-[11px] text-slate-400">
           <div className="rounded-lg border border-slate-800 p-2"><Network className="h-4 w-4 mb-1" />RDAP</div>
           <div className="rounded-lg border border-slate-800 p-2"><Server className="h-4 w-4 mb-1" />DNS</div>
-          <div className="rounded-lg border border-slate-800 p-2"><ShieldCheck className="h-4 w-4 mb-1" />Reputation</div>
+          <div className="rounded-lg border border-slate-800 p-2"><ShieldCheck className="h-4 w-4 mb-1" />{t.ip.reputation}</div>
         </div>
         <p className="mt-4 text-xs text-slate-500 leading-5">{data.note}</p>
         {data.providerObservations?.length ? (

@@ -10,6 +10,7 @@ import { HeaderCollector, HeaderClassifier } from "../server/headers";
 import { extractClientIp, validateIp } from "../server/utils/ipExtractor";
 import { CloudflareRequestCfProvider } from "../server/providers/geoip/CloudflareRequestCfProvider";
 import { getRequestEnv, runWithRequestEnv, type RequestEnvValues } from "../server/config/requestEnv";
+import { validateBrowserFingerprintPayload, PayloadValidationError } from "../server/utils/payloadValidator";
 
 type RuntimeEnv = {
   ASSETS?: Fetcher;
@@ -149,6 +150,8 @@ async function createRequestDatabase(env: RuntimeEnv): Promise<{ client: import(
     return { client: null, repo: null };
   }
 }
+
+const NON_INDEXABLE_PATHS = ['/admin', '/admin/dashboard', '/design-system'];
 
 const INDEXABLE_PATHS = [
   "/",
@@ -293,6 +296,24 @@ async function handleCountryFlag(request: Request): Promise<Response> {
   }
 }
 
+function applyPerformanceHeaders(response: Response, startedAt: number, request?: Request): Response {
+  const headers = new Headers(response.headers);
+  const durationMs = Math.max(0, Number((performance.now() - startedAt).toFixed(1)));
+  headers.set("Server-Timing", `app;dur=${durationMs}`);
+  if (request) headers.set("X-Request-ID", request.headers.get("X-Privasec-Request-ID") || headers.get("X-Request-ID") || "");
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+}
+
+function applyStaticCacheHeaders(request: Request, response: Response): Response {
+  const pathname = new URL(request.url).pathname;
+  if (request.method !== "GET" && request.method !== "HEAD") return response;
+  if (response.status !== 200) return response;
+  if (!pathname.startsWith("/assets/")) return response;
+  const headers = new Headers(response.headers);
+  headers.set("Cache-Control", "public, max-age=31536000, immutable");
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+}
+
 function applySecurityHeaders(response: Response): Response {
   const headers = new Headers(response.headers);
   headers.set("X-Content-Type-Options", "nosniff");
@@ -302,7 +323,7 @@ function applySecurityHeaders(response: Response): Response {
   headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()");
   headers.set(
     "Content-Security-Policy",
-    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: wss:; frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'"
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https: wss:; frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'"
   );
   headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
@@ -328,9 +349,13 @@ function apiMeta(req: ServiceRequest) {
   return { timestamp: new Date().toISOString(), requestId: req.requestId, version: "1.0.0" };
 }
 
-function publicError(req: ServiceRequest, code: string, message: string, status: number) {
-  return jsonResponse({ success: false, error: { code, message }, meta: apiMeta(req) }, status);
+function publicError(req: ServiceRequest, code: string, message: string, status: number, extra?: Record<string, unknown>) {
+  return jsonResponse({ success: false, error: { code, message, ...(extra || {}) }, meta: apiMeta(req) }, status);
 }
+
+const PUBLIC_API_LIMIT = { windowMs: 60_000, max: 120 };
+const HEAVY_API_LIMIT = { windowMs: 60_000, max: 30 };
+const SCORE_API_LIMIT = { windowMs: 60_000, max: 60 };
 
 
 
@@ -425,6 +450,8 @@ async function handleApi(request: Request, env: RuntimeEnv, ctx: ExecutionContex
   }
 
   if (p === "/api/ip" && method === "GET") {
+    const limited = await rateLimit(req, "ip", PUBLIC_API_LIMIT.windowMs, PUBLIC_API_LIMIT.max);
+    if (limited) return limited;
     const extracted = extractClientIp(req as any);
     return jsonResponse({ success: true, data: {
       ip: extracted.ip,
@@ -451,7 +478,10 @@ async function handleApi(request: Request, env: RuntimeEnv, ctx: ExecutionContex
   }
 
   if (p === "/api/ip/network-intelligence" && method === "GET") {
+    const limited = await rateLimit(req, "network-intelligence", HEAVY_API_LIMIT.windowMs, HEAVY_API_LIMIT.max);
+    if (limited) return limited;
     const queryIp = req.query.ip?.trim();
+    if (queryIp && queryIp.length > 64) return publicError(req, "INVALID_IP", "Provided IP address is not valid.", 400);
     const targetIp = queryIp || extractClientIp(req as any).ip;
     const validation = validateIp(targetIp);
     if (!validation.isValid) return publicError(req, "INVALID_IP", "Provided IP address is not valid.", 400);
@@ -501,7 +531,9 @@ async function handleApi(request: Request, env: RuntimeEnv, ctx: ExecutionContex
   }
 
   if (p === "/api/ip/reputation" && method === "GET") {
-    const targetIp = req.query.ip?.trim() || extractClientIp(req as any).ip;
+    const queryIp = req.query.ip?.trim();
+    if (queryIp && queryIp.length > 64) return publicError(req, "INVALID_IP", "Provided IP address is not valid.", 400);
+    const targetIp = queryIp || extractClientIp(req as any).ip;
     const validation = validateIp(targetIp);
     if (!validation.isValid) return publicError(req, "INVALID_IP", "Provided IP address is not valid.", 400);
     const limited = await rateLimit(req, "reputation", 60_000, 60);
@@ -510,7 +542,11 @@ async function handleApi(request: Request, env: RuntimeEnv, ctx: ExecutionContex
   }
 
   if (p === "/api/ip/details" && method === "GET") {
-    const targetIp = req.query.ip?.trim() || extractClientIp(req as any).ip;
+    const limited = await rateLimit(req, "ip-details", SCORE_API_LIMIT.windowMs, SCORE_API_LIMIT.max);
+    if (limited) return limited;
+    const queryIp = req.query.ip?.trim();
+    if (queryIp && queryIp.length > 64) return publicError(req, "INVALID_IP", "Provided IP address is not valid.", 400);
+    const targetIp = queryIp || extractClientIp(req as any).ip;
     const validation = validateIp(targetIp);
     if (!validation.isValid) return publicError(req, "INVALID_IP", "Provided IP address is not valid.", 400);
     if (!validation.isPublic) return jsonResponse({ success: true, data: { ip: targetIp, measurementStatus: "NOT_MEASURED", geo: { country: "Not measured", countryCode: "XX", region: "Not measured", city: "Not measured", postalCode: "Not measured", latitude: null, longitude: null, timezone: "Unknown" }, network: { isp: "Not measured", organization: "Not measured", asn: "Not measured", isMobile: null, isProxy: null, isVpn: null, isTor: null, isHosting: null, provider: "NONE", providerStatus: "UNAVAILABLE" } }, meta: apiMeta(req) });
@@ -593,6 +629,8 @@ async function handleApi(request: Request, env: RuntimeEnv, ctx: ExecutionContex
   }
 
   if ((p === "/api/headers" || p === "/api/check/headers") && method === "GET") {
+    const limited = await rateLimit(req, "headers", PUBLIC_API_LIMIT.windowMs, PUBLIC_API_LIMIT.max);
+    if (limited) return limited;
     const extracted = extractClientIp(req as any);
     const entries = HeaderCollector.collect(req as any);
     const analysis = HeaderClassifier.analyze(entries, extracted.isInfrastructureProxy);
@@ -600,6 +638,8 @@ async function handleApi(request: Request, env: RuntimeEnv, ctx: ExecutionContex
   }
 
   if (p === "/api/headers/raw" && method === "GET") {
+    const limited = await rateLimit(req, "headers-raw", PUBLIC_API_LIMIT.windowMs, PUBLIC_API_LIMIT.max);
+    if (limited) return limited;
     const extracted = extractClientIp(req as any);
     const entries = HeaderCollector.collect(req as any);
     const analysis = HeaderClassifier.analyze(entries, extracted.isInfrastructureProxy);
@@ -607,31 +647,53 @@ async function handleApi(request: Request, env: RuntimeEnv, ctx: ExecutionContex
   }
 
   if (p === "/api/analyze/browser" && method === "POST") {
-    const limited = await rateLimit(req, "browser-analysis", 60_000, 30);
+    const limited = await rateLimit(req, "browser-analysis", HEAVY_API_LIMIT.windowMs, HEAVY_API_LIMIT.max);
     if (limited) return limited;
-    const fingerprint = (body as any)?.fingerprint ?? null;
+
+    let fingerprint = null;
+    try {
+      fingerprint = validateBrowserFingerprintPayload((body as any)?.fingerprint ?? null);
+    } catch (error) {
+      if (error instanceof PayloadValidationError) {
+        return publicError(req, "INVALID_PAYLOAD", error.message, 400);
+      }
+      console.error("[BROWSER_PAYLOAD] validation failed:", error instanceof Error ? error.message : String(error));
+      return publicError(req, "INVALID_PAYLOAD", "The browser analysis payload is invalid.", 400);
+    }
+
     try {
       const result = await privacyService.evaluateRequest(req as any, fingerprint);
       ctx.waitUntil?.(Promise.resolve());
       return jsonResponse({ success: true, data: result, meta: apiMeta(req) });
     } catch (error) {
-      return publicError(req, "ANALYSIS_FAILED", error instanceof Error ? error.message : "Browser analysis failed.", 400);
+      console.error("[BROWSER_ANALYSIS] failed:", error instanceof Error ? error.message : String(error));
+      return publicError(req, "ANALYSIS_FAILED", "Browser analysis could not be completed. Please retry shortly.", 503);
     }
   }
 
   if (p === "/api/privacy/score" && method === "GET") {
+    const limited = await rateLimit(req, "privacy-score", SCORE_API_LIMIT.windowMs, SCORE_API_LIMIT.max);
+    if (limited) return limited;
     try {
       const result = await privacyService.evaluateRequest(req as any, null);
       return jsonResponse({ success: true, data: result, meta: apiMeta(req) });
     } catch (error) {
-      return publicError(req, "ANALYSIS_FAILED", error instanceof Error ? error.message : "Privacy analysis failed.", 400);
+      console.error("[PRIVACY_SCORE] failed:", error instanceof Error ? error.message : String(error));
+      return publicError(req, "ANALYSIS_FAILED", "Privacy analysis could not be completed. Please retry shortly.", 503);
     }
   }
 
   if (p === "/api/insights/population" && method === "GET") {
+    const limited = await rateLimit(req, "population-insights", PUBLIC_API_LIMIT.windowMs, PUBLIC_API_LIMIT.max);
+    if (limited) return limited;
     const score = Number(req.query.score);
-    if (!Number.isFinite(score)) return publicError(req, "INVALID_SCORE", "A numeric privacy score is required.", 400);
-    return jsonResponse({ success: true, data: await dbRepository.getPopulationInsightAsync(score, 30), meta: apiMeta(req) });
+    if (!Number.isFinite(score) || score < 0 || score > 100) return publicError(req, "INVALID_SCORE", "Privacy score must be a number between 0 and 100.", 400);
+    try {
+      return jsonResponse({ success: true, data: await dbRepository.getPopulationInsightAsync(score, 30), meta: apiMeta(req) });
+    } catch (error) {
+      console.error("[POPULATION_INSIGHTS] failed:", error instanceof Error ? error.message : String(error));
+      return publicError(req, "INSIGHTS_UNAVAILABLE", "Population insights are temporarily unavailable.", 503);
+    }
   }
 
 
@@ -714,10 +776,80 @@ async function handleApi(request: Request, env: RuntimeEnv, ctx: ExecutionContex
   return publicError(req, "NOT_FOUND", "API endpoint not found.", 404);
 }
 
+const SEO_PAGES: Record<string, { title: string; description: string }> = {
+  '/': {
+    title: 'PrivaSec — Free Privacy & Browser Intelligence Auditor',
+    description: 'Free, evidence-first privacy auditing for IP, networks, browser signals, fingerprint exposure, HTTP headers, and security exposure.',
+  },
+  '/browser': {
+    title: 'Browser Privacy & Fingerprint Test | PrivaSec',
+    description: 'Measure browser privacy signals, fingerprint exposure, WebRTC, graphics, hardware, storage, locale, and automation indicators.',
+  },
+  '/headers': {
+    title: 'HTTP Security & Privacy Headers Test | PrivaSec',
+    description: 'Inspect HTTP privacy and security headers, client hints, browser policy signals, and configuration evidence.',
+  },
+  '/learn': {
+    title: 'Privacy & Security Learning Center | PrivaSec',
+    description: 'Practical guides to IP privacy, browser fingerprinting, WebRTC, security headers, and IP reputation.',
+  },
+  '/privacy': {
+    title: 'Privacy Policy | PrivaSec',
+    description: 'Learn what PrivaSec measures, processes, stores, and deliberately does not collect.',
+  },
+};
+
+function escapeHtml(value: string): string {
+  return value.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+}
+
+async function crawlerHtmlResponse(request: Request, env: RuntimeEnv): Promise<Response | null> {
+  const url = new URL(request.url);
+  const meta = SEO_PAGES[url.pathname];
+  const shouldNoIndex = NON_INDEXABLE_PATHS.includes(url.pathname) || !meta;
+  if (!env.ASSETS || (request.method !== 'GET' && request.method !== 'HEAD')) return null;
+  if (!meta && !shouldNoIndex) return null;
+
+  const upstream = await env.ASSETS.fetch(new Request(`${url.origin}/`, request));
+  if (!upstream.ok) return null;
+  const contentType = upstream.headers.get('content-type') || '';
+  if (!contentType.includes('text/html')) return null;
+
+  let html = await upstream.text();
+  const canonical = `${url.origin}${url.pathname === '/' ? '/' : url.pathname}`;
+  const effectiveTitle = meta?.title || 'PrivaSec | Privacy Intelligence';
+  const effectiveDescription = meta?.description || 'PrivaSec privacy intelligence and browser exposure auditing.';
+  const title = escapeHtml(effectiveTitle);
+  const description = escapeHtml(effectiveDescription);
+  const replacement =
+    `<title>${title}</title>` +
+    `<meta name="description" content="${description}">` +
+    `<meta name="robots" content="${shouldNoIndex ? 'noindex,nofollow' : 'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1'}">` +
+    `<link rel="canonical" href="${canonical}">` +
+    `<meta property="og:type" content="website">` +
+    `<meta property="og:title" content="${title}">` +
+    `<meta property="og:description" content="${description}">` +
+    `<meta property="og:url" content="${canonical}">` +
+    `<meta property="og:site_name" content="PrivaSec">` +
+    `<meta name="twitter:card" content="summary">` +
+    `<meta name="twitter:title" content="${title}">` +
+    `<meta name="twitter:description" content="${description}">`;
+
+  html = html.replace(/<title>[\s\S]*?<\/title>/i, '').replace(/<meta[^>]+name=["']description["'][^>]*>\s*/i, '').replace(/<meta[^>]+name=["']robots["'][^>]*>\s*/i, '').replace(/<link[^>]+rel=["']canonical["'][^>]*>\s*/i, '').replace(/<meta[^>]+property=["']og:(title|description|type|url|site_name)["'][^>]*>\s*/gi, '').replace(/<meta[^>]+name=["']twitter:(card|title|description)["'][^>]*>\s*/gi, '');
+  html = html.replace('</head>', `${replacement}</head>`);
+
+  const headers = new Headers(upstream.headers);
+  headers.set('content-type', 'text/html; charset=utf-8');
+  headers.set('content-language', 'en');
+  headers.set('cache-control', 'public, max-age=0, must-revalidate');
+  headers.set('vary', 'Accept-Encoding');
+  return new Response(request.method === 'HEAD' ? null : html, { status: upstream.status, headers });
+}
+
 function seoResponse(request: Request): Response | null {
   const url = new URL(request.url);
   if (url.pathname === "/robots.txt") {
-    return new Response(["User-agent: *", "Allow: /", "Disallow: /api/", "Disallow: /admin", `Sitemap: ${url.origin}/sitemap.xml`, ""].join("\n"), { headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "public, max-age=3600" } });
+    return new Response(["User-agent: *", "Allow: /", "Disallow: /api/", "Disallow: /admin", "Disallow: /design-system", `Sitemap: ${url.origin}/sitemap.xml`, ""].join("\n"), { headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "public, max-age=3600" } });
   }
   if (url.pathname === "/sitemap.xml") {
     const rows = INDEXABLE_PATHS.map((path) => `<url><loc>${url.origin}${path}</loc></url>`).join("");
@@ -735,6 +867,9 @@ async function handleRequest(request: Request, env: RuntimeEnv, ctx: ExecutionCo
   const seo = seoResponse(request);
   if (seo) return applySecurityHeaders(seo);
 
+  const crawlerHtml = await crawlerHtmlResponse(request, env);
+  if (crawlerHtml) return applySecurityHeaders(crawlerHtml);
+
   if (new URL(request.url).pathname.startsWith("/api/")) {
     const response = await handleApi(request, env, ctx);
     const finalResponse = applyCors(request, applySecurityHeaders(response), env);
@@ -742,7 +877,7 @@ async function handleRequest(request: Request, env: RuntimeEnv, ctx: ExecutionCo
   }
 
   if (env.ASSETS) {
-    return applySecurityHeaders(await env.ASSETS.fetch(request));
+    return applySecurityHeaders(applyStaticCacheHeaders(request, await env.ASSETS.fetch(request)));
   }
 
   return new Response("Not found", { status: 404 });
@@ -773,6 +908,7 @@ async function handleRequest(request: Request, env: RuntimeEnv, ctx: ExecutionCo
  *   race - between concurrent requests.
  */
 async function handleRequestSafely(request: Request, env: RuntimeEnv, ctx: ExecutionContext): Promise<Response> {
+  const requestStartedAt = performance.now();
   const requestEnvValues = buildRequestEnvValues(env);
   return runWithRequestEnv(requestEnvValues, async () => {
     const pathname = new URL(request.url).pathname;
@@ -783,17 +919,36 @@ async function handleRequestSafely(request: Request, env: RuntimeEnv, ctx: Execu
       pathname === "/api/privacy/score" ||
       pathname === "/api/insights/population" ||
       pathname === "/api/ip/reputation" ||
+      pathname === "/api/ip" ||
+      pathname === "/api/ip/network-intelligence" ||
+      pathname === "/api/ip/details" ||
+      pathname === "/api/headers" ||
+      pathname === "/api/check/headers" ||
+      pathname === "/api/headers/raw" ||
+      pathname === "/api/insights/population" ||
       pathname.startsWith("/api/admin");
     const { client, repo } = needsDatabase
       ? await createRequestDatabase(env)
       : { client: null, repo: null };
 
     try {
-      return await dbRepository.runWithRequestScopedRepository(repo, () => handleRequest(request, env, ctx));
+      const response = await dbRepository.runWithRequestScopedRepository(repo, () => handleRequest(request, env, ctx));
+      const durationMs = Math.max(0, Number((performance.now() - requestStartedAt).toFixed(1)));
+      const requestPath = new URL(request.url).pathname;
+      if (requestPath.startsWith("/api/") || response.status >= 400) {
+        console.log({
+          event: "request.performance",
+          method: request.method,
+          path: requestPath,
+          status: response.status,
+          durationMs,
+        });
+      }
+      return applyPerformanceHeaders(response, requestStartedAt);
     } catch (error) {
       console.error("[WORKER] Uncaught exception while handling request:", error instanceof Error ? (error.stack || error.message) : String(error));
       const requestId = `req_${crypto.randomUUID().replaceAll("-", "")}`;
-      return applySecurityHeaders(
+      const response = applySecurityHeaders(
         jsonResponse(
           {
             success: false,
@@ -803,6 +958,14 @@ async function handleRequestSafely(request: Request, env: RuntimeEnv, ctx: Execu
           500,
         ),
       );
+      console.log({
+        event: "request.error",
+        method: request.method,
+        path: new URL(request.url).pathname,
+        status: 500,
+        durationMs: Math.max(0, Number((performance.now() - requestStartedAt).toFixed(1))),
+      });
+      return applyPerformanceHeaders(response, requestStartedAt);
     } finally {
       if (client) {
         await client.end().catch((closeError) => {

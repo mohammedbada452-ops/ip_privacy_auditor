@@ -96,7 +96,9 @@ export function generateSmartRecommendations(risks: UnifiedRiskItem[]): SmartRec
       title: hasWebgl && !hasCanvas && !hasAudio
         ? 'Reduce WebGL Hardware Exposure'
         : 'Review Canvas, WebGL & Audio Fingerprinting',
-      description: `These signals can contribute to fingerprinting. ${scoredSummary}`,
+      description: hasWebgl
+        ? `Review the canonical Browser finding for the observed WebGL/graphics evidence. ${scoredSummary}`
+        : `Review the canonical Browser findings for the observed fingerprint evidence. ${scoredSummary}`,
       sourceCategory: 'browser',
       priority: 'high',
       estimatedScoreBoost: totalBoost,

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, StatusBadge, Badge } from '../../../components/ui';
 import { Bot, UserCheck, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { canonicalStateToBadgeStatus, canonicalizeSignalState, getCanonicalSignalLabel } from '../../../lib/signalState';
 import { useLanguage } from '../../../i18n/LanguageContext';
 import type { AutomationData, ProfileGroup } from '../types';
 
@@ -16,6 +17,7 @@ export const AutomationCard: React.FC<AutomationCardProps> = ({ group }) => {
   const isWebDriver = measured ? data?.isWebDriver : undefined;
   const signals = measured ? (data?.automationSignals ?? []) : [];
 
+  const canonicalState = canonicalizeSignalState({ available: measured, evidenceState: !measured ? 'UNAVAILABLE' : isAutomation ? 'CONFIRMED' : 'NOT_DETECTED', observed: measured });
   return (
     <Card id="automation" variant="standard" className="p-5 flex flex-col justify-between space-y-4 scroll-mt-24">
       {/* Header */}
@@ -30,8 +32,8 @@ export const AutomationCard: React.FC<AutomationCardProps> = ({ group }) => {
           </div>
         </div>
         <StatusBadge
-          status={isAutomation === true ? 'danger' : isAutomation === false ? 'not-detected' : 'neutral'}
-          label={isAutomation === true ? t.browser.automationDetectedBadge : isAutomation === false ? t.common.notDetected : t.ui.notMeasured}
+          status={isAutomation === true ? 'danger' : canonicalStateToBadgeStatus(canonicalState)}
+          label={getCanonicalSignalLabel(canonicalState, t)}
           size="sm"
         />
       </div>

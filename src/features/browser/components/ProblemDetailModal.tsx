@@ -178,7 +178,7 @@ export const ProblemDetailModal: React.FC<ProblemDetailModalProps> = ({
           <button
             id="modal-close-btn"
             onClick={onClose}
-            aria-label="Close dialog"
+            aria-label={t.ui.closeDialog}
             className="min-w-10 min-h-10 p-2.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
           >
             <X className="w-5 h-5" />

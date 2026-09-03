@@ -1,5 +1,6 @@
 User-agent: *
 Allow: /
 Disallow: /admin
+Disallow: /design-system
 Disallow: /api/
 Sitemap: __PUBLIC_ORIGIN__/sitemap.xml

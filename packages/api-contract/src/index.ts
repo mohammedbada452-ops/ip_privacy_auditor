@@ -94,6 +94,17 @@ export interface IpCheckResponse {
   publicIpConfidence?: 'HIGH' | 'MEDIUM' | 'LOW' | 'UNKNOWN';
 }
 
+export type IpEvidenceConfidence = 'HIGH' | 'MEDIUM' | 'LOW' | 'UNKNOWN';
+
+export interface IpGeoEvidenceConfidence {
+  country: IpEvidenceConfidence;
+  region: IpEvidenceConfidence;
+  city: IpEvidenceConfidence;
+  postalCode: IpEvidenceConfidence;
+  timezone: IpEvidenceConfidence;
+  asn: IpEvidenceConfidence;
+}
+
 export interface IpGeoDetails {
   country: string;
   countryCode: string;
@@ -103,6 +114,8 @@ export interface IpGeoDetails {
   latitude: number | null;
   longitude: number | null;
   timezone: string;
+  /** Evidence-quality indicators; not statistical accuracy percentages. */
+  evidenceConfidence?: IpGeoEvidenceConfidence;
 }
 
 export interface IpNetworkDetails {
@@ -168,6 +181,10 @@ export interface IpNetworkProviderObservation {
   countryCode: string | null;
   country: string | null;
   asn: string | null;
+  region?: string | null;
+  city?: string | null;
+  postalCode?: string | null;
+  timezone?: string | null;
 }
 
 export interface IpNetworkIntelligenceResponse {
@@ -180,7 +197,9 @@ export interface IpNetworkIntelligenceResponse {
   intelligenceConfidence: 'HIGH' | 'MEDIUM' | 'LOW' | 'UNKNOWN';
   providers: string[];
   providerObservations?: IpNetworkProviderObservation[];
-  consensus?: { countryCode: string | null; asn: string | null; agreement: 'HIGH' | 'MEDIUM' | 'LOW' | 'NONE' };
+  consensus?: { countryCode: string | null; asn: string | null; agreement: 'HIGH' | 'MEDIUM' | 'LOW' | 'NONE'; countryAgreement?: IpEvidenceConfidence; asnAgreement?: IpEvidenceConfidence };
+  /** Explicit conflicts prevent the UI from presenting a single source as certain. */
+  conflicts?: { country: boolean; asn: boolean; region: boolean; city: boolean; postalCode: boolean; timezone: boolean };
   note: string;
 }
 
@@ -289,6 +308,10 @@ export interface PrivacyScoreAnalysis {
     unknown: number;
     unavailable: number;
     unverifiedClientObservations: number;
+    weightedTotal?: number;
+    weightedAssessable?: number;
+    weightedCoveragePct?: number;
+    excludedUnsupported?: number;
   };
 }
 

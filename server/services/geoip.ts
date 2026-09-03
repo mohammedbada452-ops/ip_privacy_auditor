@@ -6,6 +6,7 @@ import { MockGeoIPProvider } from '../providers/geoip/MockGeoIPProvider';
 import { IpInfoLiteProvider } from '../providers/geoip/IpInfoLiteProvider';
 import { validateIp } from '../utils/ipExtractor';
 import { getRequestEnv } from '../config/requestEnv';
+import { calculateGeoFieldAgreement, hasMaterialGeoConflict } from '../providers/geoip/accuracy';
 
 interface CacheEntry {
   data: GeoIPResult;
@@ -20,6 +21,9 @@ export function createDefaultGeoIPProvider(): IGeoIPProvider {
 
   switch (providerType) {
     case 'ipapi':
+      if ((getRequestEnv('NODE_ENV') || 'production').toLowerCase() === 'production') {
+        throw new Error('The ip-api GeoIP provider is not enabled for production. Use the HTTPS primary provider instead.');
+      }
       return new IpApiProvider();
     case 'mock':
       return new MockGeoIPProvider();
@@ -120,11 +124,11 @@ export class GeoIPService {
   }
 
 
-  public async getMultiSourceDetails(ip: string): Promise<{ primary: GeoIPResult; observations: Array<{ provider: string; status: 'VERIFIED' | 'UNAVAILABLE' | 'ERROR'; countryCode: string | null; country: string | null; asn: string | null }>; consensus: { countryCode: string | null; asn: string | null; agreement: 'HIGH' | 'MEDIUM' | 'LOW' | 'NONE' } }> {
+  public async getMultiSourceDetails(ip: string): Promise<{ primary: GeoIPResult; observations: Array<{ provider: string; status: 'VERIFIED' | 'UNAVAILABLE' | 'ERROR'; countryCode: string | null; country: string | null; asn: string | null; region?: string | null; city?: string | null; postalCode?: string | null; timezone?: string | null }>; consensus: { countryCode: string | null; asn: string | null; agreement: 'HIGH' | 'MEDIUM' | 'LOW' | 'NONE'; countryAgreement?: 'HIGH' | 'MEDIUM' | 'LOW' | 'UNKNOWN'; asnAgreement?: 'HIGH' | 'MEDIUM' | 'LOW' | 'UNKNOWN' }; conflicts?: { country: boolean; asn: boolean } }> {
     const validation = validateIp(ip);
     if (!validation.isValid) throw new Error(`Invalid IP address format: '${ip}'`);
     const normalizedIp = validation.normalizedIp;
-    const observations: Array<{ provider: string; status: 'VERIFIED' | 'UNAVAILABLE' | 'ERROR'; countryCode: string | null; country: string | null; asn: string | null }> = [];
+    const observations: Array<{ provider: string; status: 'VERIFIED' | 'UNAVAILABLE' | 'ERROR'; countryCode: string | null; country: string | null; asn: string | null; region?: string | null; city?: string | null; postalCode?: string | null; timezone?: string | null }> = [];
     const primary = await this.getDetails(normalizedIp);
     observations.push({
       provider: primary.network.provider || this.provider.name,
@@ -132,11 +136,15 @@ export class GeoIPService {
       countryCode: primary.geo.countryCode || null,
       country: primary.geo.country || null,
       asn: /^AS\d+$/i.test(primary.network.asn || '') ? primary.network.asn.toUpperCase() : null,
+      region: primary.geo.region || null,
+      city: primary.geo.city || null,
+      postalCode: primary.geo.postalCode || null,
+      timezone: primary.geo.timezone || null,
     });
     if (getRequestEnv('IPINFO_TOKEN') && validation.isPublic && this.provider.name !== 'IPinfo Lite') {
       try {
         const secondary = await new IpInfoLiteProvider({ token: getRequestEnv('IPINFO_TOKEN') }).lookup(normalizedIp);
-        observations.push({ provider: 'IPinfo Lite', status: 'VERIFIED', countryCode: secondary.geo.countryCode || null, country: secondary.geo.country || null, asn: /^AS\d+$/i.test(secondary.network.asn || '') ? secondary.network.asn.toUpperCase() : null });
+        observations.push({ provider: 'IPinfo Lite', status: 'VERIFIED', countryCode: secondary.geo.countryCode || null, country: secondary.geo.country || null, asn: /^AS\d+$/i.test(secondary.network.asn || '') ? secondary.network.asn.toUpperCase() : null, region: secondary.geo.region || null, city: secondary.geo.city || null, postalCode: secondary.geo.postalCode || null, timezone: secondary.geo.timezone || null });
       } catch {
         observations.push({ provider: 'IPinfo Lite', status: 'ERROR', countryCode: null, country: null, asn: null });
       }
@@ -144,13 +152,41 @@ export class GeoIPService {
     const valid = observations.filter((o) => o.status === 'VERIFIED');
     const countryCounts = new Map<string, number>();
     const asnCounts = new Map<string, number>();
-    for (const o of valid) { if (o.countryCode && o.countryCode !== 'XX') countryCounts.set(o.countryCode, (countryCounts.get(o.countryCode) || 0) + 1); if (o.asn) asnCounts.set(o.asn, (asnCounts.get(o.asn) || 0) + 1); }
+    for (const o of valid) {
+      if (o.countryCode && o.countryCode !== 'XX') countryCounts.set(o.countryCode, (countryCounts.get(o.countryCode) || 0) + 1);
+      if (o.asn) asnCounts.set(o.asn, (asnCounts.get(o.asn) || 0) + 1);
+    }
     const pick = (map: Map<string, number>) => [...map.entries()].sort((a,b)=>b[1]-a[1])[0] || null;
     const countryWinner = pick(countryCounts);
     const asnWinner = pick(asnCounts);
+    const independentObservations = valid.length;
+    const primaryObservation = observations.find(o => o.provider === primary.network.provider) || observations[0];
+    const agreementEvidence = calculateGeoFieldAgreement(
+      valid.map(o => ({ countryCode: o.countryCode, asn: o.asn, region: o.region, city: o.city, postalCode: o.postalCode, timezone: o.timezone })),
+      independentObservations,
+    );
     const winnerVotes = Math.max(countryWinner?.[1] || 0, asnWinner?.[1] || 0);
-    const agreement = valid.length < 2 ? 'LOW' : winnerVotes === valid.length ? 'HIGH' : winnerVotes >= 2 ? 'MEDIUM' : 'LOW';
-    return { primary, observations, consensus: { countryCode: countryWinner?.[0] || null, asn: asnWinner?.[0] || null, agreement } };
+    const agreement = independentObservations < 2
+      ? 'LOW'
+      : winnerVotes === independentObservations
+        ? 'HIGH'
+        : winnerVotes > independentObservations / 2
+          ? 'MEDIUM'
+          : 'LOW';
+    const countryConflict = valid.length >= 2 && valid.some(o => o.countryCode && o.countryCode !== primaryObservation?.countryCode);
+    const asnConflict = valid.length >= 2 && valid.some(o => o.asn && o.asn !== primaryObservation?.asn);
+    return {
+      primary,
+      observations,
+      consensus: {
+        countryCode: countryWinner?.[0] || null,
+        asn: asnWinner?.[0] || null,
+        agreement,
+        countryAgreement: agreementEvidence.country,
+        asnAgreement: agreementEvidence.asn,
+      },
+      conflicts: { country: countryConflict, asn: asnConflict },
+    };
   }
   public clearCache(): void {
     this.cache.clear();

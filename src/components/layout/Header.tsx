@@ -25,12 +25,12 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileNav }) => {
           className="flex items-center gap-3 group focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 rounded-lg p-1"
         >
           <div className="w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 group-hover:bg-cyan-500/20 group-hover:border-cyan-500/50 transition-all">
-            <Shield className="w-5 h-5" />
+            <Shield className="w-5 h-5" aria-hidden="true" />
           </div>
           <div>
-            <h1 className="text-sm sm:text-base font-bold text-slate-100 tracking-tight leading-snug">
+            <span className="text-sm sm:text-base font-bold text-slate-100 tracking-tight leading-snug">
               {t.appTitle}
-            </h1>
+            </span>
             <p className="text-[10px] text-slate-500 font-mono tracking-wider uppercase">
               {t.appSubtitle}
             </p>
@@ -52,7 +52,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileNav }) => {
                     ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 font-semibold shadow-sm'
                     : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50 border border-transparent'
                 }`}
-              >
+                aria-current={isActive ? 'page' : undefined}              >
                 {label}
               </Link>
             );
@@ -73,7 +73,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileNav }) => {
           </div>
 
           <div className="hidden xl:inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-cyan-400/80">
-            <Sparkles className="w-3 h-3" />
+            <Sparkles className="w-3 h-3" aria-hidden="true" />
             <span>{language === 'ar' ? 'نتائج مدعومة بالأدلة' : language === 'es' ? 'Resultados con evidencia' : language === 'fr' ? 'Résultats fondés sur les preuves' : language === 'pt' ? 'Resultados baseados em evidências' : language === 'tr' ? 'Kanıt odaklı sonuçlar' : 'Evidence-first results'}</span>
           </div>
 
@@ -87,7 +87,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileNav }) => {
             aria-label={t.menuOpen}
             className="md:hidden min-w-11 min-h-11 p-2.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800/80 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 border border-slate-800"
           >
-            <Menu className="w-5 h-5" />
+            <Menu className="w-5 h-5" aria-hidden="true" />
           </button>
         </div>
       </div>

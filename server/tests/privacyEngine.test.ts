@@ -106,6 +106,7 @@ const engine = new PrivacyEngine(registry);
       isHosting: true,
       isVpn: false,
       isTor: false,
+      providerStatus: 'VERIFIED',
     },
   };
 

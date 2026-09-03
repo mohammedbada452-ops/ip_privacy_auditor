@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, StatusBadge, Badge } from '../../../components/ui';
 import { Shield, ShieldCheck, ShieldOff, Eye, EyeOff } from 'lucide-react';
+import { canonicalStateToBadgeStatus, canonicalizeSignalState, getCanonicalSignalLabel } from '../../../lib/signalState';
 import { useLanguage } from '../../../i18n/LanguageContext';
 import type { PrivacyProtectionsData, ProfileGroup } from '../types';
 
@@ -18,6 +19,7 @@ export const PrivacyProtectionsCard: React.FC<PrivacyProtectionsCardProps> = ({ 
   const incognito = data?.incognitoSuspected;
   const adBlock = data?.adBlockDetected;
 
+  const canonicalState = canonicalizeSignalState({ available: measured, evidenceState: !measured ? 'UNAVAILABLE' : (gpc === true || dnt === true) ? 'CONFIRMED' : 'NOT_DETECTED', observed: measured });
   return (
     <Card id="privacy-protections" variant="standard" className="p-5 flex flex-col justify-between space-y-4 scroll-mt-24">
       {/* Header */}
@@ -32,8 +34,8 @@ export const PrivacyProtectionsCard: React.FC<PrivacyProtectionsCardProps> = ({ 
           </div>
         </div>
         <StatusBadge
-          status={gpc === true || dnt === true ? 'success' : gpc === false || dnt === false ? 'neutral' : 'neutral'}
-          label={gpc === true || dnt === true ? t.common.active : measured ? t.common.defaultOrder : t.ui.notMeasured}
+          status={canonicalStateToBadgeStatus(canonicalState)}
+          label={getCanonicalSignalLabel(canonicalState, t)}
           size="sm"
         />
       </div>

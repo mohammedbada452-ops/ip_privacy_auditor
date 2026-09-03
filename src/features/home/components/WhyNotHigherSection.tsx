@@ -54,14 +54,14 @@ export const WhyNotHigherSection: React.FC<WhyNotHigherSectionProps> = ({
             <Scale className="w-4 h-4 text-cyan-400 shrink-0" />
             <span>{t.ui.scoreCalculation}:</span>
             <span className="text-slate-400">{t.ui.baseline.replace('{score}', String(100))}</span>
-            <span className="text-red-400 font-bold">− Deductions ({totalDeductions} pts)</span>
+            <span className="text-red-400 font-bold">− {t.ui.deductions} ({totalDeductions} {t.privacy.pointsDeduction})</span>
             <span className="text-slate-500">=</span>
             <span className="px-2 py-0.5 rounded bg-slate-800 text-cyan-300 font-bold border border-slate-700">
               {computedScore}/100
             </span>
           </div>
           <div className="text-slate-400 text-[11px]">
-            <span>{issueFactors.length} active deduction{issueFactors.length > 1 ? 's' : ''} detected</span>
+            <span>{t.ui.activeDeductionsDetected.replace('{count}', String(issueFactors.length))}</span>
           </div>
         </div>
       )}
@@ -85,7 +85,7 @@ export const WhyNotHigherSection: React.FC<WhyNotHigherSectionProps> = ({
             const confidence = factor.confidence || 'HIGH';
             const sourceLabel =
               factor.source === 'ip'
-                ? 'Network Intelligence'
+                ? t.ui.networkIntelligence
                 : factor.source === 'headers'
                   ? 'HTTP Headers'
                   : 'Browser Intelligence';
@@ -93,6 +93,8 @@ export const WhyNotHigherSection: React.FC<WhyNotHigherSectionProps> = ({
             return (
               <div
                 key={factor.id}
+                data-finding-id={factor.id}
+                data-single-source-of-truth="true"
                 className="p-4 sm:p-5 rounded-xl bg-slate-900/50 hover:bg-slate-900/80 border border-slate-800 hover:border-slate-700 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 group"
               >
                 <div className="flex-1">

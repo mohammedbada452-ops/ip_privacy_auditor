@@ -67,6 +67,12 @@ export const AppShell: React.FC = () => {
   return (
     <>
       <SEOHead title={seo.title} description={seo.description} path={currentPath} />
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:z-[60] focus:top-3 focus:left-3 rounded-lg border border-cyan-400/60 bg-slate-950 px-4 py-3 text-sm font-semibold text-cyan-200 shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+      >
+        {t.common.skipToMain}
+      </a>
       <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-cyan-500/30 selection:text-cyan-200">
       {/* Header */}
       <Header onOpenMobileNav={() => setIsMobileNavOpen(true)} />
@@ -78,9 +84,9 @@ export const AppShell: React.FC = () => {
       />
 
       {/* Main Page Container */}
-      <main className="flex-1 w-full" id="main-content">
+      <main className="flex-1 w-full scroll-mt-20" id="main-content" tabIndex={-1}>
         <PageContainer maxWidth="7xl">
-          <Suspense fallback={<div className="p-8 text-slate-400" role="status" aria-live="polite">{t.common.loading}</div>}>{renderRouteOutlet()}</Suspense>
+          <Suspense fallback={<div className="p-8 text-slate-400" role="status" aria-live="polite" aria-atomic="true">{t.common.loading}</div>}>{renderRouteOutlet()}</Suspense>
         </PageContainer>
       </main>
 
