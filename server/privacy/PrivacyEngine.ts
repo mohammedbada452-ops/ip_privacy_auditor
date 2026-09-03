@@ -37,7 +37,7 @@ export class PrivacyEngine {
         classification,
         observed,
         scored,
-        metadata: { ...(factor.metadata || {}), scoreEligible: scored, aggregateEligible: provenance !== 'client_observed_unverified' || scored },
+        metadata: { ...(factor.metadata || {}), scoreEligible: scored, aggregateEligible: provenance !== 'client_observed_unverified' || scored } as Record<string, unknown>,
       };
     });
 

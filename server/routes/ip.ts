@@ -33,10 +33,19 @@ async function getCurrentClientGeoDetails(req: Request, ip: string): Promise<IpD
   try {
     const provider = new CloudflareRequestCfProvider(getRequestHeaderMap(req));
     const details = await provider.lookup(ip);
+    const geoObservation = [{
+      countryCode: details.geo.countryCode || null,
+      asn: /^AS\d+$/i.test(details.network.asn || '') ? details.network.asn.toUpperCase() : null,
+      region: details.geo.region || null,
+      city: details.geo.city || null,
+      postalCode: details.geo.postalCode || null,
+      timezone: details.geo.timezone || null,
+    }];
+    const geoFieldAgreement = calculateGeoFieldAgreement(geoObservation, 1);
     return {
       ip,
       measurementStatus: details.network.providerStatus === 'VERIFIED' ? 'MEASURED' : 'UNKNOWN',
-      geo: { ...details.geo, evidenceConfidence: { ...geoFieldAgreement } },
+      geo: { ...details.geo, evidenceConfidence: geoFieldAgreement },
       network: details.network,
     };
   } catch {

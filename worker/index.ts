@@ -259,7 +259,8 @@ async function handleCountryFlag(request: Request): Promise<Response> {
   const code = match[1].toLowerCase();
   const upstreamUrl = `https://flagcdn.com/w80/${code}.png`;
   const cacheKey = new Request(upstreamUrl, { method: "GET" });
-  const edgeCache = caches.default;
+  // Cloudflare Workers exposes `caches.default`; the DOM CacheStorage type does not.
+  const edgeCache = (caches as CacheStorage & { default: Cache }).default;
 
   const cached = await edgeCache.match(cacheKey);
   if (cached) {
