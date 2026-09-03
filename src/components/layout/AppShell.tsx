@@ -37,6 +37,9 @@ export const AppShell: React.FC = () => {
       '/privacy': { title: 'Privacy Policy | PrivaSec', description: 'Learn what PrivaSec measures, processes, stores, and deliberately does not collect.' },
       '/learn': { title: 'Privacy & Security Learning Center | PrivaSec', description: 'Practical guides to IP privacy, browser fingerprinting, WebRTC, security headers, and IP reputation.' },
     };
+    if (currentPath.startsWith('/learn/')) {
+      return { title: 'Learning Guide | PrivaSec', description: 'Evidence-oriented practical guidance for privacy, browser signals, WebRTC, HTTP headers, and IP reputation.' };
+    }
     return meta[currentPath] || { title: 'PrivaSec | Privacy Intelligence', description: 'Free privacy and browser exposure auditing with evidence-backed results.' };
   })();
 
@@ -60,7 +63,7 @@ export const AppShell: React.FC = () => {
       case '/design-system':
         return import.meta.env.DEV ? <DesignSystemShowcase /> : <NotFoundPage />;
       default:
-        return <NotFoundPage />;
+        return currentPath.startsWith('/learn/') ? <LearnRoute /> : <NotFoundPage />;
     }
   };
 

@@ -45,8 +45,13 @@ export const LocaleTimezoneCard: React.FC<LocaleTimezoneCardProps> = ({
       {/* Regional & Timezone Grid */}
       <div className="p-3 bg-slate-950 rounded-lg border border-slate-800/80 space-y-2 text-xs">
         <div>
+          <span className="text-slate-400 block text-[11px] mb-0.5">{t.browser.browserLanguage}</span>
+          <div className="font-mono text-slate-100 font-semibold break-words">{browserLanguage}</div>
+          <div className="text-[10px] text-slate-500 mt-1">{t.browser.resolvedLocale}: {loc?.resolvedLocale || browserLanguage}</div>
+        </div>
+        <div className="pt-2 border-t border-slate-900">
           <span className="text-slate-400 block text-[11px] mb-0.5">{t.browser.resolvedTimezone}</span>
-          <div className="font-mono text-slate-100 font-semibold">{timezoneName}</div>
+          <div className="font-mono text-slate-100 font-semibold break-words">{timezoneName}</div>
         </div>
 
         <div className="pt-2 border-t border-slate-900 grid grid-cols-2 gap-2">
@@ -65,7 +70,7 @@ export const LocaleTimezoneCard: React.FC<LocaleTimezoneCardProps> = ({
 
         <div className="pt-2 border-t border-slate-900">
           <span className="text-slate-400 block text-[11px] mb-0.5">{t.browser.configuredLanguages}</span>
-          <div className="font-mono text-slate-200 text-[11px] truncate">
+          <div className="font-mono text-slate-200 text-[11px] break-words">
             {configuredLanguages}
           </div>
         </div>

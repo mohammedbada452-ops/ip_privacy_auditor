@@ -493,6 +493,7 @@ export const en: Translations = {
     localeTimezoneTitle: 'Locale, Language & Timezone',
     localeTimezoneSubtitle: 'Configured languages, resolved regional collation, and UTC offset',
     browserLanguage: 'Primary Language',
+    resolvedLocale: 'Resolved Locale',
     configuredLanguages: 'Accepted Languages',
     resolvedTimezone: 'System Timezone',
     utcOffset: 'UTC Offset',

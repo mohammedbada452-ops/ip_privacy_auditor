@@ -291,47 +291,74 @@ export const PrivacyScoreHero: React.FC<PrivacyScoreHeroProps> = ({
 
           {/* 3 Metric Context Counters */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="p-3.5 rounded-xl bg-slate-950/60 border border-rose-500/20 flex items-center gap-3">
+            <a
+              href="#problem-center-section"
+              onClick={(event) => {
+                event.preventDefault();
+                document.getElementById('problem-center-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }}
+              className="group text-left p-3.5 rounded-xl bg-slate-950/60 border border-rose-500/20 flex items-center gap-3 cursor-pointer hover:border-rose-400/40 hover:bg-rose-950/10 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/60"
+              aria-label={t.home.scoreContext.issuesCount.replace('{count}', String(deductionFactors.length))}
+            >
               <div className="w-9 h-9 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-center shrink-0">
                 <ShieldAlert className="w-4 h-4 text-rose-400" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <span className="text-lg font-bold font-mono text-rose-400 block leading-tight">
                   {deductionFactors.length}
                 </span>
-                <span className="text-[11px] text-slate-400">
+                <span className="text-[11px] text-slate-400 group-hover:text-slate-200 transition-colors">
                   {t.home.scoreContext.issuesCount.replace('{count}', String(deductionFactors.length))}
                 </span>
               </div>
-            </div>
+            </a>
 
-            <div className="p-3.5 rounded-xl bg-slate-950/60 border border-emerald-500/20 flex items-center gap-3">
+            <a
+              href="#active-protections-section"
+              onClick={(event) => {
+                event.preventDefault();
+                document.getElementById('active-protections-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }}
+              className="group text-left p-3.5 rounded-xl bg-slate-950/60 border border-emerald-500/20 flex items-center gap-3 cursor-pointer hover:border-emerald-400/40 hover:bg-emerald-950/10 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60"
+              aria-label={t.home.scoreContext.protectionsCount.replace('{count}', String(protectionFactors.length))}
+            >
               <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
                 <ShieldCheck className="w-4 h-4 text-emerald-400" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <span className="text-lg font-bold font-mono text-emerald-400 block leading-tight">
                   {protectionFactors.length}
                 </span>
-                <span className="text-[11px] text-slate-400">
+                <span className="text-[11px] text-slate-400 group-hover:text-slate-200 transition-colors">
                   {t.home.scoreContext.protectionsCount.replace('{count}', String(protectionFactors.length))}
                 </span>
               </div>
-            </div>
+            </a>
 
-            <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-700/40 flex items-center gap-3">
+            <a
+              href="#score-evidence-breakdown"
+              onClick={(event) => {
+                event.preventDefault();
+                setShowEvidenceDetails(true);
+                window.setTimeout(() => {
+                  document.getElementById('score-evidence-breakdown')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 0);
+              }}
+              className="group text-left p-3.5 rounded-xl bg-slate-950/60 border border-slate-700/40 flex items-center gap-3 cursor-pointer hover:border-slate-500 hover:bg-slate-900/70 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500/60"
+              aria-label={t.home.scoreContext.unavailableCount.replace('{count}', String(unavailableFactors.length))}
+            >
               <div className="w-9 h-9 rounded-lg bg-slate-800/60 border border-slate-700/60 flex items-center justify-center shrink-0">
                 <CheckCircle2 className="w-4 h-4 text-slate-400" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <span className="text-lg font-bold font-mono text-slate-300 block leading-tight">
                   {unavailableFactors.length}
                 </span>
-                <span className="text-[11px] text-slate-400">
+                <span className="text-[11px] text-slate-400 group-hover:text-slate-200 transition-colors">
                   {t.home.scoreContext.unavailableCount.replace('{count}', String(unavailableFactors.length))}
                 </span>
               </div>
-            </div>
+            </a>
           </div>
 
           {/* Action Row */}

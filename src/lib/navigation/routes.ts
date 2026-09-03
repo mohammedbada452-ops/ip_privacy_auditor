@@ -162,6 +162,19 @@ export function updateDocumentTitle(path: string, lang: Language = 'en'): void {
   const dict = DICTIONARIES[lang] || DICTIONARIES.en;
   const baseTitle = dict.appTitle;
 
+  if (path.startsWith('/learn/')) {
+    const labels: Record<Language, string> = {
+      en: 'Learning Guide',
+      ar: 'دليل تعليمي',
+      es: 'Guía de aprendizaje',
+      fr: 'Guide d’apprentissage',
+      pt: 'Guia de aprendizado',
+      tr: 'Öğrenme Rehberi',
+    };
+    document.title = `${labels[lang]} | ${baseTitle}`;
+    return;
+  }
+
   if (route) {
     const pageTitle = getRouteTitle(route, lang);
     document.title = `${pageTitle} | ${baseTitle}`;
