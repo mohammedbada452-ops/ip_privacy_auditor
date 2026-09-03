@@ -244,6 +244,55 @@ function jsonResponse(data: unknown, status = 200, extraHeaders?: Record<string,
   return new Response(JSON.stringify(data), { status, headers });
 }
 
+async function handleCountryFlag(request: Request): Promise<Response> {
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    return new Response("Method Not Allowed", { status: 405, headers: { Allow: "GET, HEAD" } });
+  }
+
+  const pathname = new URL(request.url).pathname;
+  const match = pathname.match(/^\/api\/flag\/([a-z]{2})$/i);
+  if (!match) return new Response("Not Found", { status: 404 });
+
+  const code = match[1].toLowerCase();
+  const upstreamUrl = `https://flagcdn.com/w80/${code}.png`;
+  const cacheKey = new Request(upstreamUrl, { method: "GET" });
+  const edgeCache = caches.default;
+
+  const cached = await edgeCache.match(cacheKey);
+  if (cached) {
+    const headers = new Headers(cached.headers);
+    headers.set("cache-control", "public, max-age=86400, s-maxage=604800, immutable");
+    headers.set("x-privasec-flag-source", "server-proxy-cache");
+    return request.method === "HEAD"
+      ? new Response(null, { status: cached.status, headers })
+      : new Response(cached.body, { status: cached.status, headers });
+  }
+
+  try {
+    const upstream = await fetch(upstreamUrl, {
+      headers: { Accept: "image/png" },
+    });
+    if (!upstream.ok || !upstream.body) {
+      return new Response("Flag Not Found", { status: upstream.status || 404 });
+    }
+
+    const headers = new Headers({
+      "content-type": upstream.headers.get("content-type") || "image/png",
+      "cache-control": "public, max-age=86400, s-maxage=604800, immutable",
+      "x-content-type-options": "nosniff",
+      "x-privasec-flag-source": "server-proxy",
+    });
+    const response = new Response(upstream.body, { status: 200, headers });
+    await edgeCache.put(cacheKey, response.clone());
+
+    return request.method === "HEAD"
+      ? new Response(null, { status: 200, headers })
+      : response;
+  } catch {
+    return new Response("Flag unavailable", { status: 502 });
+  }
+}
+
 function applySecurityHeaders(response: Response): Response {
   const headers = new Headers(response.headers);
   headers.set("X-Content-Type-Options", "nosniff");
@@ -678,6 +727,11 @@ function seoResponse(request: Request): Response | null {
 }
 
 async function handleRequest(request: Request, env: RuntimeEnv, ctx: ExecutionContext): Promise<Response> {
+  const pathname = new URL(request.url).pathname;
+  if (/^\/api\/flag\/[A-Za-z]{2}$/.test(pathname)) {
+    return applySecurityHeaders(await handleCountryFlag(request));
+  }
+
   const seo = seoResponse(request);
   if (seo) return applySecurityHeaders(seo);
 

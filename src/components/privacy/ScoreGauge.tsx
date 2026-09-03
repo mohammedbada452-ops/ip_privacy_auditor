@@ -1,4 +1,5 @@
 import React from 'react';
+import { getScoreTierConfig } from '../../lib/scoreTier';
 
 export interface ScoreGaugeProps {
   score: number; // 0 to 100
@@ -21,36 +22,48 @@ export const ScoreGauge: React.FC<ScoreGaugeProps> = ({
   // Clamp score between 0 and 100
   const normalizedScore = Math.max(0, Math.min(100, Math.round(score)));
 
-  // Determine color based on spec
-  const getColorScheme = (val: number) => {
-    if (val >= 80) {
-      return {
-        stroke: '#10B981',
-        text: 'text-emerald-400',
-        bg: 'bg-emerald-500/10',
-        border: 'border-emerald-500/20',
-        defaultTier: 'Excellent Verified Posture',
-      };
+  // Use the authoritative score-tier thresholds shared by the privacy engine.
+  // This keeps the visual gauge, tier label, and backend classification aligned.
+  const tierConfig = getScoreTierConfig(normalizedScore);
+  const getColorScheme = () => {
+    switch (tierConfig.tier) {
+      case 'EXCELLENT':
+        return {
+          stroke: '#10B981',
+          text: 'text-emerald-400',
+          bg: 'bg-emerald-500/10',
+          border: 'border-emerald-500/20',
+          defaultTier: tierConfig.defaultLabel,
+        };
+      case 'GOOD':
+        return {
+          stroke: '#22D3EE',
+          text: 'text-cyan-300',
+          bg: 'bg-cyan-500/10',
+          border: 'border-cyan-500/20',
+          defaultTier: tierConfig.defaultLabel,
+        };
+      case 'MODERATE':
+        return {
+          stroke: '#F59E0B',
+          text: 'text-amber-400',
+          bg: 'bg-amber-500/10',
+          border: 'border-amber-500/20',
+          defaultTier: tierConfig.defaultLabel,
+        };
+      case 'CRITICAL':
+      default:
+        return {
+          stroke: '#EF4444',
+          text: 'text-rose-400',
+          bg: 'bg-rose-500/10',
+          border: 'border-rose-500/20',
+          defaultTier: tierConfig.defaultLabel,
+        };
     }
-    if (val >= 50) {
-      return {
-        stroke: '#F59E0B',
-        text: 'text-amber-400',
-        bg: 'bg-amber-500/10',
-        border: 'border-amber-500/20',
-        defaultTier: 'Moderate Exposure',
-      };
-    }
-    return {
-      stroke: '#EF4444',
-      text: 'text-red-400',
-      bg: 'bg-red-500/10',
-      border: 'border-red-500/20',
-      defaultTier: 'Severe Exposure',
-    };
   };
 
-  const scheme = getColorScheme(normalizedScore);
+  const scheme = getColorScheme();
   const tierText = tierLabel || scheme.defaultTier;
 
   // SVG Gauge calculations

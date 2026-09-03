@@ -45,6 +45,85 @@ interface AdminTabConfig {
   icon: React.ElementType;
 }
 
+interface AdminScrollableTableProps {
+  ariaLabel: string;
+  children: React.ReactNode;
+}
+
+/**
+ * Accessible horizontal table viewport with a subtle edge cue when overflow exists.
+ * The cue is visual only; keyboard users can still focus the region and scroll it.
+ */
+const AdminScrollableTable: React.FC<AdminScrollableTableProps> = ({ ariaLabel, children }) => {
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+  const [canScroll, setCanScroll] = useState(false);
+  const [showStartCue, setShowStartCue] = useState(false);
+  const [showEndCue, setShowEndCue] = useState(false);
+
+  const updateScrollCue = useCallback(() => {
+    const node = viewportRef.current;
+    if (!node) return;
+    const maxScroll = Math.max(0, node.scrollWidth - node.clientWidth);
+    const epsilon = 2;
+    setCanScroll(maxScroll > epsilon);
+    setShowStartCue(node.scrollLeft > epsilon);
+    setShowEndCue(node.scrollLeft < maxScroll - epsilon);
+  }, []);
+
+  useEffect(() => {
+    const node = viewportRef.current;
+    if (!node) return;
+    updateScrollCue();
+
+    const resizeObserver = typeof ResizeObserver !== 'undefined'
+      ? new ResizeObserver(updateScrollCue)
+      : null;
+    resizeObserver?.observe(node);
+    if (node.firstElementChild) resizeObserver?.observe(node.firstElementChild);
+    window.addEventListener('resize', updateScrollCue);
+
+    return () => {
+      resizeObserver?.disconnect();
+      window.removeEventListener('resize', updateScrollCue);
+    };
+  }, [updateScrollCue]);
+
+  return (
+    <div className="relative min-w-0">
+      {canScroll && showStartCue && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-px left-px z-10 w-8 rounded-l-lg bg-gradient-to-r from-slate-950/95 to-transparent"
+        />
+      )}
+      {canScroll && showEndCue && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-px right-px z-10 w-10 rounded-r-lg bg-gradient-to-l from-slate-950/95 to-transparent"
+        />
+      )}
+      {canScroll && (
+        <div
+          className="pointer-events-none absolute right-2 top-2 z-20 hidden rounded-full border border-slate-700/80 bg-slate-950/90 px-2 py-1 text-[10px] font-medium text-slate-400 shadow-sm sm:block"
+          aria-hidden="true"
+        >
+          Horizontal scroll
+        </div>
+      )}
+      <div
+        ref={viewportRef}
+        className="overflow-x-auto overscroll-x-contain rounded-lg border border-slate-800/70 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-950"
+        role="region"
+        tabIndex={0}
+        aria-label={ariaLabel}
+        onScroll={updateScrollCue}
+      >
+        {children}
+      </div>
+    </div>
+  );
+};
+
 const ADMIN_TABS: readonly Pick<AdminTabConfig, 'id'>[] = [
   { id: 'overview' },
   { id: 'scans' },
@@ -673,7 +752,7 @@ export const AdminDashboard: React.FC = () => {
           </div>
 
           {/* Table */}
-          <div className="overflow-x-auto rounded-lg border border-slate-800/70" role="region" tabIndex={0} aria-label="Scrollable scans table">
+          <AdminScrollableTable ariaLabel="Scrollable scans table">
             <table className="w-full text-xs text-left">
               <thead className="text-slate-400 uppercase bg-slate-950/60 border-b border-slate-800 font-semibold tracking-wider">
                 <tr>
@@ -751,7 +830,7 @@ export const AdminDashboard: React.FC = () => {
                 )}
               </tbody>
             </table>
-          </div>
+          </AdminScrollableTable>
 
           {/* Pagination */}
           <div className="flex items-center justify-between pt-4 border-t border-slate-800 text-xs text-slate-400">
@@ -813,7 +892,7 @@ export const AdminDashboard: React.FC = () => {
             </select>
           </div>
 
-          <div className="overflow-x-auto rounded-lg border border-slate-800/70" role="region" tabIndex={0} aria-label="Scrollable security logs table">
+          <AdminScrollableTable ariaLabel="Scrollable security logs table">
             <table className="w-full text-xs text-left">
               <thead className="text-slate-400 uppercase bg-slate-950/60 border-b border-slate-800 font-semibold tracking-wider">
                 <tr>
@@ -856,7 +935,7 @@ export const AdminDashboard: React.FC = () => {
                 )}
               </tbody>
             </table>
-          </div>
+          </AdminScrollableTable>
 
           {/* Pagination */}
           <div className="flex items-center justify-between pt-4 border-t border-slate-800 text-xs text-slate-400">
@@ -968,7 +1047,7 @@ export const AdminDashboard: React.FC = () => {
 
           <Card className="p-6 border-slate-800 bg-slate-900/70">
             <h3 className="text-sm font-bold text-slate-200 mb-4">{t.ui.apiPerformanceBenchmarks}</h3>
-            <div className="overflow-x-auto rounded-lg border border-slate-800/70" role="region" tabIndex={0} aria-label="Scrollable performance table">
+            <AdminScrollableTable ariaLabel="Scrollable performance table">
               <table className="w-full text-xs text-left">
                 <thead className="text-slate-400 uppercase bg-slate-950/60 border-b border-slate-800 font-semibold">
                   <tr>
@@ -995,7 +1074,7 @@ export const AdminDashboard: React.FC = () => {
                   )}
                 </tbody>
               </table>
-            </div>
+            </AdminScrollableTable>
           </Card>
         </div>
         </section>
@@ -1010,7 +1089,7 @@ export const AdminDashboard: React.FC = () => {
             <p className="text-xs text-slate-400">{t.admin.auditTrail.subtitle}</p>
           </div>
 
-          <div className="overflow-x-auto rounded-lg border border-slate-800/70" role="region" tabIndex={0} aria-label="Scrollable audit trail table">
+          <AdminScrollableTable ariaLabel="Scrollable audit trail table">
             <table className="w-full text-xs text-left">
               <thead className="text-slate-400 uppercase bg-slate-950/60 border-b border-slate-800 font-semibold tracking-wider">
                 <tr>
@@ -1049,7 +1128,7 @@ export const AdminDashboard: React.FC = () => {
                 )}
               </tbody>
             </table>
-          </div>
+          </AdminScrollableTable>
 
           {/* Pagination */}
           <div className="flex items-center justify-between pt-4 border-t border-slate-800 text-xs text-slate-400">

@@ -19,7 +19,7 @@ export const SeverityBadge: React.FC<SeverityBadgeProps> = ({
     { variant: 'danger' | 'warning' | 'info' | 'neutral'; label: string; icon: React.ReactNode; className?: string }
   > = {
     critical: { variant: 'danger', label: 'CRITICAL', icon: <AlertOctagon className="w-3 h-3" aria-hidden="true" />, className: 'font-bold' },
-    high: { variant: 'danger', label: 'HIGH RISK', icon: <AlertTriangle className="w-3 h-3" aria-hidden="true" />, className: 'border-red-400/30' },
+    high: { variant: 'warning', label: 'HIGH RISK', icon: <AlertTriangle className="w-3 h-3" aria-hidden="true" />, className: '!bg-orange-500/10 !text-orange-300 !border-orange-400/30 font-semibold' },
     medium: { variant: 'warning', label: 'MEDIUM RISK', icon: <AlertTriangle className="w-3 h-3" aria-hidden="true" /> },
     low: { variant: 'info', label: 'LOW RISK', icon: <Info className="w-3 h-3" aria-hidden="true" /> },
     info: { variant: 'neutral', label: 'INFO', icon: <Info className="w-3 h-3" aria-hidden="true" /> },

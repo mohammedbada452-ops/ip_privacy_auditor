@@ -59,32 +59,23 @@ export const HeaderRow: React.FC<HeaderRowProps> = ({ item }) => {
   return (
     <div className="border-b border-slate-800/60 last:border-b-0 hover:bg-slate-900/40 transition-colors">
       {/* Primary Row Grid */}
-      <div
-        onClick={() => setIsExpanded(!isExpanded)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            setIsExpanded((prev) => !prev);
-          }
-        }}
-        role="button"
-        tabIndex={0}
-        aria-expanded={isExpanded}
-        aria-controls={`header-details-${item.category}-${item.canonicalName.replace(/[^a-zA-Z0-9_-]/g, '-')}`}
-        aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${item.canonicalName}`}
-        className="p-4 cursor-pointer grid grid-cols-1 lg:grid-cols-12 gap-3 items-center focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 focus-visible:ring-inset"
-      >
+      <div className="p-4 grid grid-cols-1 lg:grid-cols-12 gap-3 items-center">
         {/* Header Name (Col 1-4) */}
-        <div className="lg:col-span-4 flex items-center gap-2.5">
+        <div className="lg:col-span-4 min-w-0">
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsExpanded(!isExpanded);
-            }}
-            className="w-10 h-10 inline-flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-300 hover:bg-slate-800/70 transition-colors shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60" aria-label={isExpanded ? t.common.collapse : t.common.expand}
+            type="button"
+            onClick={() => setIsExpanded((prev) => !prev)}
+            aria-expanded={isExpanded}
+            aria-controls={`header-details-${item.category}-${item.canonicalName.replace(/[^a-zA-Z0-9_-]/g, '-')}`}
+            aria-label={`${isExpanded ? t.common.collapse : t.common.expand} ${item.canonicalName}`}
+            className="w-full min-w-0 flex items-center gap-2.5 text-start rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 focus-visible:ring-inset px-1 py-1 hover:bg-slate-900/40 transition-colors"
           >
-            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-          </button>
+            <span
+              aria-hidden="true"
+              className="w-10 h-10 inline-flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-300 hover:bg-slate-800/70 transition-colors shrink-0"
+            >
+              {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </span>
 
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
@@ -119,6 +110,7 @@ export const HeaderRow: React.FC<HeaderRowProps> = ({ item }) => {
               {getCategoryLabel()}
             </span>
           </div>
+          </button>
         </div>
 
         {/* Value Column (Col 5-8) */}
