@@ -5,7 +5,7 @@ import { Link } from '../../../router/Router';
 import { useLanguage } from '../../../i18n/LanguageContext';
 import { Card, CardBody, CardHeader, CopyValue, RefreshButton, StatusBadge } from '../../../components/ui';
 import type { IpCheckResponse, IpDetailsResponse, IpNetworkIntelligenceResponse } from '@packages/api-contract';
-import type { BrowserProfile, IdentityData, LocaleData } from '../../browser/types';
+import type { BrowserProfile, IdentityData } from '../../browser/types';
 import type { HeadersAnalysisResponse } from '../../headers/types';
 import { getCountryName, getLanguageCountryConsistency, getSafeNetworkText, getStatusLabel } from '../utils/networkPresentation';
 
@@ -62,11 +62,9 @@ export const TechnicalSummarySection: React.FC<TechnicalSummarySectionProps> = (
     ? (browserProfile.groups.IDENTITY.data as IdentityData & { timezone?: string }).timezone || null
     : null;
   const timezoneMatch = timezone !== 'Unknown' && browserTimezone ? timezone === browserTimezone : null;
-  const localeData = browserProfile?.groups?.LOCALE?.data as LocaleData | undefined;
-  const browserLanguage = localeData?.language || (browserProfile?.groups?.IDENTITY?.data
+  const browserLanguage = browserProfile?.groups?.IDENTITY?.data
     ? (browserProfile.groups.IDENTITY.data as IdentityData).language || null
-    : null);
-  const resolvedLocale = localeData?.resolvedLocale || browserLanguage || null;
+    : null;
   const languageConsistency = getLanguageCountryConsistency(browserLanguage, countryCode || null);
   const intelligenceConfidence = networkIntelligence?.intelligenceConfidence || null;
   const intelligenceSources = networkIntelligence?.providers?.length
@@ -162,24 +160,6 @@ export const TechnicalSummarySection: React.FC<TechnicalSummarySectionProps> = (
               <div className="text-[11px] text-slate-500 font-mono mt-2">
                 Source: {ipCheck?.observationSource || ipCheck?.ipSource || 'server observed'}
               </div>
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                <div className="rounded-lg border border-slate-800/90 bg-slate-900/70 p-2.5">
-                  <div className="text-[9px] uppercase tracking-wider text-slate-600 font-mono">{t.ui.measurement}</div>
-                  <div className="mt-1 text-[11px] text-slate-200 font-mono truncate">{ipDetails?.measurementStatus || t.common.unknown}</div>
-                </div>
-                <div className="rounded-lg border border-slate-800/90 bg-slate-900/70 p-2.5">
-                  <div className="text-[9px] uppercase tracking-wider text-slate-600 font-mono">{t.ip.scope}</div>
-                  <div className="mt-1 text-[11px] text-cyan-300 font-mono truncate">{isPublic ? t.ui.publicRoutableAddress : t.ui.publicScopeUnverified}</div>
-                </div>
-                <div className="rounded-lg border border-slate-800/90 bg-slate-900/70 p-2.5">
-                  <div className="text-[9px] uppercase tracking-wider text-slate-600 font-mono">{t.ui.intelligenceSource}</div>
-                  <div className="mt-1 text-[11px] text-slate-200 font-mono truncate" title={intelligenceSources}>{intelligenceSources}</div>
-                </div>
-                <div className="rounded-lg border border-slate-800/90 bg-slate-900/70 p-2.5">
-                  <div className="text-[9px] uppercase tracking-wider text-slate-600 font-mono">{t.ui.confidence}</div>
-                  <div className="mt-1 text-[11px] text-slate-200 font-mono truncate">{intelligenceConfidence || ipDetails?.measurementStatus || t.common.unknown}</div>
-                </div>
-              </div>
             </div>
 
             <div className="rounded-xl border border-slate-800 bg-slate-900/65 p-4 sm:p-5">
@@ -202,26 +182,14 @@ export const TechnicalSummarySection: React.FC<TechnicalSummarySectionProps> = (
                 {timezoneMatch === true ? t.ui.networkTimezoneMatch : timezoneMatch === false ? t.ui.timezoneMismatch.replace('{timezone}', browserTimezone) : t.ui.timezoneConsistencyNotMeasured}
               </div>}
               {browserLanguage && (
-                <div className="mt-2 space-y-1 rounded-lg border border-slate-800/80 bg-slate-950/35 p-2.5">
-                  <div className="flex items-center justify-between gap-3 text-[10px] font-mono">
-                    <span className="text-slate-600">{t.ui.browserSignal}</span>
-                    <span className="text-slate-300 truncate" title={browserLanguage}>{browserLanguage}</span>
-                  </div>
-                  {resolvedLocale && resolvedLocale !== browserLanguage && (
-                    <div className="flex items-center justify-between gap-3 text-[10px] font-mono">
-                      <span className="text-slate-600">{t.browser.resolvedLocale}</span>
-                      <span className="text-slate-300 truncate" title={resolvedLocale}>{resolvedLocale}</span>
-                    </div>
-                  )}
-                  <div className={`text-[10px] leading-4 ${languageConsistency === 'MATCH' ? 'text-emerald-400' : languageConsistency === 'MISMATCH' ? 'text-amber-400' : 'text-slate-500'}`}>
-                    {languageConsistency === 'MATCH'
-                      ? `${t.home.remediationCenter.match}: ${browserLanguage}`
-                      : languageConsistency === 'MISMATCH'
-                      ? `${t.home.remediationCenter.mismatch}: ${browserLanguage}`
-                      : languageConsistency === 'AMBIGUOUS'
-                      ? `${t.home.remediationCenter.statusNotVerifiable}: ${browserLanguage} — no regional subtag`
-                      : t.home.remediationCenter.statusUnavailable}
-                  </div>
+                <div className={`mt-1 text-[11px] ${languageConsistency === 'MATCH' ? 'text-emerald-400' : languageConsistency === 'MISMATCH' ? 'text-amber-400' : 'text-slate-500'}`}>
+                  {languageConsistency === 'MATCH'
+                    ? `Browser language region matches network country (${browserLanguage})`
+                    : languageConsistency === 'MISMATCH'
+                    ? `Language/country mismatch: browser set to ${browserLanguage}`
+                    : languageConsistency === 'AMBIGUOUS'
+                    ? `Browser language (${browserLanguage}) has no region — can't be compared`
+                    : 'Language consistency not measured'}
                 </div>
               )}
             </div>
@@ -279,24 +247,24 @@ export const TechnicalSummarySection: React.FC<TechnicalSummarySectionProps> = (
 
           {showSecondaryDetails && (
             <div id="technical-secondary-details" className="space-y-5 animate-fadeIn">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            <div className="min-w-0 rounded-lg border border-slate-800 bg-slate-900/50 px-4 py-3 flex flex-col items-start justify-between gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            <div className="rounded-lg border border-slate-800 bg-slate-900/50 px-4 py-3 flex items-center justify-between gap-3">
               <span className="text-xs text-slate-400">{t.ip.vpnConnection}</span>
-              <StatusBadge status={ipDetails?.network?.isVpn == null ? 'neutral' : ipDetails.network.isVpn ? 'warning' : 'success'} label={vpnLabel} className="w-full min-w-0 justify-center text-center whitespace-normal break-words leading-tight" />
+              <StatusBadge status={ipDetails?.network?.isVpn == null ? 'neutral' : ipDetails.network.isVpn ? 'warning' : 'success'} label={vpnLabel} />
             </div>
-            <div className="min-w-0 rounded-lg border border-slate-800 bg-slate-900/50 px-4 py-3 flex flex-col items-start justify-between gap-2">
+            <div className="rounded-lg border border-slate-800 bg-slate-900/50 px-4 py-3 flex items-center justify-between gap-3">
               <span className="text-xs text-slate-400">{t.ip.proxyServer}</span>
-              <StatusBadge status={ipDetails?.network?.isProxy == null ? 'neutral' : ipDetails.network.isProxy ? 'warning' : 'success'} label={proxyLabel} className="w-full min-w-0 justify-center text-center whitespace-normal break-words leading-tight" />
+              <StatusBadge status={ipDetails?.network?.isProxy == null ? 'neutral' : ipDetails.network.isProxy ? 'warning' : 'success'} label={proxyLabel} />
             </div>
-            <div className="min-w-0 rounded-lg border border-slate-800 bg-slate-900/50 px-4 py-3 flex flex-col items-start justify-between gap-2">
+            <div className="rounded-lg border border-slate-800 bg-slate-900/50 px-4 py-3 flex items-center justify-between gap-3">
               <span className="text-xs text-slate-400">{t.ip.torExitNode}</span>
-              <StatusBadge status={ipDetails?.network?.isTor == null ? 'neutral' : ipDetails.network.isTor ? 'danger' : 'success'} label={torLabel} className="w-full min-w-0 justify-center text-center whitespace-normal break-words leading-tight" />
+              <StatusBadge status={ipDetails?.network?.isTor == null ? 'neutral' : ipDetails.network.isTor ? 'danger' : 'success'} label={torLabel} />
             </div>
-            <div className="min-w-0 rounded-lg border border-slate-800 bg-slate-900/50 px-4 py-3 flex flex-col items-start justify-between gap-2">
+            <div className="rounded-lg border border-slate-800 bg-slate-900/50 px-4 py-3 flex items-center justify-between gap-3">
               <span className="text-xs text-slate-400">{t.ip.datacenterHosting}</span>
-              <StatusBadge status={ipDetails?.network?.isHosting == null ? 'neutral' : ipDetails.network.isHosting ? 'warning' : 'success'} label={hostingLabel} className="w-full min-w-0 justify-center text-center whitespace-normal break-words leading-tight" />
+              <StatusBadge status={ipDetails?.network?.isHosting == null ? 'neutral' : ipDetails.network.isHosting ? 'warning' : 'success'} label={hostingLabel} />
             </div>
-            <div className="min-w-0 rounded-lg border border-slate-800 bg-slate-900/50 px-4 py-3 flex flex-col items-start justify-between gap-2">
+            <div className="rounded-lg border border-slate-800 bg-slate-900/50 px-4 py-3 flex items-center justify-between gap-3">
               <span className="text-xs text-slate-400">{t.ui.providerNetworkPrivacy}</span>
               {providerPrivacyScore !== null ? (
                 <div className="text-right"><div className="text-cyan-300 font-mono font-bold">{providerPrivacyScore}%</div><div className="text-[10px] text-slate-600">{providerPrivacyGrade ? `${t.ui.providerGrade} ${providerPrivacyGrade}` : t.ui.providerReportedScore}</div></div>

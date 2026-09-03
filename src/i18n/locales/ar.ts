@@ -493,7 +493,6 @@ export const ar: Translations = {
     localeTimezoneTitle: 'المنطقة واللغة والمنطقة الزمنية',
     localeTimezoneSubtitle: 'اللغات المكونة، الترتيب الإقليمي المحلول، وإزاحة UTC',
     browserLanguage: 'اللغة الأساسية',
-    resolvedLocale: 'الإعداد الإقليمي المحلّل',
     configuredLanguages: 'اللغات المقبولة',
     resolvedTimezone: 'المنطقة الزمنية للنظام',
     utcOffset: 'إزاحة UTC',

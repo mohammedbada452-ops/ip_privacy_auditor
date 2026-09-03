@@ -42,7 +42,7 @@ export const ActiveProtectionsSection: React.FC<ActiveProtectionsSectionProps> =
   const totalProtectionsAndBaselines = verifiedProtections.length + noRiskFactors.length;
 
   return (
-    <section id="active-protections-section" className="mb-8 scroll-mt-24" aria-labelledby="protections-heading">
+    <section className="mb-8" aria-labelledby="protections-heading">
       <div className="mb-4">
         <h2 id="protections-heading" className="text-xl font-bold font-mono text-slate-100 flex items-center gap-2">
           <ShieldCheck className="w-5 h-5 text-emerald-400" />

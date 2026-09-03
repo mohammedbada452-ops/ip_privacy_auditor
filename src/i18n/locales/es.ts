@@ -493,7 +493,6 @@ export const es: Translations = {
     localeTimezoneTitle: 'Región, Idioma y Zona Horaria',
     localeTimezoneSubtitle: 'Idiomas configurados, cotejo regional resuelto y desfase UTC',
     browserLanguage: 'Idioma Principal',
-    resolvedLocale: 'Localidad resuelta',
     configuredLanguages: 'Idiomas Aceptados',
     resolvedTimezone: 'Zona Horaria del Sistema',
     utcOffset: 'Desfase UTC',

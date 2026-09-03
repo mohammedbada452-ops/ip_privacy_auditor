@@ -506,7 +506,6 @@ export interface Translations {
     localeTimezoneTitle: string;
     localeTimezoneSubtitle: string;
     browserLanguage: string;
-    resolvedLocale: string;
     configuredLanguages: string;
     resolvedTimezone: string;
     utcOffset: string;

@@ -44,14 +44,14 @@ export const WebRtcCard: React.FC<WebRtcCardProps> = ({ group }) => {
           status={badgeStatus}
           label={badgeLabel}
           size="sm"
-          className="min-w-0 max-w-[44%] sm:max-w-[48%] shrink-0 text-center justify-center whitespace-normal break-words leading-tight"
+          className="max-w-[48%] sm:max-w-[55%] shrink-0 text-center whitespace-normal break-words"
         />
       </div>
 
       {/* Leak Status Banner */}
       {!isUnavailable ? (
         <div
-          className={`p-3 rounded-lg border text-xs min-w-0 ${
+          className={`p-3 rounded-lg border text-xs ${
             leakDetected
               ? 'bg-rose-950/40 border-rose-900/60 text-rose-300'
               : hasPublicCandidate

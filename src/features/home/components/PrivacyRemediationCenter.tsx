@@ -286,45 +286,6 @@ export const PrivacyRemediationCenter: React.FC<PrivacyRemediationCenterProps> =
           </button>
         </div>
 
-        {/* Guided remediation workflow: review -> remediate -> re-scan -> verify */}
-        <div
-          id="remediation-workflow"
-          className="mt-6 p-5 rounded-2xl bg-slate-950/40 border border-slate-800/90"
-        >
-          <div className="flex items-center justify-between gap-3 mb-4">
-            <div>
-              <div className="text-xs font-bold uppercase tracking-wider text-slate-200">
-                {t.home.remediationCenter.summaryTitle}
-              </div>
-              <div className="text-[11px] text-slate-500 mt-1">
-                {t.home.remediationCenter.expectedOutcomeLabel}
-              </div>
-            </div>
-            <Layers className="w-5 h-5 text-cyan-400 shrink-0" aria-hidden="true" />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            {[
-              [t.common.viewDetails, t.home.remediationCenter.detectionConfidenceLabel],
-              [t.common.remediate, t.home.remediationCenter.actionableNow],
-              [t.home.remediationCenter.recheckAction, t.home.remediationCenter.rechecking],
-              [t.home.remediationCenter.expectedOutcomeLabel, t.home.remediationCenter.beforeAfterTitle],
-            ].map(([title, detail], index) => (
-              <div
-                key={`${title}-${index}`}
-                className="relative rounded-xl border border-slate-800 bg-slate-900/60 p-3"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="w-7 h-7 rounded-full border border-cyan-500/30 bg-cyan-500/10 text-cyan-300 flex items-center justify-center text-[11px] font-mono font-bold shrink-0">
-                    {index + 1}
-                  </span>
-                  <span className="text-xs font-semibold text-slate-200">{title}</span>
-                </div>
-                <p className="mt-2 text-[10px] leading-4 text-slate-500">{detail}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
         {/* Summary Metric Counters */}
         <div
           id="remediation-metrics-summary"
@@ -801,8 +762,8 @@ export const PrivacyRemediationCenter: React.FC<PrivacyRemediationCenterProps> =
                       {t.home.remediationCenter.mismatch}
                     </span>
                   ) : (
-                    <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-500/10 text-slate-400 border border-slate-500/20">
-                      {t.home.remediationCenter.statusNotVerifiable}
+                    <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-500/10 text-slate-500 border border-slate-500/20">
+                      {t.home.remediationCenter.statusUnavailable}
                     </span>
                   )}
                 </div>

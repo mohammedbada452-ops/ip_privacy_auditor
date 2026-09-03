@@ -493,7 +493,6 @@ export const fr: Translations = {
     localeTimezoneTitle: 'Paramètres Régionaux, Langue & Fuseau Horaire',
     localeTimezoneSubtitle: 'Langues configurées, collation régionale résolue et décalage UTC',
     browserLanguage: 'Langue Principale',
-    resolvedLocale: 'Paramètres régionaux résolus',
     configuredLanguages: 'Langues Acceptées',
     resolvedTimezone: 'Fuseau Horaire Système',
     utcOffset: 'Décalage UTC',

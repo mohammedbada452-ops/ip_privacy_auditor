@@ -493,7 +493,6 @@ export const tr: Translations = {
     localeTimezoneTitle: 'Yerel Ayar, Dil ve Saat Dilimi',
     localeTimezoneSubtitle: 'Yapılandırılmış diller, çözümlenmiş bölgesel sıralama ve UTC farkı',
     browserLanguage: 'Birincil Dil',
-    resolvedLocale: 'Çözümlenmiş Yerel Ayar',
     configuredLanguages: 'Kabul Edilen Diller',
     resolvedTimezone: 'Sistem Saat Dilimi',
     utcOffset: 'UTC Farkı',
