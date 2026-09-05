@@ -420,13 +420,18 @@ function cookieValue(request: Request, name: string): string | undefined {
   return undefined;
 }
 
-function hasValidCsrfToken(request: Request): boolean {
+async function hasValidCsrfToken(request: Request): Promise<boolean> {
   const cookieToken = cookieValue(request, "privasec_admin_csrf") || "";
   const headerToken = request.headers.get("x-csrf-token") || "";
   if (!cookieToken || !headerToken || cookieToken.length !== headerToken.length) return false;
-  const cookieBuffer = Buffer.from(cookieToken, "utf8");
-  const headerBuffer = Buffer.from(headerToken, "utf8");
-  return crypto.timingSafeEqual(cookieBuffer, headerBuffer);
+  const cookieBuffer = new TextEncoder().encode(cookieToken);
+  const headerBuffer = new TextEncoder().encode(headerToken);
+  if (cookieBuffer.length !== headerBuffer.length) return false;
+  // Web Crypto in Cloudflare Workers does not expose Node's timingSafeEqual.
+  // Compare equal-length byte arrays without an early exit.
+  let diff = 0;
+  for (let i = 0; i < cookieBuffer.length; i++) diff |= cookieBuffer[i] ^ headerBuffer[i];
+  return diff === 0;
 }
 
 function cookieHeader(name: string, value: string, options: { httpOnly?: boolean; secure?: boolean; sameSite?: string; path?: string; maxAge?: number } = {}): string {
@@ -750,7 +755,7 @@ async function handleApi(request: Request, env: RuntimeEnv, ctx: ExecutionContex
     }
 
     if ((p === "/api/admin/logout" || p === "/api/admin/auth/logout") && method === "POST") {
-      if (!hasValidCsrfToken(request)) return publicError(req, "CSRF_TOKEN_REQUIRED", "A valid CSRF token is required for this administrative action.", 403);
+      if (!(await hasValidCsrfToken(request))) return publicError(req, "CSRF_TOKEN_REQUIRED", "A valid CSRF token is required for this administrative action.", 403);
       const token = cookieValue(request, "privasec_admin_session") || (req.headers["authorization"] as string || "").replace(/^Bearer\s+/i, "") || (req.headers["x-admin-token"] as string | undefined);
       if (token) await adminAuthService.logoutAsync(token, req as any);
       return jsonResponse({ success: true, data: { message: "Logged out successfully" } }, 200, { "Set-Cookie": cookieHeader("privasec_admin_session", "", { httpOnly: true, secure, sameSite: "Strict", path: "/", maxAge: 0 }) });

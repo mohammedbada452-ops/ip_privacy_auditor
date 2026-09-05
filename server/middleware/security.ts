@@ -77,8 +77,9 @@ export function corsMiddleware(req: Request, res: Response, next: NextFunction):
   const originHeader = req.headers.origin;
   const origin = typeof originHeader === 'string' ? originHeader.trim() : undefined;
   const isDevelopment = getRequestEnv('NODE_ENV') !== 'production';
-  const configuredOrigins = getRequestEnv('CORS_ALLOWED_ORIGINS')
-    ? getRequestEnv('CORS_ALLOWED_ORIGINS').split(',').map((o: string) => o.trim()).filter(Boolean)
+  const configuredOriginsValue = getRequestEnv('CORS_ALLOWED_ORIGINS');
+  const configuredOrigins = configuredOriginsValue
+    ? configuredOriginsValue.split(',').map((o: string) => o.trim()).filter(Boolean)
     : [];
 
   if (origin) {
