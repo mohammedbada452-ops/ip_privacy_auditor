@@ -1,4 +1,4 @@
-import { initPool, getPool, isPostgresAvailable, sanitizeDatabaseUrl } from './postgres';
+import { initPool, getPool, closePool, isPostgresAvailable, sanitizeDatabaseUrl } from './postgres';
 import { runMigrations } from './migrationRunner';
 import { PostgresRepository } from './postgresRepository';
 import { dbRepository } from './repository';
@@ -39,9 +39,13 @@ export async function initializeDatabase(databaseUrlOverride?: string): Promise<
     }
   }
 
+  let ownedPool = false;
+
   try {
     console.log(`[DATABASE] Connecting to PostgreSQL at ${sanitizeDatabaseUrl(databaseUrl)}...`);
+    const existingPool = getPool();
     const pool = initPool({ connectionString: databaseUrl });
+    ownedPool = existingPool !== pool;
     const isHealthy = await isPostgresAvailable(pool);
 
     if (!isHealthy) {
@@ -75,6 +79,13 @@ export async function initializeDatabase(databaseUrlOverride?: string): Promise<
       currentSchemaVersion: migrationResult.currentVersion,
     };
   } catch (err) {
+    if (ownedPool) {
+      try {
+        await closePool();
+      } catch (closeErr) {
+        console.error('[DATABASE] Failed to close PostgreSQL pool after initialization failure:', (closeErr as Error).message);
+      }
+    }
     const errorMsg = (err as Error).message;
     console.error('[DATABASE] PostgreSQL initialization failed:', errorMsg);
     if (isProduction) {

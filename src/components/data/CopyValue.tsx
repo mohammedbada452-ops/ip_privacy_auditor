@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Copy, Check } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 
@@ -19,12 +19,25 @@ export const CopyValue: React.FC<CopyValueProps> = ({
 }) => {
   const { t } = useLanguage();
   const [copied, setCopied] = useState<boolean>(false);
+  const resetCopiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (resetCopiedTimerRef.current) {
+      clearTimeout(resetCopiedTimerRef.current);
+    }
+  }, []);
 
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(value);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      if (resetCopiedTimerRef.current) {
+        clearTimeout(resetCopiedTimerRef.current);
+      }
+      resetCopiedTimerRef.current = setTimeout(() => {
+        setCopied(false);
+        resetCopiedTimerRef.current = null;
+      }, 2000);
     } catch (err) {
       console.error('Failed to copy to clipboard:', err);
     }

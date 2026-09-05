@@ -293,36 +293,39 @@ export const AdminDashboard: React.FC = () => {
     }
   }, [isAuthenticated, auditPage]);
 
-  const refreshAll = async () => {
+  const refreshAll = useCallback(async () => {
     setIsRefreshing(true);
     setFetchError(null);
-    await Promise.all([
-      fetchOverview(),
-      fetchScans(),
-      fetchLogs(),
-      fetchTraffic(),
-      fetchPerf(),
-      fetchAudit(),
-    ]);
-    setIsRefreshing(false);
-    setIsLoading(false);
-  };
+    try {
+      await Promise.all([
+        fetchOverview(),
+        fetchScans(),
+        fetchLogs(),
+        fetchTraffic(),
+        fetchPerf(),
+        fetchAudit(),
+      ]);
+    } finally {
+      setIsRefreshing(false);
+      setIsLoading(false);
+    }
+  }, [fetchOverview, fetchScans, fetchLogs, fetchTraffic, fetchPerf, fetchAudit]);
 
   useEffect(() => {
     if (isAuthenticated) {
-      refreshAll();
+      void refreshAll();
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, refreshAll]);
 
   useEffect(() => {
     if (isAuthenticated) {
       if (activeTab === 'scans') fetchScans();
-      if (activeTab === 'logs') fetchLogs();
+      if (activeTab === 'securityLogs') fetchLogs();
       if (activeTab === 'traffic') fetchTraffic();
       if (activeTab === 'performance') fetchPerf();
       if (activeTab === 'audit') fetchAudit();
     }
-  }, [isAuthenticated, activeTab, scansPage, scansCountry, scansTier, logsPage, logsEvent, auditPage]);
+  }, [isAuthenticated, activeTab, scansPage, scansSearch, scansCountry, scansTier, logsPage, logsEvent, auditPage, fetchScans, fetchLogs, fetchTraffic, fetchPerf, fetchAudit]);
 
   if (authLoading || (isLoading && !stats)) {
     return (
@@ -735,6 +738,7 @@ export const AdminDashboard: React.FC = () => {
               </div>
 
               <select
+                aria-label={t.admin.scansTable.filterTier || 'Scan tier filter'}
                 value={scansTier}
                 onChange={(e) => {
                   setScansTier(e.target.value);
@@ -877,6 +881,7 @@ export const AdminDashboard: React.FC = () => {
             </div>
 
             <select
+              aria-label={t.admin.logsTable.filterEvent || 'Security event filter'}
               value={logsEvent}
               onChange={(e) => {
                 setLogsEvent(e.target.value);

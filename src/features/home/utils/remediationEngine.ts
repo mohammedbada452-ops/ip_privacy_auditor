@@ -124,7 +124,7 @@ function classifyActor(factorId: string, category: string): ResponsibleActor {
   }
   if (category === 'BROWSER') return 'BROWSER';
   if (category === 'NETWORK') return 'NETWORK';
-  if (category === 'HTTP_HEADERS') return 'BROWSER';
+  if (category === 'HTTP_HEADERS') return 'HEADERS';
   return 'EDUCATIONAL';
 }
 

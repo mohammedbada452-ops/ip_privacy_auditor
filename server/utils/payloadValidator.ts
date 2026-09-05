@@ -117,7 +117,7 @@ export function validateBrowserFingerprintPayload(raw: unknown): BrowserFingerpr
     }
   }
 
-  // 5. Screen
+  // 6. Screen
   if (obj.screen !== undefined) {
     if (typeof obj.screen !== 'object' || Array.isArray(obj.screen)) {
       throw new PayloadValidationError('Invalid screen: expected object');

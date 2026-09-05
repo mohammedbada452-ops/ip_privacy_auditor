@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   PageContainer,
   Section,
@@ -46,18 +46,31 @@ export const DesignSystemShowcase: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [gaugeScore, setGaugeScore] = useState<number>(85);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
+  }, []);
 
   const handleRefreshDemo = () => {
     setIsRefreshing(true);
-    setTimeout(() => {
+    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    refreshTimerRef.current = setTimeout(() => {
       setIsRefreshing(false);
       setGaugeScore((prev) => (prev === 85 ? 42 : prev === 42 ? 68 : 85));
+      refreshTimerRef.current = null;
     }, 1200);
   };
 
   const showDemoAction = (msg: string) => {
     setFeedbackMessage(msg);
-    setTimeout(() => setFeedbackMessage(null), 3000);
+    if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
+    feedbackTimerRef.current = setTimeout(() => {
+      setFeedbackMessage(null);
+      feedbackTimerRef.current = null;
+    }, 3000);
   };
 
   return (

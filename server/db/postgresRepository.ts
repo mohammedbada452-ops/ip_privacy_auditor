@@ -15,14 +15,11 @@ import type {
 } from './repository';
 import { validateAdminUsername, validateAdminPassword } from '../config';
 import { getRequestEnv } from '../config/requestEnv';
+import { hashSessionToken } from './postgres';
 
 // Runtime (non-type-only) binding used solely for `instanceof` checks below, since the
 // `pg` import above is type-only and cannot be used as a value.
 const { Pool: PgPool } = pgRuntime;
-
-function hashSessionToken(rawToken: string): string {
-  return crypto.createHash('sha256').update(rawToken).digest('hex');
-}
 
 /**
  * This repository is constructed with either:

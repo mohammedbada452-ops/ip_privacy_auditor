@@ -41,13 +41,15 @@ export function installPerformanceObservers(): () => void {
 
   try {
     if (PerformanceObserver.supportedEntryTypes?.includes("event")) {
+      let maxInteractionDuration = 0;
       const observer = new PerformanceObserver((list) => {
-        let max = 0;
         for (const entry of list.getEntries() as PerformanceEntry[]) {
           const duration = entry.duration;
-          if (Number.isFinite(duration)) max = Math.max(max, duration);
+          if (Number.isFinite(duration)) {
+            maxInteractionDuration = Math.max(maxInteractionDuration, duration);
+          }
         }
-        if (max > 0) reportMetric("INP", max, "ms");
+        if (maxInteractionDuration > 0) reportMetric("INP", maxInteractionDuration, "ms");
       });
       observer.observe({ type: "event", buffered: true, durationThreshold: 40 } as PerformanceObserverInit);
       observers.push(observer);

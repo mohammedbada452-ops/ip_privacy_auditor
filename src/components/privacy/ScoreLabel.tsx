@@ -13,6 +13,8 @@ export const ScoreLabel: React.FC<ScoreLabelProps> = ({
   className = '',
   size = 'md',
 }) => {
+  const safeScore = Number.isFinite(score) ? score : 0;
+
   const getScoreColor = (val: number) => {
     if (val >= 80) return 'text-emerald-400';
     if (val >= 50) return 'text-amber-400';
@@ -26,8 +28,8 @@ export const ScoreLabel: React.FC<ScoreLabelProps> = ({
   };
 
   return (
-    <span className={`font-mono ${sizeClasses[size]} ${getScoreColor(score)} ${className}`}>
-      {Math.round(score)}
+    <span className={`font-mono ${sizeClasses[size]} ${getScoreColor(safeScore)} ${className}`}>
+      {Math.round(safeScore)}
       {showMax && <span className="text-slate-500 text-xs font-normal">/100</span>}
     </span>
   );

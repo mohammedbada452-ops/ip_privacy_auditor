@@ -108,6 +108,7 @@ export const en: Translations = {
   nav: {
     overview: 'Overview',
     browser: 'Browser Signals',
+    learn: 'Learn',
     headers: 'HTTP Headers',
     privacyPolicy: 'Privacy Policy',
     admin: 'Admin',

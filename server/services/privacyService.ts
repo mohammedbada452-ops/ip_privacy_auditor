@@ -2,6 +2,7 @@ import type { Request } from 'express';
 import { extractClientIp } from '../utils/ipExtractor';
 import { geoIPService } from './geoip';
 import { PrivacyEngine } from '../privacy/PrivacyEngine';
+import { dbRepository } from '../db/repository';
 import type {
   BrowserFingerprintInput,
   PrivacyScoreAnalysis,
@@ -87,7 +88,6 @@ export class PrivacyService {
 
     // 5. Asynchronously persist anonymized scan record to Stage 11 Database
     try {
-      const { dbRepository } = await import('../db/repository');
       const countryCode = ipDetails?.geo?.countryCode || 'XX';
       const city = ipDetails?.geo?.city || 'Unknown';
       const isp = ipDetails?.network?.isp || 'Unknown ISP';

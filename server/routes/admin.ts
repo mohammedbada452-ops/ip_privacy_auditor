@@ -9,6 +9,24 @@ import { getRequestEnv } from '../config/requestEnv';
 
 export const adminRouter = Router();
 
+const MAX_ADMIN_PAGE = 100_000;
+const MAX_ADMIN_LIMIT = 100;
+const MAX_ADMIN_SEARCH_LENGTH = 200;
+
+function boundedPositiveInt(value: string | string[] | undefined, fallback: number, max: number): number {
+  const raw = Array.isArray(value) ? value[0] : value;
+  const parsed = Number.parseInt(raw || '', 10);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(1, parsed));
+}
+
+function boundedSearch(value: string | string[] | undefined): string | undefined {
+  const raw = Array.isArray(value) ? value[0] : value;
+  const normalized = raw?.trim();
+  if (!normalized) return undefined;
+  return normalized.slice(0, MAX_ADMIN_SEARCH_LENGTH);
+}
+
 // Administrative responses contain sensitive operational data and must never be cached.
 adminRouter.use((_req, res, next) => {
   res.setHeader('Cache-Control', 'no-store, max-age=0');
@@ -271,12 +289,12 @@ adminRouter.get('/admin/metrics/overview', adminAuthMiddleware, requirePermissio
  * List paginated scan sessions (strictly privacy-safe and anonymized)
  */
 adminRouter.get('/admin/scans', adminAuthMiddleware, requirePermission('scans:read'), asyncHandler(async (req: Request, res: Response) => {
-  const page = parseInt(req.query.page as string, 10) || 1;
+  const page = boundedPositiveInt(req.query.page as string | string[] | undefined, 1, MAX_ADMIN_PAGE);
   const requestedLimit = parseInt(req.query.limit as string, 10);
-  const limit = Number.isFinite(requestedLimit) ? Math.min(100, Math.max(1, requestedLimit)) : 10;
+  const limit = Number.isFinite(requestedLimit) ? Math.min(MAX_ADMIN_LIMIT, Math.max(1, requestedLimit)) : 10;
   const country = (req.query.country as string) || undefined;
   const tier = (req.query.tier as string) || undefined;
-  const search = (req.query.search as string) || undefined;
+  const search = boundedSearch(req.query.search as string | string[] | undefined);
   const isVpn = req.query.isVpn !== undefined ? req.query.isVpn === 'true' : undefined;
   const sortBy = (req.query.sortBy as any) || 'createdAt';
   const sortOrder = (req.query.sortOrder as any) || 'desc';
@@ -307,11 +325,11 @@ adminRouter.get('/admin/scans', adminAuthMiddleware, requirePermission('scans:re
  * Fetch security & audit event logs
  */
 adminRouter.get('/admin/logs', adminAuthMiddleware, requirePermission('logs:read'), asyncHandler(async (req: Request, res: Response) => {
-  const page = parseInt(req.query.page as string, 10) || 1;
+  const page = boundedPositiveInt(req.query.page as string | string[] | undefined, 1, MAX_ADMIN_PAGE);
   const requestedLimit = parseInt(req.query.limit as string, 10);
-  const limit = Number.isFinite(requestedLimit) ? Math.min(100, Math.max(1, requestedLimit)) : 10;
+  const limit = Number.isFinite(requestedLimit) ? Math.min(MAX_ADMIN_LIMIT, Math.max(1, requestedLimit)) : 10;
   const eventType = (req.query.eventType as string) || undefined;
-  const search = (req.query.search as string) || undefined;
+  const search = boundedSearch(req.query.search as string | string[] | undefined);
 
   const result = await dbRepository.getSecurityLogsPaginatedAsync({
     page,
@@ -392,10 +410,10 @@ adminRouter.get('/admin/performance', adminAuthMiddleware, requirePermission('me
  * Admin console operational audit trail
  */
 adminRouter.get('/admin/audit', adminAuthMiddleware, requirePermission('audit:read'), asyncHandler(async (req: Request, res: Response) => {
-  const page = parseInt(req.query.page as string, 10) || 1;
+  const page = boundedPositiveInt(req.query.page as string | string[] | undefined, 1, MAX_ADMIN_PAGE);
   const requestedLimit = parseInt(req.query.limit as string, 10);
-  const limit = Number.isFinite(requestedLimit) ? Math.min(100, Math.max(1, requestedLimit)) : 10;
-  const search = (req.query.search as string) || undefined;
+  const limit = Number.isFinite(requestedLimit) ? Math.min(MAX_ADMIN_LIMIT, Math.max(1, requestedLimit)) : 10;
+  const search = boundedSearch(req.query.search as string | string[] | undefined);
 
   const result = await dbRepository.getAdminAuditLogsPaginatedAsync({
     page,

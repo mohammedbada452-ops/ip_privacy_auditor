@@ -130,17 +130,8 @@ export function getRouteTitle(route: RouteConfig, lang: Language): string {
       return dict.nav.browser;
     case 'headers':
       return dict.nav.headers;
-    case 'learn': {
-      const labels: Record<Language, string> = {
-        en: 'Learn',
-        ar: 'التعلم',
-        es: 'Aprender',
-        fr: 'Apprendre',
-        pt: 'Aprender',
-        tr: 'Öğren',
-      };
-      return labels[lang];
-    }
+    case 'learn':
+      return dict.nav.learn;
     case 'privacy-policy':
       return dict.nav.privacyPolicy;
     case 'admin':

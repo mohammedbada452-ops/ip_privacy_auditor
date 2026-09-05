@@ -38,7 +38,7 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
     <div className={`flex flex-col items-center justify-center py-12 px-4 text-center ${className}`}>
       <div className="relative flex items-center justify-center mb-4">
         <div className="w-10 h-10 border-2 border-cyan-500/20 border-t-cyan-400 rounded-full animate-spin" />
-        <div className="absolute w-6 h-6 border-2 border-slate-700 border-b-cyan-300 rounded-full animate-spin direction-reverse" />
+        <div className="absolute w-6 h-6 border-2 border-slate-700 border-b-cyan-300 rounded-full animate-spin" />
       </div>
       <p className="text-xs font-mono text-cyan-400/90 tracking-wider uppercase animate-pulse">
         {message}

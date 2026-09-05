@@ -172,14 +172,14 @@ export const PrivacyScoreHero: React.FC<PrivacyScoreHeroProps> = ({
         <div className="flex-1 min-w-0 w-full lg:basis-[58%] space-y-5 lg:pt-1">
           <div>
             <div className="flex flex-wrap items-center gap-2 mb-2">
-              <span className={analysis.verificationStatus === 'PARTIAL' ? 'text-[10px] font-bold tracking-wide uppercase px-2 py-1 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-300' : 'text-[10px] font-bold tracking-wide uppercase px-2 py-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-300'} role="status">
+              <span className={analysis.verificationStatus === 'PARTIAL' ? 'text-[10px] font-bold tracking-wide uppercase px-2 py-1 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-300' : 'text-[10px] font-bold tracking-wide uppercase px-2 py-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-300'} role="status" aria-live="polite" aria-atomic="true">
                 {verificationLabel}
               </span>
 
               <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-100 font-sans">
                 {t.home.title}
               </h1>
-              <span className="text-[10px] font-bold tracking-wide uppercase px-2 py-1 rounded-full border border-sky-500/20 bg-sky-500/10 text-sky-300" role="status">
+              <span className="text-[10px] font-bold tracking-wide uppercase px-2 py-1 rounded-full border border-sky-500/20 bg-sky-500/10 text-sky-300" role="status" aria-live="polite" aria-atomic="true">
                 {coverage !== null ? `${t.ui.evidenceCoverageShort} ${coverage}%` : t.ui.evidenceNotMeasured} · {t.ui.confidenceLabel.replace('{confidence}', confidence.toLowerCase())}
               </span>
               {totalDurationMs !== undefined && totalDurationMs > 0 && (

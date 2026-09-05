@@ -105,7 +105,8 @@ export interface Translations {
       unavailable: string;
       inferred: string;
       reviewNeeded: string;
-    };
+      skipToMain: string;
+  };
   };
 
   languages: {
@@ -121,6 +122,7 @@ export interface Translations {
     overview: string;
     browser: string;
     headers: string;
+    learn: string;
     privacyPolicy: string;
     admin: string;
     adminDashboard: string;
@@ -1116,5 +1118,5 @@ export interface LanguageContextType {
   formatNumber: (value: number, options?: Intl.NumberFormatOptions) => string;
   formatDate: (date: Date | number | string, options?: Intl.DateTimeFormatOptions) => string;
   formatScore: (score: number) => string;
-  plural: (count: number, forms: { zero?: string; one: string; other: string }) => string;
+  plural: (count: number, forms: { zero?: string; one: string; two?: string; few?: string; many?: string; other: string }) => string;
 }

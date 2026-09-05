@@ -42,7 +42,7 @@ export function securityHeaders(req: Request, res: Response, next: NextFunction)
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
         "font-src 'self' data: https://fonts.gstatic.com",
         "img-src 'self' data: blob: https:",
-        "connect-src 'self' https: wss:",
+        "connect-src 'self' wss:",
         "frame-ancestors 'self'",
         "object-src 'none'",
         "base-uri 'self'",

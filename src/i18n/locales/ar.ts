@@ -108,6 +108,7 @@ export const ar: Translations = {
   nav: {
     overview: 'نظرة عامة',
     browser: 'إشارات المتصفح',
+    learn: 'التعلم',
     headers: 'ترويسات HTTP',
     privacyPolicy: 'سياسة الخصوصية',
     admin: 'الإدارة',

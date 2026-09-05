@@ -90,11 +90,20 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return `${formatNumber(rounded)}/100`;
   }, [formatNumber]);
 
-  const plural = useCallback((count: number, forms: { zero?: string; one: string; other: string }): string => {
+  const plural = useCallback((count: number, forms: { zero?: string; one: string; two?: string; few?: string; many?: string; other: string }): string => {
     if (count === 0 && forms.zero) return forms.zero;
-    if (count === 1) return forms.one;
+
+    try {
+      const category = new Intl.PluralRules(language).select(count);
+      if (category === 'one') return forms.one;
+      if (category === 'two' && forms.two) return forms.two;
+      if (category === 'few' && forms.few) return forms.few;
+      if (category === 'many' && forms.many) return forms.many;
+    } catch {
+      // Fall through to the generic plural form for environments without PluralRules support.
+    }
     return forms.other;
-  }, []);
+  }, [language]);
 
   const t = useMemo<Translations>(() => {
     return DICTIONARIES[language] || DICTIONARIES.en;

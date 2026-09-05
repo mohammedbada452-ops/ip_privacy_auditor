@@ -157,6 +157,17 @@ export class DatabaseRepository {
     const timestamps = (existingTimestamps || []).filter((timestamp) => timestamp > windowStart);
     if (existingTimestamps) this.apiRateLimitWindows.delete(bucketKey);
 
+    // Opportunistically purge expired fallback buckets before applying the hard cap.
+    // This prevents a high-cardinality traffic burst from evicting active clients merely
+    // because many old buckets remain in memory between requests.
+    if (this.apiRateLimitWindows.size > 9_000) {
+      for (const [staleKey, staleTimestamps] of this.apiRateLimitWindows) {
+        if (!staleTimestamps.some((timestamp) => timestamp > windowStart)) {
+          this.apiRateLimitWindows.delete(staleKey);
+        }
+      }
+    }
+
     if (timestamps.length >= maxRequests) {
       const oldestInWindow = timestamps[0] || now;
       const retryAfterSeconds = Math.max(

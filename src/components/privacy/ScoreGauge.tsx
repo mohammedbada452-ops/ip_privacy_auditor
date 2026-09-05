@@ -20,7 +20,8 @@ export const ScoreGauge: React.FC<ScoreGaugeProps> = ({
   className = '',
 }) => {
   // Clamp score between 0 and 100
-  const normalizedScore = Math.max(0, Math.min(100, Math.round(score)));
+  const finiteScore = Number.isFinite(score) ? score : 0;
+  const normalizedScore = Math.max(0, Math.min(100, Math.round(finiteScore)));
 
   // Use the authoritative score-tier thresholds shared by the privacy engine.
   // This keeps the visual gauge, tier label, and backend classification aligned.

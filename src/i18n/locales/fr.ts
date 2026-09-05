@@ -108,6 +108,7 @@ export const fr: Translations = {
   nav: {
     overview: 'Aperçu',
     browser: 'Signaux du Navigateur',
+    learn: 'Apprendre',
     headers: 'En-têtes HTTP',
     privacyPolicy: 'Politique de confidentialité',
     admin: 'Administration',

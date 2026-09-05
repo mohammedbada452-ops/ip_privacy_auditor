@@ -352,7 +352,7 @@ function applySecurityHeaders(response: Response): Response {
   headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()");
   headers.set(
     "Content-Security-Policy",
-    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https: wss:; frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'"
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' wss:; frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'"
   );
   headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
@@ -386,7 +386,21 @@ const PUBLIC_API_LIMIT = { windowMs: 60_000, max: 120 };
 const HEAVY_API_LIMIT = { windowMs: 60_000, max: 30 };
 const SCORE_API_LIMIT = { windowMs: 60_000, max: 60 };
 
+const MAX_ADMIN_PAGE = 100_000;
+const MAX_ADMIN_LIMIT = 100;
+const MAX_ADMIN_SEARCH_LENGTH = 200;
 
+function boundedPositiveInt(value: string | undefined, fallback: number, max: number): number {
+  const parsed = Number.parseInt(value || "", 10);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(1, parsed));
+}
+
+function boundedSearch(value: string | undefined): string | undefined {
+  const normalized = value?.trim();
+  if (!normalized) return undefined;
+  return normalized.slice(0, MAX_ADMIN_SEARCH_LENGTH);
+}
 
 async function rateLimit(req: ServiceRequest, bucket: string, windowMs: number, max: number): Promise<Response | null> {
   try {
@@ -782,13 +796,13 @@ async function handleApi(request: Request, env: RuntimeEnv, ctx: ExecutionContex
     if (p === "/api/admin/scans" && method === "GET") {
       const auth = await guarded("scans:read");
       if (auth.response) return auth.response;
-      return jsonResponse({ success: true, ...(await dbRepository.getScanSessionsPaginatedAsync({ page: Number(req.query.page) || 1, limit: Number(req.query.limit) || 10, country: req.query.country, tier: req.query.tier, search: req.query.search, isVpn: req.query.isVpn === undefined ? undefined : req.query.isVpn === "true", sortBy: ((["countryCode", "privacyScore", "createdAt"] as const).includes(req.query.sortBy as any) ? req.query.sortBy : "createdAt") as "countryCode" | "privacyScore" | "createdAt", sortOrder: ((["asc", "desc"] as const).includes(req.query.sortOrder as any) ? req.query.sortOrder : "desc") as "asc" | "desc" })), meta: apiMeta(req) });
+      return jsonResponse({ success: true, ...(await dbRepository.getScanSessionsPaginatedAsync({ page: boundedPositiveInt(req.query.page, 1, MAX_ADMIN_PAGE), limit: boundedPositiveInt(req.query.limit, 10, MAX_ADMIN_LIMIT), country: req.query.country, tier: req.query.tier, search: boundedSearch(req.query.search), isVpn: req.query.isVpn === undefined ? undefined : req.query.isVpn === "true", sortBy: ((["countryCode", "privacyScore", "createdAt"] as const).includes(req.query.sortBy as any) ? req.query.sortBy : "createdAt") as "countryCode" | "privacyScore" | "createdAt", sortOrder: ((["asc", "desc"] as const).includes(req.query.sortOrder as any) ? req.query.sortOrder : "desc") as "asc" | "desc" })), meta: apiMeta(req) });
     }
 
     if (p === "/api/admin/logs" && method === "GET") {
       const auth = await guarded("logs:read");
       if (auth.response) return auth.response;
-      return jsonResponse({ success: true, ...(await dbRepository.getSecurityLogsPaginatedAsync({ page: Number(req.query.page) || 1, limit: Number(req.query.limit) || 10, eventType: req.query.eventType, search: req.query.search })), meta: apiMeta(req) });
+      return jsonResponse({ success: true, ...(await dbRepository.getSecurityLogsPaginatedAsync({ page: boundedPositiveInt(req.query.page, 1, MAX_ADMIN_PAGE), limit: boundedPositiveInt(req.query.limit, 10, MAX_ADMIN_LIMIT), eventType: req.query.eventType, search: boundedSearch(req.query.search) })), meta: apiMeta(req) });
     }
 
     if ((p === "/api/admin/metrics/pageviews" || p === "/api/admin/traffic") && method === "GET") {
@@ -813,7 +827,7 @@ async function handleApi(request: Request, env: RuntimeEnv, ctx: ExecutionContex
     if (p === "/api/admin/audit" && method === "GET") {
       const auth = await guarded("audit:read");
       if (auth.response) return auth.response;
-      return jsonResponse({ success: true, ...(await dbRepository.getAdminAuditLogsPaginatedAsync({ page: Number(req.query.page) || 1, limit: Number(req.query.limit) || 10, search: req.query.search })), meta: apiMeta(req) });
+      return jsonResponse({ success: true, ...(await dbRepository.getAdminAuditLogsPaginatedAsync({ page: boundedPositiveInt(req.query.page, 1, MAX_ADMIN_PAGE), limit: boundedPositiveInt(req.query.limit, 10, MAX_ADMIN_LIMIT), search: boundedSearch(req.query.search) })), meta: apiMeta(req) });
     }
   }
 

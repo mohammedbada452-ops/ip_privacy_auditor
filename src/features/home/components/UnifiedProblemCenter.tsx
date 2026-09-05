@@ -201,6 +201,7 @@ export const UnifiedProblemCenter: React.FC<UnifiedProblemCenterProps> = ({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t.home.unifiedRisks.searchPlaceholder}
+            aria-label={t.home.unifiedRisks.searchPlaceholder}
             className="w-full px-3.5 py-1.5 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-sky-500/50"
           />
         </div>

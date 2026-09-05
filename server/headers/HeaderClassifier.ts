@@ -230,6 +230,13 @@ export class HeaderClassifier {
 
       categoryCountMap[category] = (categoryCountMap[category] || 0) + 1;
 
+      const classification = classifyHeaderFinding(normKey, category, canonicalName);
+      const scoreScope = classification === 'SECURITY'
+        ? 'SECURITY'
+        : classification === 'INFORMATIONAL' || classification === 'CONFIGURATION'
+          ? 'INFORMATIONAL'
+          : 'PRIVACY_EXPOSURE';
+
       items.push({
         name: entry.key,
         canonicalName,
@@ -247,8 +254,8 @@ export class HeaderClassifier {
         isProxyHeader,
         isPrivacyControl,
         riskPoints,
-        classification: classifyHeaderFinding(normKey, category, canonicalName),
-        scoreScope: classifyHeaderFinding(normKey, category, canonicalName) === 'SECURITY' ? 'SECURITY' : classifyHeaderFinding(normKey, category, canonicalName) === 'INFORMATIONAL' || classifyHeaderFinding(normKey, category, canonicalName) === 'CONFIGURATION' ? 'INFORMATIONAL' : 'PRIVACY_EXPOSURE',
+        classification,
+        scoreScope,
       });
 
       // Populate Client Hints Analysis

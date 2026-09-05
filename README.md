@@ -4,7 +4,7 @@ PrivaSec is a privacy-auditing web application for IP intelligence, browser fing
 
 ## Local development
 
-**Prerequisites:** Node.js 20+ and npm.
+**Prerequisites:** Node.js 22+ (supported range: 22.x–24.x) and npm 11.
 
 1. Install dependencies:
    `npm install`

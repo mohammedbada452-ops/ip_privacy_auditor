@@ -108,6 +108,7 @@ export const tr: Translations = {
   nav: {
     overview: 'Genel Bakış',
     browser: 'Tarayıcı Sinyalleri',
+    learn: 'Öğren',
     headers: 'HTTP Başlıkları',
     privacyPolicy: 'Gizlilik Politikası',
     admin: 'Yönetim',
