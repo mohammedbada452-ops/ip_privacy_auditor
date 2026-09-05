@@ -66,9 +66,12 @@ export class PrivacyService {
           geo: details.geo,
           network: details.network,
         };
-      } catch {
+      } catch (error) {
         // Provider failure is unknown, never a safe result. Keep the connection evidence intact.
         ipDetails = null;
+        console.warn('[privacyService] GeoIP provider unavailable', {
+          name: error instanceof Error ? error.name : 'UnknownError',
+        });
       }
     }
 
@@ -126,8 +129,11 @@ export class PrivacyService {
         verificationCoveragePct: analysis.verificationCoveragePct ?? 0,
         overallConfidence: analysis.overallConfidence || 'LOW',
       });
-    } catch {
-      // Non-blocking telemetry
+    } catch (error) {
+      // Persistence is deliberately non-blocking. Log only error class/name; never log scan content, IPs, or identifiers.
+      console.warn('[privacyService] Scan persistence failed', {
+        name: error instanceof Error ? error.name : 'UnknownError',
+      });
     }
 
     return analysis;

@@ -125,8 +125,9 @@ export function validateAdminPassword(
       'admin123',
       '123456',
       '12345678',
-      'admin2026',
-      'adminsecurity2026!',
+      'admin' + new Date().getUTCFullYear(),
+      'adminsecurity' + new Date().getUTCFullYear() + '!',
+
     ];
     if (weakList.includes(lower)) {
       return { valid: false, error: 'Admin password cannot be a common default or weak password in production.' };
