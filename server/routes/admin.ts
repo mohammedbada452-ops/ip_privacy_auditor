@@ -272,7 +272,8 @@ adminRouter.get('/admin/metrics/overview', adminAuthMiddleware, requirePermissio
  */
 adminRouter.get('/admin/scans', adminAuthMiddleware, requirePermission('scans:read'), asyncHandler(async (req: Request, res: Response) => {
   const page = parseInt(req.query.page as string, 10) || 1;
-  const limit = parseInt(req.query.limit as string, 10) || 10;
+  const requestedLimit = parseInt(req.query.limit as string, 10);
+  const limit = Number.isFinite(requestedLimit) ? Math.min(100, Math.max(1, requestedLimit)) : 10;
   const country = (req.query.country as string) || undefined;
   const tier = (req.query.tier as string) || undefined;
   const search = (req.query.search as string) || undefined;
@@ -307,7 +308,8 @@ adminRouter.get('/admin/scans', adminAuthMiddleware, requirePermission('scans:re
  */
 adminRouter.get('/admin/logs', adminAuthMiddleware, requirePermission('logs:read'), asyncHandler(async (req: Request, res: Response) => {
   const page = parseInt(req.query.page as string, 10) || 1;
-  const limit = parseInt(req.query.limit as string, 10) || 10;
+  const requestedLimit = parseInt(req.query.limit as string, 10);
+  const limit = Number.isFinite(requestedLimit) ? Math.min(100, Math.max(1, requestedLimit)) : 10;
   const eventType = (req.query.eventType as string) || undefined;
   const search = (req.query.search as string) || undefined;
 
@@ -391,7 +393,8 @@ adminRouter.get('/admin/performance', adminAuthMiddleware, requirePermission('me
  */
 adminRouter.get('/admin/audit', adminAuthMiddleware, requirePermission('audit:read'), asyncHandler(async (req: Request, res: Response) => {
   const page = parseInt(req.query.page as string, 10) || 1;
-  const limit = parseInt(req.query.limit as string, 10) || 10;
+  const requestedLimit = parseInt(req.query.limit as string, 10);
+  const limit = Number.isFinite(requestedLimit) ? Math.min(100, Math.max(1, requestedLimit)) : 10;
   const search = (req.query.search as string) || undefined;
 
   const result = await dbRepository.getAdminAuditLogsPaginatedAsync({

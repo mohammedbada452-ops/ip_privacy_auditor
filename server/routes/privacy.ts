@@ -80,7 +80,9 @@ privacyRouter.get('/privacy/score', async (req, res, next) => {
 privacyRouter.get('/insights/population', async (req, res, next) => {
   try {
     const scoreRaw = Number(req.query.score);
-    if (!Number.isFinite(scoreRaw)) return res.status(400).json({ success: false, error: { code: 'INVALID_SCORE', message: 'A numeric privacy score is required.' } });
+    if (!Number.isFinite(scoreRaw) || scoreRaw < 0 || scoreRaw > 100) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_SCORE', message: 'Privacy score must be a number between 0 and 100.' } });
+    }
     const result = await dbRepository.getPopulationInsightAsync(scoreRaw, 30);
     const payload: ApiResponse<PopulationInsightResponse> = { success: true, data: result, meta: { timestamp: new Date().toISOString(), requestId: req.requestId || 'req_population' } };
     return res.status(200).json(payload);

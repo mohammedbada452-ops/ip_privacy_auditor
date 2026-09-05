@@ -32,14 +32,21 @@ function expandIpv6(ip: string): string {
 class ReverseDnsService {
   private cache = new Map<string, { data: ReverseDnsResult; expiresAt: number }>();
   private readonly ttlMs = 60 * 60 * 1000;
+  private readonly maxEntries = 1000;
 
   public async lookup(ip: string): Promise<ReverseDnsResult> {
     const validation = validateIp(ip);
     if (!validation.isValid) throw new Error('Invalid IP address format.');
     if (!validation.isPublic) return { status: 'NOT_MEASURED', names: [], resolver: null, dnssecValidated: null, note: 'Reverse DNS is only queried for publicly routable IP addresses.' };
     const key = validation.normalizedIp;
+    const now = Date.now();
     const cached = this.cache.get(key);
-    if (cached && cached.expiresAt > Date.now()) return cached.data;
+    if (cached && cached.expiresAt > now) {
+      this.cache.delete(key);
+      this.cache.set(key, cached);
+      return cached.data;
+    }
+    if (cached) this.cache.delete(key);
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 4000);
     try {
@@ -61,7 +68,13 @@ class ReverseDnsService {
         dnssecValidated: typeof payload.AD === 'boolean' ? payload.AD : null,
         note: names.length ? 'Reverse DNS records resolved through Cloudflare DNS over HTTPS.' : 'No PTR record was returned for this address.',
       };
+      this.cache.delete(key);
       this.cache.set(key, { data: result, expiresAt: Date.now() + this.ttlMs });
+      while (this.cache.size > this.maxEntries) {
+        const oldestKey = this.cache.keys().next().value as string | undefined;
+        if (!oldestKey) break;
+        this.cache.delete(oldestKey);
+      }
       return result;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

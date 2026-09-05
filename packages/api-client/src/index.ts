@@ -33,11 +33,13 @@ export class ApiClientError extends Error {
 export interface ApiClientConfig {
   baseUrl?: string;
   headers?: Record<string, string>;
+  timeoutMs?: number;
 }
 
 export class ApiClient {
   private baseUrl: string;
   private defaultHeaders: Record<string, string>;
+  private readonly timeoutMs: number;
 
   constructor(config: ApiClientConfig = {}) {
     this.baseUrl = config.baseUrl || '';
@@ -45,6 +47,9 @@ export class ApiClient {
       'Content-Type': 'application/json',
       ...config.headers,
     };
+    this.timeoutMs = Number.isFinite(config.timeoutMs) && (config.timeoutMs ?? 0) > 0
+      ? Math.floor(config.timeoutMs as number)
+      : 15_000;
   }
 
   async fetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -54,10 +59,20 @@ export class ApiClient {
       ...options.headers,
     };
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
+    const callerSignal = options.signal;
+    const onCallerAbort = () => controller.abort(callerSignal?.reason);
+    if (callerSignal) {
+      if (callerSignal.aborted) controller.abort(callerSignal.reason);
+      else callerSignal.addEventListener('abort', onCallerAbort, { once: true });
+    }
+
     try {
       const response = await fetch(url, {
         credentials: options.credentials || 'same-origin',
         ...options,
+        signal: controller.signal,
         headers,
       });
 
@@ -101,8 +116,14 @@ export class ApiClient {
       if (err instanceof ApiClientError) {
         throw err;
       }
+      if (controller.signal.aborted && !callerSignal?.aborted) {
+        throw new ApiClientError(`Request timed out after ${this.timeoutMs} ms`, 'TIMEOUT', 0);
+      }
       const message = err instanceof Error ? err.message : 'Unknown network error';
       throw new ApiClientError(message, 'NETWORK_ERROR', 0);
+    } finally {
+      clearTimeout(timeoutId);
+      if (callerSignal) callerSignal.removeEventListener('abort', onCallerAbort);
     }
   }
 

@@ -324,7 +324,11 @@ async function handleCountryFlag(request: Request): Promise<Response> {
 function applyPerformanceHeaders(response: Response, startedAt: number, request?: Request): Response {
   const headers = new Headers(response.headers);
   const durationMs = Math.max(0, Number((performance.now() - startedAt).toFixed(1)));
-  headers.set("Server-Timing", `app;dur=${durationMs}`);
+  if (getRequestEnv("NODE_ENV") !== "production") {
+    headers.set("Server-Timing", `app;dur=${durationMs}`);
+  } else {
+    headers.delete("Server-Timing");
+  }
   if (request) headers.set("X-Request-ID", request.headers.get("X-Privasec-Request-ID") || headers.get("X-Request-ID") || "");
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 }
@@ -965,7 +969,6 @@ async function handleRequestSafely(request: Request, env: RuntimeEnv, ctx: Execu
       pathname === "/api/headers" ||
       pathname === "/api/check/headers" ||
       pathname === "/api/headers/raw" ||
-      pathname === "/api/insights/population" ||
       pathname.startsWith("/api/admin");
     const { client, repo } = needsDatabase
       ? await createRequestDatabase(env)
