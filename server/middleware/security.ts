@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { extractClientIp } from '../utils/ipExtractor';
 import { dbRepository } from '../db/repository';
+import { getRequestEnv } from '../config/requestEnv';
 
 export interface SecurityConfig {
   allowedOrigins?: string[];
@@ -33,7 +34,7 @@ export function securityHeaders(req: Request, res: Response, next: NextFunction)
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=()');
 
   // Content-Security-Policy designed for modern Vite SPA + Preview iframe compatibility
-  const isProduction = process.env.NODE_ENV === 'production';
+  const isProduction = getRequestEnv('NODE_ENV') === 'production';
   const cspDirectives = isProduction
     ? [
         "default-src 'self'",
@@ -62,7 +63,7 @@ export function securityHeaders(req: Request, res: Response, next: NextFunction)
   res.setHeader('Content-Security-Policy', cspDirectives.join('; '));
 
   // HTTP Strict Transport Security (HSTS) in production
-  if (process.env.NODE_ENV === 'production') {
+  if (getRequestEnv('NODE_ENV') === 'production') {
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   }
 
@@ -75,9 +76,9 @@ export function securityHeaders(req: Request, res: Response, next: NextFunction)
 export function corsMiddleware(req: Request, res: Response, next: NextFunction): void {
   const originHeader = req.headers.origin;
   const origin = typeof originHeader === 'string' ? originHeader.trim() : undefined;
-  const isDevelopment = process.env.NODE_ENV !== 'production';
-  const configuredOrigins = process.env.CORS_ALLOWED_ORIGINS
-    ? process.env.CORS_ALLOWED_ORIGINS.split(',').map((o: string) => o.trim()).filter(Boolean)
+  const isDevelopment = getRequestEnv('NODE_ENV') !== 'production';
+  const configuredOrigins = getRequestEnv('CORS_ALLOWED_ORIGINS')
+    ? getRequestEnv('CORS_ALLOWED_ORIGINS').split(',').map((o: string) => o.trim()).filter(Boolean)
     : [];
 
   if (origin) {
@@ -152,8 +153,11 @@ export class RateLimiter {
     let entry = this.storage.get(ip);
     if (!entry) {
       entry = { timestamps: [] };
-      this.storage.set(ip, entry);
+    } else {
+      // Refresh insertion order so cap eviction behaves like an LRU policy.
+      this.storage.delete(ip);
     }
+    this.storage.set(ip, entry);
 
     // Filter out timestamps outside window
     entry.timestamps = entry.timestamps.filter((ts) => ts > windowStart);
@@ -195,9 +199,12 @@ export class RateLimiter {
       }
     }
 
-    // Cap total storage size to avoid memory bloat
-    if (this.storage.size > 10000) {
-      this.storage.clear();
+    // Cap total storage size without wiping all clients' protection. Cleanup above has already
+    // removed stale entries, so evict the least-recently-touched active bucket only as a final
+    // memory guard. Existing clients keep their rate-limit history.
+    if (this.storage.size > 10_000) {
+      const oldestKey = this.storage.keys().next().value as string | undefined;
+      if (oldestKey) this.storage.delete(oldestKey);
     }
   }
 }
@@ -215,8 +222,8 @@ export function createRateLimitMiddleware(
   tierName: string
 ) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const nodeEnv = String(process.env.NODE_ENV || '');
-    if (nodeEnv === 'test' && (req.headers['x-bypass-ratelimit'] === '1' || process.env.DISABLE_RATE_LIMIT === 'true')) {
+    const nodeEnv = String(getRequestEnv('NODE_ENV') || '');
+    if (nodeEnv === 'test' && (req.headers['x-bypass-ratelimit'] === '1' || getRequestEnv('DISABLE_RATE_LIMIT') === 'true')) {
       next();
       return;
     }
@@ -236,7 +243,7 @@ export function createRateLimitMiddleware(
       next();
     } catch (err) {
       // Never fail-open in production. A limiter outage is treated as service unavailable.
-      if (process.env.NODE_ENV === 'production') {
+      if (getRequestEnv('NODE_ENV') === 'production') {
         res.status(503).json({ success: false, error: { code: 'RATE_LIMITER_UNAVAILABLE', message: 'Traffic protection is temporarily unavailable. Please retry shortly.' } });
         return;
       }

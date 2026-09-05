@@ -97,6 +97,15 @@ async function testRateLimiter() {
   const r5 = limiter.check(ip);
   assert.strictEqual(r5.isLimited, false, 'Resetting IP must restore allowance');
 
+  // Memory-cap regression: exceeding the cap must evict one bucket, not erase every client's protection.
+  const cappedLimiter = new RateLimiter(60_000, 3);
+  for (let i = 0; i <= 10_000; i++) cappedLimiter.check(`synthetic-${i}`);
+  cappedLimiter.check('protected-client');
+  cappedLimiter.check('synthetic-last');
+  const protectedResult = cappedLimiter.check('protected-client');
+  assert.strictEqual(protectedResult.remaining, 1, 'Existing client history must survive storage cap enforcement');
+  cappedLimiter.destroy();
+
   limiter.destroy();
   console.log('✓ Rate Limiter verified successfully.');
 }

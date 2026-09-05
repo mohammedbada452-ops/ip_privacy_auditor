@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
+import { getRequestEnv } from '../config/requestEnv';
 import { redactUrl } from '../utils/redaction';
 import type { ApiErrorResponse } from '@packages/api-contract';
 
@@ -29,7 +30,7 @@ export function errorHandler(
   const requestId = req.requestId || 'unknown';
 
   // In production, mask internal server error details to prevent reconnaissance
-  if (process.env.NODE_ENV === 'production' && status >= 500) {
+  if (getRequestEnv('NODE_ENV') === 'production' && status >= 500) {
     message = 'An unexpected internal server error occurred. Please contact system administrator.';
   }
 
@@ -45,7 +46,7 @@ export function errorHandler(
     },
   };
 
-  if (process.env.NODE_ENV !== 'production') {
+  if (getRequestEnv('NODE_ENV') !== 'production') {
     console.error(`[Error Handler] ${req.method} ${redactUrl(req.originalUrl)}:`, err instanceof Error ? err.message : 'Unhandled error');
   }
 

@@ -84,11 +84,21 @@ export class DatabaseRepository {
   private loginAttempts: Map<string, { count: number; firstAttemptAt: number; blockedUntil?: number }> = new Map();
   private apiRateLimitWindows: Map<string, number[]> = new Map();
 
-  private serverSalt: string;
+  private serverSalt?: string;
 
   constructor() {
-    this.serverSalt = getRequestEnv('SERVER_SECRET_SALT') || (getRequestEnv('NODE_ENV') === 'production' ? '' : crypto.randomBytes(32).toString('hex'));
+    // Do not read request-scoped secrets during module initialization. In a warm Worker isolate
+    // the repository singleton is created outside AsyncLocalStorage, so the salt must be resolved
+    // lazily at call time. Development keeps a stable generated fallback for deterministic tests.
     this.initializeDefaultState();
+  }
+
+  private getServerSalt(): string {
+    const configuredSalt = getRequestEnv('SERVER_SECRET_SALT');
+    if (configuredSalt) return configuredSalt;
+    if (getRequestEnv('NODE_ENV') === 'production') return '';
+    this.serverSalt ??= crypto.randomBytes(32).toString('hex');
+    return this.serverSalt;
   }
 
   public setPostgresRepository(repo: PostgresRepository | null): void {
@@ -143,9 +153,9 @@ export class DatabaseRepository {
     // rate limiting whenever PostgreSQL was unavailable.
     const now = Date.now();
     const windowStart = now - windowMs;
-    const timestamps = (this.apiRateLimitWindows.get(bucketKey) || []).filter(
-      (timestamp) => timestamp > windowStart
-    );
+    const existingTimestamps = this.apiRateLimitWindows.get(bucketKey);
+    const timestamps = (existingTimestamps || []).filter((timestamp) => timestamp > windowStart);
+    if (existingTimestamps) this.apiRateLimitWindows.delete(bucketKey);
 
     if (timestamps.length >= maxRequests) {
       const oldestInWindow = timestamps[0] || now;
@@ -165,7 +175,8 @@ export class DatabaseRepository {
     this.apiRateLimitWindows.set(bucketKey, timestamps);
 
     if (this.apiRateLimitWindows.size > 10_000) {
-      this.apiRateLimitWindows.clear();
+      const oldestKey = this.apiRateLimitWindows.keys().next().value as string | undefined;
+      if (oldestKey) this.apiRateLimitWindows.delete(oldestKey);
     }
 
     return {
@@ -326,10 +337,11 @@ export class DatabaseRepository {
    * Strictly guarantees NO raw IPs are stored in scan records.
    */
   public anonymizeIp(ip: string): string {
-    if (!this.serverSalt) {
+    const serverSalt = this.getServerSalt();
+    if (!serverSalt) {
       throw new Error('SERVER_SECRET_SALT is required in production for IP pseudonymization.');
     }
-    return crypto.createHmac('sha256', this.serverSalt).update(ip.trim()).digest('hex');
+    return crypto.createHmac('sha256', serverSalt).update(ip.trim()).digest('hex');
   }
 
   /**
@@ -653,7 +665,10 @@ export class DatabaseRepository {
 
   public recordFailedLogin(ip: string) {
     const now = Date.now();
-    const record = this.loginAttempts.get(ip) || { count: 0, firstAttemptAt: now };
+    const existing = this.loginAttempts.get(ip);
+    const record = !existing || now - existing.firstAttemptAt > 15 * 60 * 1000
+      ? { count: 0, firstAttemptAt: now }
+      : existing;
     record.count += 1;
 
     if (record.count >= 5) {

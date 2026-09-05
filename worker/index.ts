@@ -32,6 +32,7 @@ type RuntimeEnv = {
   TRUST_PROXY?: string;
   DISABLE_RATE_LIMIT?: string;
   APP_ENV?: string;
+  PORT?: string;
   [key: string]: unknown;
 };
 
@@ -83,6 +84,9 @@ function buildRequestEnvValues(env: RuntimeEnv): RequestEnvValues {
   if (typeof env.TRUST_PROXY === "string") values.TRUST_PROXY = env.TRUST_PROXY;
   if (typeof env.DISABLE_RATE_LIMIT === "string") values.DISABLE_RATE_LIMIT = env.DISABLE_RATE_LIMIT;
   if (typeof env.APP_ENV === "string") values.APP_ENV = env.APP_ENV;
+  if (typeof env.PORT === "string") values.PORT = env.PORT;
+  if (typeof env.DATABASE_URL === "string") values.DATABASE_URL = env.DATABASE_URL;
+  if (typeof env.CORS_ALLOWED_ORIGINS === "string") values.CORS_ALLOWED_ORIGINS = env.CORS_ALLOWED_ORIGINS;
   return values;
 }
 
@@ -223,8 +227,28 @@ async function readJsonBody(request: Request, maxBytes = 100 * 1024): Promise<un
   const contentLength = Number(request.headers.get("content-length") || "0");
   if (Number.isFinite(contentLength) && contentLength > maxBytes) throw new Error("PAYLOAD_TOO_LARGE");
 
-  const text = await request.text();
-  if (new TextEncoder().encode(text).byteLength > maxBytes) throw new Error("PAYLOAD_TOO_LARGE");
+  if (!request.body) return {};
+
+  const reader = request.body.getReader();
+  const decoder = new TextDecoder();
+  let totalBytes = 0;
+  let text = "";
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > maxBytes) {
+        await reader.cancel();
+        throw new Error("PAYLOAD_TOO_LARGE");
+      }
+      text += decoder.decode(value, { stream: true });
+    }
+    text += decoder.decode();
+  } catch (error) {
+    await reader.cancel().catch(() => {});
+    throw error;
+  }
   if (!text.trim()) return {};
 
   if (contentType.includes("json")) {
@@ -394,6 +418,15 @@ function cookieValue(request: Request, name: string): string | undefined {
     }
   }
   return undefined;
+}
+
+function hasValidCsrfToken(request: Request): boolean {
+  const cookieToken = cookieValue(request, "privasec_admin_csrf") || "";
+  const headerToken = request.headers.get("x-csrf-token") || "";
+  if (!cookieToken || !headerToken || cookieToken.length !== headerToken.length) return false;
+  const cookieBuffer = Buffer.from(cookieToken, "utf8");
+  const headerBuffer = Buffer.from(headerToken, "utf8");
+  return crypto.timingSafeEqual(cookieBuffer, headerBuffer);
 }
 
 function cookieHeader(name: string, value: string, options: { httpOnly?: boolean; secure?: boolean; sameSite?: string; path?: string; maxAge?: number } = {}): string {
@@ -717,9 +750,10 @@ async function handleApi(request: Request, env: RuntimeEnv, ctx: ExecutionContex
     }
 
     if ((p === "/api/admin/logout" || p === "/api/admin/auth/logout") && method === "POST") {
+      if (!hasValidCsrfToken(request)) return publicError(req, "CSRF_TOKEN_REQUIRED", "A valid CSRF token is required for this administrative action.", 403);
       const token = cookieValue(request, "privasec_admin_session") || (req.headers["authorization"] as string || "").replace(/^Bearer\s+/i, "") || (req.headers["x-admin-token"] as string | undefined);
       if (token) await adminAuthService.logoutAsync(token, req as any);
-      return jsonResponse({ success: true, data: { message: "Logged out successfully" } }, 200, { "Set-Cookie": "privasec_admin_session=; Max-Age=0; Path=/; HttpOnly; SameSite=Lax" });
+      return jsonResponse({ success: true, data: { message: "Logged out successfully" } }, 200, { "Set-Cookie": cookieHeader("privasec_admin_session", "", { httpOnly: true, secure, sameSite: "Strict", path: "/", maxAge: 0 }) });
     }
 
     const guarded = async (permission?: AdminPermission) => requireAdmin(req, permission);

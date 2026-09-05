@@ -1,5 +1,6 @@
 import pg from 'pg';
 import crypto from 'crypto';
+import { getRequestEnv } from '../config/requestEnv';
 
 const { Pool } = pg;
 
@@ -49,12 +50,12 @@ export function initPool(config?: DatabasePoolConfig): pg.Pool {
     return globalPool;
   }
 
-  const connectionString = config?.connectionString || process.env.DATABASE_URL;
+  const connectionString = config?.connectionString || getRequestEnv('DATABASE_URL');
   if (!connectionString) {
     throw new Error('DATABASE_URL is not configured.');
   }
 
-  const isProduction = process.env.NODE_ENV === 'production';
+  const isProduction = getRequestEnv('NODE_ENV') === 'production';
   const isSslRequired = connectionString.includes('sslmode=require') || connectionString.includes('ssl=true');
 
   const poolConfig: pg.PoolConfig = {

@@ -3,6 +3,7 @@ import { runMigrations } from './migrationRunner';
 import { PostgresRepository } from './postgresRepository';
 import { dbRepository } from './repository';
 import { getAdminAuthConfig } from '../config';
+import { getRequestEnv } from '../config/requestEnv';
 
 export interface DatabaseInitResult {
   status: 'connected' | 'fallback_development' | 'failed';
@@ -20,8 +21,8 @@ export interface DatabaseInitResult {
  * 4. Bootstraps environment admin credentials
  */
 export async function initializeDatabase(databaseUrlOverride?: string): Promise<DatabaseInitResult> {
-  const isProduction = process.env.NODE_ENV === 'production';
-  const databaseUrl = databaseUrlOverride || process.env.DATABASE_URL;
+  const isProduction = getRequestEnv('NODE_ENV') === 'production';
+  const databaseUrl = databaseUrlOverride || getRequestEnv('DATABASE_URL');
 
   if (!databaseUrl) {
     if (isProduction) {

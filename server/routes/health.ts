@@ -2,6 +2,7 @@ import { Router } from 'express';
 import type { Request, Response } from 'express';
 import type { ApiSuccessResponse, HealthzResponse } from '@packages/api-contract';
 import { dbRepository } from '../db/repository';
+import { getRequestEnv } from '../config/requestEnv';
 
 const router = Router();
 const startTime = Date.now();
@@ -9,7 +10,7 @@ const startTime = Date.now();
 router.get('/healthz', async (req: Request, res: Response) => {
   const postgres = dbRepository.getPostgresRepository();
   let status: HealthzResponse['status'] = 'ok';
-  if (process.env.NODE_ENV === 'production') {
+  if (getRequestEnv('NODE_ENV') === 'production') {
     if (!postgres) status = 'unhealthy';
     else { try { status = (await postgres.checkHealth()) ? 'ok' : 'unhealthy'; } catch { status = 'unhealthy'; } }
   }
@@ -18,7 +19,7 @@ router.get('/healthz', async (req: Request, res: Response) => {
     uptime: Math.floor((Date.now() - startTime) / 1000),
     timestamp: new Date().toISOString(),
     service: 'privacy-intelligence-auditor-api',
-    environment: process.env.NODE_ENV || 'development',
+    environment: getRequestEnv('NODE_ENV') || 'development',
   };
 
   const response: ApiSuccessResponse<HealthzResponse> = {
@@ -44,7 +45,7 @@ router.get('/health/live', (_req: Request, res: Response) => {
 router.get('/health/ready', async (req: Request, res: Response) => {
   const postgres = dbRepository.getPostgresRepository();
   if (!postgres) {
-    const ok = process.env.NODE_ENV !== 'production';
+    const ok = getRequestEnv('NODE_ENV') !== 'production';
     res.status(ok ? 200 : 503).json({ success: ok, data: { status: ok ? 'ready-development' : 'not-ready', database: 'not-configured' }, meta: { timestamp: new Date().toISOString(), requestId: req.requestId || 'req_health_ready' } });
     return;
   }

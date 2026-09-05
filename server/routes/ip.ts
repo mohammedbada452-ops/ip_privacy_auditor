@@ -176,8 +176,14 @@ router.get('/ip/network-intelligence', async (req: Request, res: Response) => {
       lastReportedAt: null, usageType: null, isWhitelisted: null, countryCode: null, domain: null,
       confidence: 'UNKNOWN' as const, note: 'Reputation lookup failed; existing audit results are unaffected.',
     })),
-    rdapService.lookup(normalizedIp),
-    reverseDnsService.lookup(normalizedIp),
+    rdapService.lookup(normalizedIp).catch(() => ({
+      status: 'ERROR' as const, source: 'RDAP', handle: null, name: null, country: null, startAddress: null, endAddress: null, cidr: null, networkType: null,
+      note: 'RDAP is temporarily unavailable; existing IP and privacy results are unaffected.',
+    })),
+    reverseDnsService.lookup(normalizedIp).catch(() => ({
+      status: 'ERROR' as const, names: [], resolver: 'Cloudflare 1.1.1.1 DoH', dnssecValidated: null,
+      note: 'Reverse DNS is temporarily unavailable; existing IP and privacy results are unaffected.',
+    })),
   ]);
 
   if ('error' in multiSource) {

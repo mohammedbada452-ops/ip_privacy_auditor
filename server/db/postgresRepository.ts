@@ -47,12 +47,11 @@ export class PostgresRepository {
     }
   }
   private connection: pg.Pool | pg.Client;
-  private serverSalt: string;
+  private serverSalt?: string;
   private loginAttempts: Map<string, { count: number; firstAttemptAt: number; blockedUntil?: number }> = new Map();
 
   constructor(connection: pg.Pool | pg.Client) {
     this.connection = connection;
-    this.serverSalt = getRequestEnv('SERVER_SECRET_SALT') || (getRequestEnv('NODE_ENV') === 'production' ? '' : crypto.randomBytes(32).toString('hex'));
   }
 
   /**
@@ -101,10 +100,15 @@ export class PostgresRepository {
    * Strictly prevents storing raw IP addresses in scan tables.
    */
   public anonymizeIp(ip: string): string {
-    if (!this.serverSalt) {
-      throw new Error('SERVER_SECRET_SALT is required in production for IP pseudonymization.');
+    const configuredSalt = getRequestEnv('SERVER_SECRET_SALT');
+    if (!configuredSalt) {
+      if (getRequestEnv('NODE_ENV') === 'production') {
+        throw new Error('SERVER_SECRET_SALT is required in production for IP pseudonymization.');
+      }
+      this.serverSalt ??= crypto.randomBytes(32).toString('hex');
     }
-    return crypto.createHmac('sha256', this.serverSalt).update(ip.trim()).digest('hex');
+    const serverSalt = configuredSalt || this.serverSalt!;
+    return crypto.createHmac('sha256', serverSalt).update(ip.trim()).digest('hex');
   }
 
   /**
@@ -184,7 +188,7 @@ export class PostgresRepository {
     passwordPlain: string,
     options?: { force?: boolean }
   ): Promise<{ success: boolean; username: string; isNewUser: boolean }> {
-    const isProduction = process.env.NODE_ENV === 'production';
+    const isProduction = getRequestEnv('NODE_ENV') === 'production';
     const userVal = validateAdminUsername(username);
     if (!userVal.valid) {
       throw new Error(`Failed to bootstrap admin: ${userVal.error}`);
@@ -263,7 +267,7 @@ export class PostgresRepository {
    * Rotates credentials transactionally in PostgreSQL.
    */
   public async rotateAdminCredentials(username: string, newPasswordPlain: string): Promise<boolean> {
-    const isProduction = process.env.NODE_ENV === 'production';
+    const isProduction = getRequestEnv('NODE_ENV') === 'production';
     const passVal = validateAdminPassword(newPasswordPlain, isProduction);
     if (!passVal.valid) {
       throw new Error(`Failed to rotate admin credentials: ${passVal.error}`);

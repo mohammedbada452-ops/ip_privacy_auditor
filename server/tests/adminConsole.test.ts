@@ -60,6 +60,20 @@ async function runStage12AdminTests() {
   rateLimit = dbRepository.checkLoginRateLimit(testClientIp);
   assert(!rateLimit.isBlocked, 'Resetting failed login attempts clears the block');
 
+  // Expired-window regression: a new failure window must start clean instead of accumulating old attempts.
+  const originalNow = Date.now;
+  let fakeNow = originalNow();
+  try {
+    Date.now = () => fakeNow;
+    for (let i = 0; i < 4; i++) dbRepository.recordFailedLogin(testClientIp);
+    fakeNow += 16 * 60 * 1000;
+    dbRepository.recordFailedLogin(testClientIp);
+    assert(!dbRepository.checkLoginRateLimit(testClientIp).isBlocked, 'Expired login-attempt window must reset before counting the new failure');
+  } finally {
+    Date.now = originalNow;
+    dbRepository.resetFailedLogins(testClientIp);
+  }
+
   // 4. Admin Authentication Service
   console.log('\n--- 4. Admin Authentication & Session Management ---');
   dbRepository.bootstrapAdminCredentials('admin', 'AdminConsoleTestPass2026!#');

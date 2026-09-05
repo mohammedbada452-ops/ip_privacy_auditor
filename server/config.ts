@@ -26,8 +26,8 @@ export interface AdminAuthConfig {
  * Returns core server configuration. Feature-specific secrets are validated by their dedicated accessors.
  */
 export function getFoundationConfig(): FoundationConfig {
-  const port = parseInt(process.env.PORT || '3000', 10);
-  const nodeEnv = (process.env.NODE_ENV || 'development') as FoundationConfig['nodeEnv'];
+  const port = parseInt(getRequestEnv('PORT') || '3000', 10);
+  const nodeEnv = (getRequestEnv('NODE_ENV') || 'development') as FoundationConfig['nodeEnv'];
 
   return {
     port,
@@ -39,7 +39,7 @@ export function getFoundationConfig(): FoundationConfig {
  * Accessor for PostgreSQL configuration.
  */
 export function getDatabaseConfig(): { databaseUrl: string } {
-  const databaseUrl = process.env.DATABASE_URL;
+  const databaseUrl = getRequestEnv('DATABASE_URL');
   if (!databaseUrl) {
     throw new Error(
       'DATABASE_URL is required for database operations in later stages, but is not configured.'
@@ -52,7 +52,7 @@ export function getDatabaseConfig(): { databaseUrl: string } {
  * Accessor for GeoIP provider configuration.
  */
 export function getGeoIPConfig(): { apiKey: string } {
-  const apiKey = process.env.GEOIP_API_KEY;
+  const apiKey = getRequestEnv('GEOIP_API_KEY');
   if (!apiKey) {
     throw new Error(
       'GEOIP_API_KEY is required for GeoIP provider operations in later stages, but is not configured.'
@@ -184,8 +184,8 @@ export function getAdminAuthConfig(): AdminAuthConfig {
  * Accessor for the server-side HMAC salt used to pseudonymize sensitive identifiers.
  */
 export function getSecuritySaltConfig(): { serverSecretSalt?: string } {
-  const serverSecretSalt = process.env.SERVER_SECRET_SALT;
-  if (process.env.NODE_ENV === 'production' && (!serverSecretSalt || serverSecretSalt.length < 32)) {
+  const serverSecretSalt = getRequestEnv('SERVER_SECRET_SALT');
+  if (getRequestEnv('NODE_ENV') === 'production' && (!serverSecretSalt || serverSecretSalt.length < 32)) {
     throw new Error('SERVER_SECRET_SALT must be configured with at least 32 characters in production.');
   }
   return { serverSecretSalt };
@@ -199,12 +199,13 @@ export function getProductionSecurityConfig(): {
   disableRateLimit: boolean;
   trustedProxyCidrs: string[];
 } {
-  const corsAllowedOrigins = process.env.CORS_ALLOWED_ORIGINS
-    ? process.env.CORS_ALLOWED_ORIGINS.split(',').map((s: string) => s.trim())
+  const rawCorsAllowedOrigins = getRequestEnv('CORS_ALLOWED_ORIGINS');
+  const corsAllowedOrigins = rawCorsAllowedOrigins
+    ? rawCorsAllowedOrigins.split(',').map((s: string) => s.trim())
     : [];
-  const disableRateLimit = process.env.DISABLE_RATE_LIMIT === 'true';
-  const trustedProxyCidrs = (process.env.TRUSTED_PROXY_CIDRS || process.env.TRUSTED_PROXIES || '').split(',').map((s: string) => s.trim()).filter(Boolean);
-  if (process.env.NODE_ENV === 'production' && disableRateLimit) {
+  const disableRateLimit = getRequestEnv('DISABLE_RATE_LIMIT') === 'true';
+  const trustedProxyCidrs = (getRequestEnv('TRUSTED_PROXY_CIDRS') || getRequestEnv('TRUSTED_PROXIES') || '').split(',').map((s: string) => s.trim()).filter(Boolean);
+  if (getRequestEnv('NODE_ENV') === 'production' && disableRateLimit) {
     throw new Error('DISABLE_RATE_LIMIT must never be enabled in production.');
   }
 

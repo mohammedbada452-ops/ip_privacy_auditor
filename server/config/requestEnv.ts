@@ -26,6 +26,9 @@ export interface RequestEnvValues {
   TRUST_PROXY?: string;
   DISABLE_RATE_LIMIT?: string;
   APP_ENV?: string;
+  PORT?: string;
+  DATABASE_URL?: string;
+  CORS_ALLOWED_ORIGINS?: string;
 }
 
 const requestEnvStorage = new AsyncLocalStorage<RequestEnvValues>();

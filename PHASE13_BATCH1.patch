@@ -1,0 +1,632 @@
+diff --git a/package.json b/package.json
+index 1a16d36..9f2c787 100644
+--- a/package.json
++++ b/package.json
+@@ -9,7 +9,7 @@
+     "start": "npm run build:server && node dist/server.cjs",
+     "clean": "rm -rf dist",
+     "lint": "tsc --noEmit",
+-    "test": "tsx server/tests/ip.test.ts && tsx server/tests/ipUi.test.ts && tsx server/tests/privacyEngine.test.ts && tsx server/tests/browserIntelligence.test.ts && tsx server/tests/headersIntelligence.test.ts && tsx server/tests/i18n.test.ts && tsx server/tests/adminConsole.test.ts && tsx server/tests/productionHardening.test.ts && tsx server/tests/finalIntegration.test.ts && tsx server/tests/fix1Verification.test.ts && tsx server/tests/fix2BrowserIntelligence.test.ts && tsx server/tests/headersExperience.test.ts && tsx server/tests/unifiedPrivacyDashboard.test.ts && tsx server/tests/fix5TrustAccuracy.test.ts && tsx server/tests/fix6Remediation.test.ts && tsx server/tests/fix7TrustConsistency.test.ts && tsx server/tests/fix7_1ConsistencyCorrection.test.ts && tsx server/tests/fix7_2AccuracyCorrection.test.ts && tsx server/tests/fix7_3SnapshotConsistency.test.ts && tsx server/tests/adminCredentialConfiguration.test.ts && tsx server/tests/fix8_1AdminSecurity.test.ts && tsx server/tests/fix8_2DatabasePersistence.test.ts && tsx server/tests/fix8_3ProductionDataIntegrity.test.ts && tsx server/tests/fix8_4NetworkAccuracy.test.ts && tsx server/tests/fix8_4_1GeoIPProvider.test.ts && tsx server/tests/finalHardening.test.ts && tsx server/tests/headerScoreScope.test.ts && tsx server/tests/globalAccuracy.test.ts && tsx server/tests/fix9TrustLayer.test.ts",
++    "test": "tsx server/tests/requestEnvIsolation.test.ts && tsx server/tests/ip.test.ts && tsx server/tests/ipUi.test.ts && tsx server/tests/privacyEngine.test.ts && tsx server/tests/browserIntelligence.test.ts && tsx server/tests/headersIntelligence.test.ts && tsx server/tests/i18n.test.ts && tsx server/tests/adminConsole.test.ts && tsx server/tests/productionHardening.test.ts && tsx server/tests/finalIntegration.test.ts && tsx server/tests/fix1Verification.test.ts && tsx server/tests/fix2BrowserIntelligence.test.ts && tsx server/tests/headersExperience.test.ts && tsx server/tests/unifiedPrivacyDashboard.test.ts && tsx server/tests/fix5TrustAccuracy.test.ts && tsx server/tests/fix6Remediation.test.ts && tsx server/tests/fix7TrustConsistency.test.ts && tsx server/tests/fix7_1ConsistencyCorrection.test.ts && tsx server/tests/fix7_2AccuracyCorrection.test.ts && tsx server/tests/fix7_3SnapshotConsistency.test.ts && tsx server/tests/adminCredentialConfiguration.test.ts && tsx server/tests/fix8_1AdminSecurity.test.ts && tsx server/tests/fix8_2DatabasePersistence.test.ts && tsx server/tests/fix8_3ProductionDataIntegrity.test.ts && tsx server/tests/fix8_4NetworkAccuracy.test.ts && tsx server/tests/fix8_4_1GeoIPProvider.test.ts && tsx server/tests/finalHardening.test.ts && tsx server/tests/headerScoreScope.test.ts && tsx server/tests/globalAccuracy.test.ts && tsx server/tests/fix9TrustLayer.test.ts",
+     "test:signal-corrections": "tsx server/tests/finalSignalCorrections.test.ts",
+     "test:accuracy": "tsx server/tests/headerScoreScope.test.ts && tsx server/tests/globalAccuracy.test.ts",
+     "test:release-guards": "node scripts/prepare-seo.mjs",
+diff --git a/server/config.ts b/server/config.ts
+index 0153cd3..547c5ba 100644
+--- a/server/config.ts
++++ b/server/config.ts
+@@ -26,8 +26,8 @@ export interface AdminAuthConfig {
+  * Returns core server configuration. Feature-specific secrets are validated by their dedicated accessors.
+  */
+ export function getFoundationConfig(): FoundationConfig {
+-  const port = parseInt(process.env.PORT || '3000', 10);
+-  const nodeEnv = (process.env.NODE_ENV || 'development') as FoundationConfig['nodeEnv'];
++  const port = parseInt(getRequestEnv('PORT') || '3000', 10);
++  const nodeEnv = (getRequestEnv('NODE_ENV') || 'development') as FoundationConfig['nodeEnv'];
+ 
+   return {
+     port,
+@@ -39,7 +39,7 @@ export function getFoundationConfig(): FoundationConfig {
+  * Accessor for PostgreSQL configuration.
+  */
+ export function getDatabaseConfig(): { databaseUrl: string } {
+-  const databaseUrl = process.env.DATABASE_URL;
++  const databaseUrl = getRequestEnv('DATABASE_URL');
+   if (!databaseUrl) {
+     throw new Error(
+       'DATABASE_URL is required for database operations in later stages, but is not configured.'
+@@ -52,7 +52,7 @@ export function getDatabaseConfig(): { databaseUrl: string } {
+  * Accessor for GeoIP provider configuration.
+  */
+ export function getGeoIPConfig(): { apiKey: string } {
+-  const apiKey = process.env.GEOIP_API_KEY;
++  const apiKey = getRequestEnv('GEOIP_API_KEY');
+   if (!apiKey) {
+     throw new Error(
+       'GEOIP_API_KEY is required for GeoIP provider operations in later stages, but is not configured.'
+@@ -184,8 +184,8 @@ export function getAdminAuthConfig(): AdminAuthConfig {
+  * Accessor for the server-side HMAC salt used to pseudonymize sensitive identifiers.
+  */
+ export function getSecuritySaltConfig(): { serverSecretSalt?: string } {
+-  const serverSecretSalt = process.env.SERVER_SECRET_SALT;
+-  if (process.env.NODE_ENV === 'production' && (!serverSecretSalt || serverSecretSalt.length < 32)) {
++  const serverSecretSalt = getRequestEnv('SERVER_SECRET_SALT');
++  if (getRequestEnv('NODE_ENV') === 'production' && (!serverSecretSalt || serverSecretSalt.length < 32)) {
+     throw new Error('SERVER_SECRET_SALT must be configured with at least 32 characters in production.');
+   }
+   return { serverSecretSalt };
+@@ -199,12 +199,13 @@ export function getProductionSecurityConfig(): {
+   disableRateLimit: boolean;
+   trustedProxyCidrs: string[];
+ } {
+-  const corsAllowedOrigins = process.env.CORS_ALLOWED_ORIGINS
+-    ? process.env.CORS_ALLOWED_ORIGINS.split(',').map((s: string) => s.trim())
++  const rawCorsAllowedOrigins = getRequestEnv('CORS_ALLOWED_ORIGINS');
++  const corsAllowedOrigins = rawCorsAllowedOrigins
++    ? rawCorsAllowedOrigins.split(',').map((s: string) => s.trim())
+     : [];
+-  const disableRateLimit = process.env.DISABLE_RATE_LIMIT === 'true';
+-  const trustedProxyCidrs = (process.env.TRUSTED_PROXY_CIDRS || process.env.TRUSTED_PROXIES || '').split(',').map((s: string) => s.trim()).filter(Boolean);
+-  if (process.env.NODE_ENV === 'production' && disableRateLimit) {
++  const disableRateLimit = getRequestEnv('DISABLE_RATE_LIMIT') === 'true';
++  const trustedProxyCidrs = (getRequestEnv('TRUSTED_PROXY_CIDRS') || getRequestEnv('TRUSTED_PROXIES') || '').split(',').map((s: string) => s.trim()).filter(Boolean);
++  if (getRequestEnv('NODE_ENV') === 'production' && disableRateLimit) {
+     throw new Error('DISABLE_RATE_LIMIT must never be enabled in production.');
+   }
+ 
+diff --git a/server/config/requestEnv.ts b/server/config/requestEnv.ts
+index 93b7013..88a0445 100644
+--- a/server/config/requestEnv.ts
++++ b/server/config/requestEnv.ts
+@@ -26,6 +26,9 @@ export interface RequestEnvValues {
+   TRUST_PROXY?: string;
+   DISABLE_RATE_LIMIT?: string;
+   APP_ENV?: string;
++  PORT?: string;
++  DATABASE_URL?: string;
++  CORS_ALLOWED_ORIGINS?: string;
+ }
+ 
+ const requestEnvStorage = new AsyncLocalStorage<RequestEnvValues>();
+diff --git a/server/db/init.ts b/server/db/init.ts
+index a80e75a..07495e0 100644
+--- a/server/db/init.ts
++++ b/server/db/init.ts
+@@ -3,6 +3,7 @@ import { runMigrations } from './migrationRunner';
+ import { PostgresRepository } from './postgresRepository';
+ import { dbRepository } from './repository';
+ import { getAdminAuthConfig } from '../config';
++import { getRequestEnv } from '../config/requestEnv';
+ 
+ export interface DatabaseInitResult {
+   status: 'connected' | 'fallback_development' | 'failed';
+@@ -20,8 +21,8 @@ export interface DatabaseInitResult {
+  * 4. Bootstraps environment admin credentials
+  */
+ export async function initializeDatabase(databaseUrlOverride?: string): Promise<DatabaseInitResult> {
+-  const isProduction = process.env.NODE_ENV === 'production';
+-  const databaseUrl = databaseUrlOverride || process.env.DATABASE_URL;
++  const isProduction = getRequestEnv('NODE_ENV') === 'production';
++  const databaseUrl = databaseUrlOverride || getRequestEnv('DATABASE_URL');
+ 
+   if (!databaseUrl) {
+     if (isProduction) {
+diff --git a/server/db/postgres.ts b/server/db/postgres.ts
+index b9cbdb6..7902a2d 100644
+--- a/server/db/postgres.ts
++++ b/server/db/postgres.ts
+@@ -1,5 +1,6 @@
+ import pg from 'pg';
+ import crypto from 'crypto';
++import { getRequestEnv } from '../config/requestEnv';
+ 
+ const { Pool } = pg;
+ 
+@@ -49,12 +50,12 @@ export function initPool(config?: DatabasePoolConfig): pg.Pool {
+     return globalPool;
+   }
+ 
+-  const connectionString = config?.connectionString || process.env.DATABASE_URL;
++  const connectionString = config?.connectionString || getRequestEnv('DATABASE_URL');
+   if (!connectionString) {
+     throw new Error('DATABASE_URL is not configured.');
+   }
+ 
+-  const isProduction = process.env.NODE_ENV === 'production';
++  const isProduction = getRequestEnv('NODE_ENV') === 'production';
+   const isSslRequired = connectionString.includes('sslmode=require') || connectionString.includes('ssl=true');
+ 
+   const poolConfig: pg.PoolConfig = {
+diff --git a/server/db/postgresRepository.ts b/server/db/postgresRepository.ts
+index bd68ebc..0e30631 100644
+--- a/server/db/postgresRepository.ts
++++ b/server/db/postgresRepository.ts
+@@ -47,12 +47,11 @@ export class PostgresRepository {
+     }
+   }
+   private connection: pg.Pool | pg.Client;
+-  private serverSalt: string;
++  private serverSalt?: string;
+   private loginAttempts: Map<string, { count: number; firstAttemptAt: number; blockedUntil?: number }> = new Map();
+ 
+   constructor(connection: pg.Pool | pg.Client) {
+     this.connection = connection;
+-    this.serverSalt = getRequestEnv('SERVER_SECRET_SALT') || (getRequestEnv('NODE_ENV') === 'production' ? '' : crypto.randomBytes(32).toString('hex'));
+   }
+ 
+   /**
+@@ -101,10 +100,15 @@ export class PostgresRepository {
+    * Strictly prevents storing raw IP addresses in scan tables.
+    */
+   public anonymizeIp(ip: string): string {
+-    if (!this.serverSalt) {
+-      throw new Error('SERVER_SECRET_SALT is required in production for IP pseudonymization.');
++    const configuredSalt = getRequestEnv('SERVER_SECRET_SALT');
++    if (!configuredSalt) {
++      if (getRequestEnv('NODE_ENV') === 'production') {
++        throw new Error('SERVER_SECRET_SALT is required in production for IP pseudonymization.');
++      }
++      this.serverSalt ??= crypto.randomBytes(32).toString('hex');
+     }
+-    return crypto.createHmac('sha256', this.serverSalt).update(ip.trim()).digest('hex');
++    const serverSalt = configuredSalt || this.serverSalt!;
++    return crypto.createHmac('sha256', serverSalt).update(ip.trim()).digest('hex');
+   }
+ 
+   /**
+@@ -184,7 +188,7 @@ export class PostgresRepository {
+     passwordPlain: string,
+     options?: { force?: boolean }
+   ): Promise<{ success: boolean; username: string; isNewUser: boolean }> {
+-    const isProduction = process.env.NODE_ENV === 'production';
++    const isProduction = getRequestEnv('NODE_ENV') === 'production';
+     const userVal = validateAdminUsername(username);
+     if (!userVal.valid) {
+       throw new Error(`Failed to bootstrap admin: ${userVal.error}`);
+@@ -263,7 +267,7 @@ export class PostgresRepository {
+    * Rotates credentials transactionally in PostgreSQL.
+    */
+   public async rotateAdminCredentials(username: string, newPasswordPlain: string): Promise<boolean> {
+-    const isProduction = process.env.NODE_ENV === 'production';
++    const isProduction = getRequestEnv('NODE_ENV') === 'production';
+     const passVal = validateAdminPassword(newPasswordPlain, isProduction);
+     if (!passVal.valid) {
+       throw new Error(`Failed to rotate admin credentials: ${passVal.error}`);
+diff --git a/server/db/repository.ts b/server/db/repository.ts
+index 1dbe847..4450361 100644
+--- a/server/db/repository.ts
++++ b/server/db/repository.ts
+@@ -84,13 +84,23 @@ export class DatabaseRepository {
+   private loginAttempts: Map<string, { count: number; firstAttemptAt: number; blockedUntil?: number }> = new Map();
+   private apiRateLimitWindows: Map<string, number[]> = new Map();
+ 
+-  private serverSalt: string;
++  private serverSalt?: string;
+ 
+   constructor() {
+-    this.serverSalt = getRequestEnv('SERVER_SECRET_SALT') || (getRequestEnv('NODE_ENV') === 'production' ? '' : crypto.randomBytes(32).toString('hex'));
++    // Do not read request-scoped secrets during module initialization. In a warm Worker isolate
++    // the repository singleton is created outside AsyncLocalStorage, so the salt must be resolved
++    // lazily at call time. Development keeps a stable generated fallback for deterministic tests.
+     this.initializeDefaultState();
+   }
+ 
++  private getServerSalt(): string {
++    const configuredSalt = getRequestEnv('SERVER_SECRET_SALT');
++    if (configuredSalt) return configuredSalt;
++    if (getRequestEnv('NODE_ENV') === 'production') return '';
++    this.serverSalt ??= crypto.randomBytes(32).toString('hex');
++    return this.serverSalt;
++  }
++
+   public setPostgresRepository(repo: PostgresRepository | null): void {
+     // Used by the Node/Express dev server (server/db/init.ts) only. Cloudflare Workers must
+     // never call this - it would be exactly the shared/global connection state this design
+@@ -143,9 +153,9 @@ export class DatabaseRepository {
+     // rate limiting whenever PostgreSQL was unavailable.
+     const now = Date.now();
+     const windowStart = now - windowMs;
+-    const timestamps = (this.apiRateLimitWindows.get(bucketKey) || []).filter(
+-      (timestamp) => timestamp > windowStart
+-    );
++    const existingTimestamps = this.apiRateLimitWindows.get(bucketKey);
++    const timestamps = (existingTimestamps || []).filter((timestamp) => timestamp > windowStart);
++    if (existingTimestamps) this.apiRateLimitWindows.delete(bucketKey);
+ 
+     if (timestamps.length >= maxRequests) {
+       const oldestInWindow = timestamps[0] || now;
+@@ -165,7 +175,8 @@ export class DatabaseRepository {
+     this.apiRateLimitWindows.set(bucketKey, timestamps);
+ 
+     if (this.apiRateLimitWindows.size > 10_000) {
+-      this.apiRateLimitWindows.clear();
++      const oldestKey = this.apiRateLimitWindows.keys().next().value as string | undefined;
++      if (oldestKey) this.apiRateLimitWindows.delete(oldestKey);
+     }
+ 
+     return {
+@@ -326,10 +337,11 @@ export class DatabaseRepository {
+    * Strictly guarantees NO raw IPs are stored in scan records.
+    */
+   public anonymizeIp(ip: string): string {
+-    if (!this.serverSalt) {
++    const serverSalt = this.getServerSalt();
++    if (!serverSalt) {
+       throw new Error('SERVER_SECRET_SALT is required in production for IP pseudonymization.');
+     }
+-    return crypto.createHmac('sha256', this.serverSalt).update(ip.trim()).digest('hex');
++    return crypto.createHmac('sha256', serverSalt).update(ip.trim()).digest('hex');
+   }
+ 
+   /**
+@@ -653,7 +665,10 @@ export class DatabaseRepository {
+ 
+   public recordFailedLogin(ip: string) {
+     const now = Date.now();
+-    const record = this.loginAttempts.get(ip) || { count: 0, firstAttemptAt: now };
++    const existing = this.loginAttempts.get(ip);
++    const record = !existing || now - existing.firstAttemptAt > 15 * 60 * 1000
++      ? { count: 0, firstAttemptAt: now }
++      : existing;
+     record.count += 1;
+ 
+     if (record.count >= 5) {
+diff --git a/server/middleware/errorHandler.ts b/server/middleware/errorHandler.ts
+index 3e6d599..393e3b5 100644
+--- a/server/middleware/errorHandler.ts
++++ b/server/middleware/errorHandler.ts
+@@ -1,4 +1,5 @@
+ import type { Request, Response, NextFunction } from 'express';
++import { getRequestEnv } from '../config/requestEnv';
+ import { redactUrl } from '../utils/redaction';
+ import type { ApiErrorResponse } from '@packages/api-contract';
+ 
+@@ -29,7 +30,7 @@ export function errorHandler(
+   const requestId = req.requestId || 'unknown';
+ 
+   // In production, mask internal server error details to prevent reconnaissance
+-  if (process.env.NODE_ENV === 'production' && status >= 500) {
++  if (getRequestEnv('NODE_ENV') === 'production' && status >= 500) {
+     message = 'An unexpected internal server error occurred. Please contact system administrator.';
+   }
+ 
+@@ -45,7 +46,7 @@ export function errorHandler(
+     },
+   };
+ 
+-  if (process.env.NODE_ENV !== 'production') {
++  if (getRequestEnv('NODE_ENV') !== 'production') {
+     console.error(`[Error Handler] ${req.method} ${redactUrl(req.originalUrl)}:`, err instanceof Error ? err.message : 'Unhandled error');
+   }
+ 
+diff --git a/server/middleware/security.ts b/server/middleware/security.ts
+index 4e5bbc3..301c032 100644
+--- a/server/middleware/security.ts
++++ b/server/middleware/security.ts
+@@ -1,6 +1,7 @@
+ import type { Request, Response, NextFunction } from 'express';
+ import { extractClientIp } from '../utils/ipExtractor';
+ import { dbRepository } from '../db/repository';
++import { getRequestEnv } from '../config/requestEnv';
+ 
+ export interface SecurityConfig {
+   allowedOrigins?: string[];
+@@ -33,7 +34,7 @@ export function securityHeaders(req: Request, res: Response, next: NextFunction)
+   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=()');
+ 
+   // Content-Security-Policy designed for modern Vite SPA + Preview iframe compatibility
+-  const isProduction = process.env.NODE_ENV === 'production';
++  const isProduction = getRequestEnv('NODE_ENV') === 'production';
+   const cspDirectives = isProduction
+     ? [
+         "default-src 'self'",
+@@ -62,7 +63,7 @@ export function securityHeaders(req: Request, res: Response, next: NextFunction)
+   res.setHeader('Content-Security-Policy', cspDirectives.join('; '));
+ 
+   // HTTP Strict Transport Security (HSTS) in production
+-  if (process.env.NODE_ENV === 'production') {
++  if (getRequestEnv('NODE_ENV') === 'production') {
+     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+   }
+ 
+@@ -75,9 +76,9 @@ export function securityHeaders(req: Request, res: Response, next: NextFunction)
+ export function corsMiddleware(req: Request, res: Response, next: NextFunction): void {
+   const originHeader = req.headers.origin;
+   const origin = typeof originHeader === 'string' ? originHeader.trim() : undefined;
+-  const isDevelopment = process.env.NODE_ENV !== 'production';
+-  const configuredOrigins = process.env.CORS_ALLOWED_ORIGINS
+-    ? process.env.CORS_ALLOWED_ORIGINS.split(',').map((o: string) => o.trim()).filter(Boolean)
++  const isDevelopment = getRequestEnv('NODE_ENV') !== 'production';
++  const configuredOrigins = getRequestEnv('CORS_ALLOWED_ORIGINS')
++    ? getRequestEnv('CORS_ALLOWED_ORIGINS').split(',').map((o: string) => o.trim()).filter(Boolean)
+     : [];
+ 
+   if (origin) {
+@@ -152,8 +153,11 @@ export class RateLimiter {
+     let entry = this.storage.get(ip);
+     if (!entry) {
+       entry = { timestamps: [] };
+-      this.storage.set(ip, entry);
++    } else {
++      // Refresh insertion order so cap eviction behaves like an LRU policy.
++      this.storage.delete(ip);
+     }
++    this.storage.set(ip, entry);
+ 
+     // Filter out timestamps outside window
+     entry.timestamps = entry.timestamps.filter((ts) => ts > windowStart);
+@@ -195,9 +199,12 @@ export class RateLimiter {
+       }
+     }
+ 
+-    // Cap total storage size to avoid memory bloat
+-    if (this.storage.size > 10000) {
+-      this.storage.clear();
++    // Cap total storage size without wiping all clients' protection. Cleanup above has already
++    // removed stale entries, so evict the least-recently-touched active bucket only as a final
++    // memory guard. Existing clients keep their rate-limit history.
++    if (this.storage.size > 10_000) {
++      const oldestKey = this.storage.keys().next().value as string | undefined;
++      if (oldestKey) this.storage.delete(oldestKey);
+     }
+   }
+ }
+@@ -215,8 +222,8 @@ export function createRateLimitMiddleware(
+   tierName: string
+ ) {
+   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+-    const nodeEnv = String(process.env.NODE_ENV || '');
+-    if (nodeEnv === 'test' && (req.headers['x-bypass-ratelimit'] === '1' || process.env.DISABLE_RATE_LIMIT === 'true')) {
++    const nodeEnv = String(getRequestEnv('NODE_ENV') || '');
++    if (nodeEnv === 'test' && (req.headers['x-bypass-ratelimit'] === '1' || getRequestEnv('DISABLE_RATE_LIMIT') === 'true')) {
+       next();
+       return;
+     }
+@@ -236,7 +243,7 @@ export function createRateLimitMiddleware(
+       next();
+     } catch (err) {
+       // Never fail-open in production. A limiter outage is treated as service unavailable.
+-      if (process.env.NODE_ENV === 'production') {
++      if (getRequestEnv('NODE_ENV') === 'production') {
+         res.status(503).json({ success: false, error: { code: 'RATE_LIMITER_UNAVAILABLE', message: 'Traffic protection is temporarily unavailable. Please retry shortly.' } });
+         return;
+       }
+diff --git a/server/routes/admin.ts b/server/routes/admin.ts
+index 292149d..f4a6f11 100644
+--- a/server/routes/admin.ts
++++ b/server/routes/admin.ts
+@@ -5,6 +5,7 @@ import { dbRepository } from '../db/repository';
+ import { extractClientIp } from '../utils/ipExtractor';
+ import crypto from 'crypto';
+ import { hasPermission, type AdminPermission } from '../auth/rbac';
++import { getRequestEnv } from '../config/requestEnv';
+ 
+ export const adminRouter = Router();
+ 
+@@ -21,7 +22,7 @@ const asyncHandler = (handler: (req: Request, res: Response, next: NextFunction)
+ /** Issue a non-HttpOnly CSRF token for double-submit protection. */
+ adminRouter.get('/admin/csrf', (_req: Request, res: Response) => {
+   const token = crypto.randomBytes(32).toString('hex');
+-  const isProduction = process.env.NODE_ENV === 'production';
++  const isProduction = getRequestEnv('NODE_ENV') === 'production';
+   res.cookie('privasec_admin_csrf', token, { httpOnly: false, secure: isProduction, sameSite: 'strict', path: '/api/admin', maxAge: 2 * 60 * 60 * 1000 });
+   res.json({ success: true, data: { csrfToken: token }, meta: { timestamp: new Date().toISOString() } });
+ });
+@@ -75,7 +76,7 @@ export function adminCsrfGuard(req: Request, res: Response, next: NextFunction)
+   if (origin && host) {
+     try {
+       const originHost = new URL(origin).host;
+-      const isDevelopment = process.env.NODE_ENV !== 'production';
++      const isDevelopment = getRequestEnv('NODE_ENV') !== 'production';
+       const allowedDevelopmentOrigin = isDevelopment && (originHost === 'localhost:3000' || originHost === '127.0.0.1:3000');
+       if (originHost !== host && !allowedDevelopmentOrigin) {
+         const clientIp = extractClientIp(req).ip;
+@@ -146,7 +147,7 @@ const handleLogin = async (req: Request, res: Response) => {
+     return;
+   }
+ 
+-  const isProduction = process.env.NODE_ENV === 'production';
++  const isProduction = getRequestEnv('NODE_ENV') === 'production';
+   if (result.token) {
+     res.cookie('privasec_admin_session', result.token, {
+       httpOnly: true,
+@@ -197,11 +198,11 @@ const handleLogout = async (req: Request, res: Response) => {
+     await adminAuthService.logoutAsync(token, req);
+   }
+ 
+-  const isProduction = process.env.NODE_ENV === 'production';
++  const isProduction = getRequestEnv('NODE_ENV') === 'production';
+   res.clearCookie('privasec_admin_session', {
+     httpOnly: true,
+     secure: isProduction,
+-    sameSite: 'lax',
++    sameSite: 'strict',
+     path: '/',
+   });
+ 
+diff --git a/server/routes/health.ts b/server/routes/health.ts
+index d63b15a..de7db99 100644
+--- a/server/routes/health.ts
++++ b/server/routes/health.ts
+@@ -2,6 +2,7 @@ import { Router } from 'express';
+ import type { Request, Response } from 'express';
+ import type { ApiSuccessResponse, HealthzResponse } from '@packages/api-contract';
+ import { dbRepository } from '../db/repository';
++import { getRequestEnv } from '../config/requestEnv';
+ 
+ const router = Router();
+ const startTime = Date.now();
+@@ -9,7 +10,7 @@ const startTime = Date.now();
+ router.get('/healthz', async (req: Request, res: Response) => {
+   const postgres = dbRepository.getPostgresRepository();
+   let status: HealthzResponse['status'] = 'ok';
+-  if (process.env.NODE_ENV === 'production') {
++  if (getRequestEnv('NODE_ENV') === 'production') {
+     if (!postgres) status = 'unhealthy';
+     else { try { status = (await postgres.checkHealth()) ? 'ok' : 'unhealthy'; } catch { status = 'unhealthy'; } }
+   }
+@@ -18,7 +19,7 @@ router.get('/healthz', async (req: Request, res: Response) => {
+     uptime: Math.floor((Date.now() - startTime) / 1000),
+     timestamp: new Date().toISOString(),
+     service: 'privacy-intelligence-auditor-api',
+-    environment: process.env.NODE_ENV || 'development',
++    environment: getRequestEnv('NODE_ENV') || 'development',
+   };
+ 
+   const response: ApiSuccessResponse<HealthzResponse> = {
+@@ -44,7 +45,7 @@ router.get('/health/live', (_req: Request, res: Response) => {
+ router.get('/health/ready', async (req: Request, res: Response) => {
+   const postgres = dbRepository.getPostgresRepository();
+   if (!postgres) {
+-    const ok = process.env.NODE_ENV !== 'production';
++    const ok = getRequestEnv('NODE_ENV') !== 'production';
+     res.status(ok ? 200 : 503).json({ success: ok, data: { status: ok ? 'ready-development' : 'not-ready', database: 'not-configured' }, meta: { timestamp: new Date().toISOString(), requestId: req.requestId || 'req_health_ready' } });
+     return;
+   }
+diff --git a/server/routes/ip.ts b/server/routes/ip.ts
+index adbcbca..bbdc8c4 100644
+--- a/server/routes/ip.ts
++++ b/server/routes/ip.ts
+@@ -176,8 +176,14 @@ router.get('/ip/network-intelligence', async (req: Request, res: Response) => {
+       lastReportedAt: null, usageType: null, isWhitelisted: null, countryCode: null, domain: null,
+       confidence: 'UNKNOWN' as const, note: 'Reputation lookup failed; existing audit results are unaffected.',
+     })),
+-    rdapService.lookup(normalizedIp),
+-    reverseDnsService.lookup(normalizedIp),
++    rdapService.lookup(normalizedIp).catch(() => ({
++      status: 'ERROR' as const, source: 'RDAP', handle: null, name: null, country: null, startAddress: null, endAddress: null, cidr: null, networkType: null,
++      note: 'RDAP is temporarily unavailable; existing IP and privacy results are unaffected.',
++    })),
++    reverseDnsService.lookup(normalizedIp).catch(() => ({
++      status: 'ERROR' as const, names: [], resolver: 'Cloudflare 1.1.1.1 DoH', dnssecValidated: null,
++      note: 'Reverse DNS is temporarily unavailable; existing IP and privacy results are unaffected.',
++    })),
+   ]);
+ 
+   if ('error' in multiSource) {
+diff --git a/server/tests/adminConsole.test.ts b/server/tests/adminConsole.test.ts
+index 8616bd4..786c755 100644
+--- a/server/tests/adminConsole.test.ts
++++ b/server/tests/adminConsole.test.ts
+@@ -60,6 +60,20 @@ async function runStage12AdminTests() {
+   rateLimit = dbRepository.checkLoginRateLimit(testClientIp);
+   assert(!rateLimit.isBlocked, 'Resetting failed login attempts clears the block');
+ 
++  // Expired-window regression: a new failure window must start clean instead of accumulating old attempts.
++  const originalNow = Date.now;
++  let fakeNow = originalNow();
++  try {
++    Date.now = () => fakeNow;
++    for (let i = 0; i < 4; i++) dbRepository.recordFailedLogin(testClientIp);
++    fakeNow += 16 * 60 * 1000;
++    dbRepository.recordFailedLogin(testClientIp);
++    assert(!dbRepository.checkLoginRateLimit(testClientIp).isBlocked, 'Expired login-attempt window must reset before counting the new failure');
++  } finally {
++    Date.now = originalNow;
++    dbRepository.resetFailedLogins(testClientIp);
++  }
++
+   // 4. Admin Authentication Service
+   console.log('\n--- 4. Admin Authentication & Session Management ---');
+   dbRepository.bootstrapAdminCredentials('admin', 'AdminConsoleTestPass2026!#');
+diff --git a/server/tests/productionHardening.test.ts b/server/tests/productionHardening.test.ts
+index 10ba68d..5925ab1 100644
+--- a/server/tests/productionHardening.test.ts
++++ b/server/tests/productionHardening.test.ts
+@@ -97,6 +97,15 @@ async function testRateLimiter() {
+   const r5 = limiter.check(ip);
+   assert.strictEqual(r5.isLimited, false, 'Resetting IP must restore allowance');
+ 
++  // Memory-cap regression: exceeding the cap must evict one bucket, not erase every client's protection.
++  const cappedLimiter = new RateLimiter(60_000, 3);
++  for (let i = 0; i <= 10_000; i++) cappedLimiter.check(`synthetic-${i}`);
++  cappedLimiter.check('protected-client');
++  cappedLimiter.check('synthetic-last');
++  const protectedResult = cappedLimiter.check('protected-client');
++  assert.strictEqual(protectedResult.remaining, 1, 'Existing client history must survive storage cap enforcement');
++  cappedLimiter.destroy();
++
+   limiter.destroy();
+   console.log('✓ Rate Limiter verified successfully.');
+ }
+diff --git a/worker/index.ts b/worker/index.ts
+index e4fa756..d10e458 100644
+--- a/worker/index.ts
++++ b/worker/index.ts
+@@ -32,6 +32,7 @@ type RuntimeEnv = {
+   TRUST_PROXY?: string;
+   DISABLE_RATE_LIMIT?: string;
+   APP_ENV?: string;
++  PORT?: string;
+   [key: string]: unknown;
+ };
+ 
+@@ -83,6 +84,9 @@ function buildRequestEnvValues(env: RuntimeEnv): RequestEnvValues {
+   if (typeof env.TRUST_PROXY === "string") values.TRUST_PROXY = env.TRUST_PROXY;
+   if (typeof env.DISABLE_RATE_LIMIT === "string") values.DISABLE_RATE_LIMIT = env.DISABLE_RATE_LIMIT;
+   if (typeof env.APP_ENV === "string") values.APP_ENV = env.APP_ENV;
++  if (typeof env.PORT === "string") values.PORT = env.PORT;
++  if (typeof env.DATABASE_URL === "string") values.DATABASE_URL = env.DATABASE_URL;
++  if (typeof env.CORS_ALLOWED_ORIGINS === "string") values.CORS_ALLOWED_ORIGINS = env.CORS_ALLOWED_ORIGINS;
+   return values;
+ }
+ 
+@@ -223,8 +227,28 @@ async function readJsonBody(request: Request, maxBytes = 100 * 1024): Promise<un
+   const contentLength = Number(request.headers.get("content-length") || "0");
+   if (Number.isFinite(contentLength) && contentLength > maxBytes) throw new Error("PAYLOAD_TOO_LARGE");
+ 
+-  const text = await request.text();
+-  if (new TextEncoder().encode(text).byteLength > maxBytes) throw new Error("PAYLOAD_TOO_LARGE");
++  if (!request.body) return {};
++
++  const reader = request.body.getReader();
++  const decoder = new TextDecoder();
++  let totalBytes = 0;
++  let text = "";
++  try {
++    while (true) {
++      const { done, value } = await reader.read();
++      if (done) break;
++      totalBytes += value.byteLength;
++      if (totalBytes > maxBytes) {
++        await reader.cancel();
++        throw new Error("PAYLOAD_TOO_LARGE");
++      }
++      text += decoder.decode(value, { stream: true });
++    }
++    text += decoder.decode();
++  } catch (error) {
++    await reader.cancel().catch(() => {});
++    throw error;
++  }
+   if (!text.trim()) return {};
+ 
+   if (contentType.includes("json")) {
+@@ -396,6 +420,15 @@ function cookieValue(request: Request, name: string): string | undefined {
+   return undefined;
+ }
+ 
++function hasValidCsrfToken(request: Request): boolean {
++  const cookieToken = cookieValue(request, "privasec_admin_csrf") || "";
++  const headerToken = request.headers.get("x-csrf-token") || "";
++  if (!cookieToken || !headerToken || cookieToken.length !== headerToken.length) return false;
++  const cookieBuffer = Buffer.from(cookieToken, "utf8");
++  const headerBuffer = Buffer.from(headerToken, "utf8");
++  return crypto.timingSafeEqual(cookieBuffer, headerBuffer);
++}
++
+ function cookieHeader(name: string, value: string, options: { httpOnly?: boolean; secure?: boolean; sameSite?: string; path?: string; maxAge?: number } = {}): string {
+   const parts = [`${name}=${encodeURIComponent(value)}`];
+   if (options.httpOnly) parts.push("HttpOnly");
+@@ -717,9 +750,10 @@ async function handleApi(request: Request, env: RuntimeEnv, ctx: ExecutionContex
+     }
+ 
+     if ((p === "/api/admin/logout" || p === "/api/admin/auth/logout") && method === "POST") {
++      if (!hasValidCsrfToken(request)) return publicError(req, "CSRF_TOKEN_REQUIRED", "A valid CSRF token is required for this administrative action.", 403);
+       const token = cookieValue(request, "privasec_admin_session") || (req.headers["authorization"] as string || "").replace(/^Bearer\s+/i, "") || (req.headers["x-admin-token"] as string | undefined);
+       if (token) await adminAuthService.logoutAsync(token, req as any);
+-      return jsonResponse({ success: true, data: { message: "Logged out successfully" } }, 200, { "Set-Cookie": "privasec_admin_session=; Max-Age=0; Path=/; HttpOnly; SameSite=Lax" });
++      return jsonResponse({ success: true, data: { message: "Logged out successfully" } }, 200, { "Set-Cookie": cookieHeader("privasec_admin_session", "", { httpOnly: true, secure, sameSite: "Strict", path: "/", maxAge: 0 }) });
+     }
+ 
+     const guarded = async (permission?: AdminPermission) => requireAdmin(req, permission);
