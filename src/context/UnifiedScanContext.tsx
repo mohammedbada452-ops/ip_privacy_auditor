@@ -118,8 +118,15 @@ export const UnifiedScanProvider: React.FC<{ children: React.ReactNode }> = ({ c
       // -------------------------------------------------------------
       const netStart = performance.now();
       try {
+        // Each request is now caught independently. Previously `apiClient.getIp()`
+        // was left unwrapped, so any hiccup on that single trivial endpoint made
+        // Promise.all reject and discarded the (independently fetched, often
+        // perfectly healthy) ipDetails/networkIntelligence results too. That is
+        // what produced a misleading "IP intelligence service unavailable" banner
+        // and an artificially low Evidence Coverage even when the richer network
+        // intelligence lookup had actually succeeded.
         const [ipCheck, ipDetails, networkIntelligence] = await Promise.all([
-          apiClient.getIp(),
+          apiClient.getIp().catch(() => null),
           apiClient.getIpDetails().catch(() => null),
           apiClient.getIpNetworkIntelligence().catch(() => null),
         ]);
@@ -127,14 +134,25 @@ export const UnifiedScanProvider: React.FC<{ children: React.ReactNode }> = ({ c
         ipDetailsRes = ipDetails;
         networkIntelligenceRes = networkIntelligence;
         networkDuration = Math.round(performance.now() - netStart);
-        networkStatus = ipCheck ? 'COMPLETE' : 'PARTIAL';
+
+        const anyIpDataAvailable = Boolean(ipCheck || ipDetails || networkIntelligence);
+        networkStatus = ipCheck ? 'COMPLETE' : anyIpDataAvailable ? 'PARTIAL' : 'UNAVAILABLE';
+
+        if (!ipCheck) {
+          partialDetected = true;
+          localPartialReason = anyIpDataAvailable
+            ? 'Basic IP/header lookup unavailable; network intelligence signals were still collected'
+            : 'IP intelligence service unavailable';
+        }
 
         if (scanRunIdRef.current === runId) {
           setSteps((prev) =>
-            prev.map((s) => (s.id === 'ip' ? { ...s, status: 'complete', durationMs: networkDuration } : s))
+            prev.map((s) => (s.id === 'ip' ? { ...s, status: ipCheck ? 'complete' : 'warning', durationMs: networkDuration } : s))
           );
         }
       } catch (err) {
+        // With every request above now individually caught, this branch should be
+        // effectively unreachable — kept only as a last-resort safety net.
         console.warn('IP collection encountered an issue:', err);
         networkDuration = Math.round(performance.now() - netStart);
         networkStatus = 'UNAVAILABLE';

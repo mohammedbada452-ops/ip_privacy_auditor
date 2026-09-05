@@ -6,6 +6,27 @@ export interface IFactorEvaluator {
   evaluate(input: PrivacyEngineInput): PrivacyFactor;
 }
 
+/**
+ * Some free GeoIP providers structurally never return certain security
+ * signals — this is a property of the provider's data schema, not a
+ * transient failure. Treating a permanently-absent field as "unavailable"
+ * caps Evidence Coverage below 100% forever, on every scan, regardless of
+ * how healthy the provider is. Each entry below was verified against the
+ * provider's live response (HackMyIP: proxy/hosting/mobile present, vpn/tor
+ * never present; IPinfo Lite free tier: no security fields at all — VPN/
+ * proxy/Tor/hosting detection is a paid IPinfo add-on).
+ */
+const PROVIDER_SECURITY_SIGNAL_SUPPORT: Record<string, { proxy: boolean; hosting: boolean; vpn: boolean; tor: boolean; mobile: boolean }> = {
+  HackMyIPProvider: { proxy: true, hosting: true, vpn: false, tor: false, mobile: true },
+  'IPinfo Lite': { proxy: false, hosting: false, vpn: false, tor: false, mobile: false },
+};
+
+function isSignalUnsupportedByProvider(providerName: string | undefined, signal: 'proxy' | 'hosting' | 'vpn' | 'tor' | 'mobile'): boolean {
+  if (!providerName) return false;
+  const support = PROVIDER_SECURITY_SIGNAL_SUPPORT[providerName];
+  return support ? support[signal] === false : false;
+}
+
 export class FactorRegistry {
   private evaluators: IFactorEvaluator[] = [];
 
@@ -30,7 +51,9 @@ export class FactorRegistry {
       id: 'NET_PROXY_DETECTED',
       evaluate: (input): PrivacyFactor => {
         const network = input.ipDetails?.network;
-        const available = Boolean(network && network.providerStatus === 'VERIFIED' && typeof network.isProxy === 'boolean');
+        const providerVerified = Boolean(network && network.providerStatus === 'VERIFIED');
+        const unsupported = providerVerified && typeof network?.isProxy !== 'boolean' && isSignalUnsupportedByProvider(network?.provider, 'proxy');
+        const available = Boolean(providerVerified && typeof network?.isProxy === 'boolean');
         const isProxy = network?.isProxy === true;
         const isInfra = Boolean(input.ipCheck?.connectionFlags?.isInfrastructureProxy);
         const isUntrustedProxy = available && isProxy && !isInfra;
@@ -49,13 +72,16 @@ export class FactorRegistry {
             ? 'Untrusted public or transparent proxy server detected relaying unencrypted traffic.'
             : isInfra
               ? 'Trusted reverse-proxy infrastructure detected in the request path.'
-              : 'No transparent proxy server detected on origin connection.',
+              : unsupported
+                ? 'Active GeoIP provider does not expose a proxy signal for this lookup.'
+                : 'No transparent proxy server detected on origin connection.',
           recommendation: isUntrustedProxy ? 'Disconnect from untrusted proxy or route traffic through an encrypted VPN tunnel.' : undefined,
           detected: isUntrustedProxy,
           available,
           source: 'ip',
           confidence: 'HIGH',
           classification: 'INFORMATIONAL',
+          metadata: unsupported ? { capabilityStatus: 'UNSUPPORTED' } : undefined,
         };
       },
     });
@@ -65,7 +91,9 @@ export class FactorRegistry {
       id: 'NET_HOSTING_DATACENTER',
       evaluate: (input): PrivacyFactor => {
         const network = input.ipDetails?.network;
-        const available = Boolean(network && network.providerStatus === 'VERIFIED' && typeof network.isHosting === 'boolean');
+        const providerVerified = Boolean(network && network.providerStatus === 'VERIFIED');
+        const unsupported = providerVerified && typeof network?.isHosting !== 'boolean' && isSignalUnsupportedByProvider(network?.provider, 'hosting');
+        const available = Boolean(providerVerified && typeof network?.isHosting === 'boolean');
         const isHosting = network?.isHosting === true;
         return {
           id: 'NET_HOSTING_DATACENTER',
@@ -79,13 +107,16 @@ export class FactorRegistry {
           expectedValue: false,
           reason: isHosting
             ? 'IP address originates from a public cloud or datacenter hosting provider.'
-            : 'IP address belongs to a standard residential, commercial, or enterprise ISP.',
+            : unsupported
+              ? 'Active GeoIP provider does not expose a hosting/datacenter signal for this lookup.'
+              : 'IP address belongs to a standard residential, commercial, or enterprise ISP.',
           recommendation: isHosting ? 'Optional VPN/Tor recommended if accessing residential-only geo services.' : undefined,
           detected: isHosting,
           available,
           source: 'ip',
           confidence: 'HIGH',
           classification: 'INFORMATIONAL',
+          metadata: unsupported ? { capabilityStatus: 'UNSUPPORTED' } : undefined,
         };
       },
     });
@@ -95,7 +126,13 @@ export class FactorRegistry {
       id: 'NET_VPN_DETECTED',
       evaluate: (input): PrivacyFactor => {
         const network = input.ipDetails?.network;
-        const available = Boolean(network && network.providerStatus === 'VERIFIED' && typeof network.isVpn === 'boolean');
+        const providerVerified = Boolean(network && network.providerStatus === 'VERIFIED');
+        // Some default free providers verifiably never return a vpn field at
+        // all (confirmed against their live response schemas), so a null
+        // value from them is "this signal isn't offered", not "unknown" — it
+        // must not sit in evidence coverage forever as UNAVAILABLE.
+        const unsupported = providerVerified && typeof network?.isVpn !== 'boolean' && isSignalUnsupportedByProvider(network?.provider, 'vpn');
+        const available = Boolean(providerVerified && typeof network?.isVpn === 'boolean');
         const isVpn = network?.isVpn === true;
         return {
           id: 'NET_VPN_DETECTED',
@@ -108,13 +145,16 @@ export class FactorRegistry {
           currentValue: available ? (isVpn ? 'Active Commercial VPN' : 'Direct ISP IP') : null,
           reason: isVpn
             ? 'Commercial or private VPN connection detected concealing origin IP.'
-            : 'No active commercial VPN detected.',
+            : unsupported
+              ? 'Active GeoIP provider does not expose a VPN signal for this lookup.'
+              : 'No active commercial VPN detected.',
           recommendation: isVpn ? 'Maintain active VPN usage to protect network identity.' : undefined,
           detected: isVpn,
           available,
           source: 'ip',
           confidence: 'HIGH',
           classification: 'INFORMATIONAL',
+          metadata: unsupported ? { capabilityStatus: 'UNSUPPORTED' } : undefined,
         };
       },
     });
@@ -124,7 +164,10 @@ export class FactorRegistry {
       id: 'NET_TOR_DETECTED',
       evaluate: (input): PrivacyFactor => {
         const network = input.ipDetails?.network;
-        const available = Boolean(network && network.providerStatus === 'VERIFIED' && typeof network.isTor === 'boolean');
+        const providerVerified = Boolean(network && network.providerStatus === 'VERIFIED');
+        // Same rationale as NET_VPN_DETECTED above.
+        const unsupported = providerVerified && typeof network?.isTor !== 'boolean' && isSignalUnsupportedByProvider(network?.provider, 'tor');
+        const available = Boolean(providerVerified && typeof network?.isTor === 'boolean');
         const isTor = network?.isTor === true;
         return {
           id: 'NET_TOR_DETECTED',
@@ -137,13 +180,16 @@ export class FactorRegistry {
           currentValue: available ? (isTor ? 'Tor Onion Relay Active' : 'Standard Web Route') : null,
           reason: isTor
             ? 'Tor exit node connection active providing multi-hop network anonymization.'
-            : 'Connection is not routed through Tor.',
+            : unsupported
+              ? 'Active GeoIP provider does not expose a Tor signal for this lookup.'
+              : 'Connection is not routed through Tor.',
           recommendation: isTor ? 'Tor provides maximum network-layer anonymity.' : undefined,
           detected: isTor,
           available,
           source: 'ip',
           confidence: 'HIGH',
           classification: 'INFORMATIONAL',
+          metadata: unsupported ? { capabilityStatus: 'UNSUPPORTED' } : undefined,
         };
       },
     });
@@ -153,7 +199,9 @@ export class FactorRegistry {
       id: 'NET_MOBILE_CARRIER',
       evaluate: (input): PrivacyFactor => {
         const network = input.ipDetails?.network;
-        const available = Boolean(network && network.providerStatus === 'VERIFIED' && typeof network.isMobile === 'boolean');
+        const providerVerified = Boolean(network && network.providerStatus === 'VERIFIED');
+        const unsupported = providerVerified && typeof network?.isMobile !== 'boolean' && isSignalUnsupportedByProvider(network?.provider, 'mobile');
+        const available = Boolean(providerVerified && typeof network?.isMobile === 'boolean');
         const isMobile = network?.isMobile === true;
         return {
           id: 'NET_MOBILE_CARRIER',
@@ -166,12 +214,15 @@ export class FactorRegistry {
           currentValue: available ? (isMobile ? 'Mobile Carrier CGNAT' : 'Fixed Broadband') : null,
           reason: isMobile
             ? 'Mobile carrier IP detected utilizing shared Carrier-Grade NAT.'
-            : 'Standard broadband fixed connection.',
+            : unsupported
+              ? 'Active GeoIP provider does not expose a mobile-carrier signal for this lookup.'
+              : 'Standard broadband fixed connection.',
           detected: isMobile,
           available,
           source: 'ip',
           confidence: 'HIGH',
           classification: 'INFORMATIONAL',
+          metadata: unsupported ? { capabilityStatus: 'UNSUPPORTED' } : undefined,
         };
       },
     });
